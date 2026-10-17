@@ -1,0 +1,837 @@
+package com.ww1armor.entity;
+
+import com.ww1armor.ArmoredCarMod;
+import com.ww1armor.ModConfig;
+import com.ww1armor.compat.TaczCompat;
+import net.minecraft.core.particles.BlockParticleOption;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.syncher.EntityDataAccessor;
+import net.minecraft.network.syncher.EntityDataSerializers;
+import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.tags.DamageTypeTags;
+import net.minecraft.util.Mth;
+import net.minecraft.util.RandomSource;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.MoverType;
+import net.minecraft.world.entity.Pose;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.projectile.ProjectileUtil;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.EntityHitResult;
+import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.phys.Vec3;
+import org.jetbrains.annotations.Nullable;
+
+import java.util.Set;
+
+/**
+ * Büssing A5P armoured car (1 block = 1 m; 8 m long, 3.8 m tall, two driven axles, four wheels).
+ * Seat 0 = driver, 1 = cupola gunner (MG 08), 2 + 3 = passengers in the casemate.
+ *
+ * Driving is simulated on the driver's client (like vanilla boats) and sent to the server with the
+ * vanilla vehicle-move packet; everything else (damage, seats, MG, wreck) is server-authoritative.
+ */
+public class ArmoredCarEntity extends Entity {
+    public static final int SEATS = 4;
+    public static final int DRIVER = 0;
+    public static final int GUNNER = 1;
+
+    /** Seat feet positions in blocks: {right, up, forward}. */
+    private static final double[][] SEAT_OFFSETS = {
+            {0.00, 1.19, 1.10},    // driver in the front step, eyes at the front vision slit
+            {0.00, 1.82, -0.72},   // gunner, head in the turret at the port level
+            {0.45, 1.19, -1.85},   // passenger, fighting compartment (side vision ports)
+            {-0.45, 1.19, -1.85},  // passenger
+    };
+    /** Turret centre / gun pivot (blocks). Matches the model: turret at y 50 px, z +11.5 px; gun +5 px. */
+    public static final double GUN_PIVOT_UP = 55.0 / 16.0;
+    public static final double GUN_PIVOT_FWD = -11.5 / 16.0;
+    public static final double MUZZLE_DIST = 29.3 / 16.0;
+    public static final double WHEEL_RADIUS = 12.5 / 16.0;
+    /** Front to rear axle (blocks). */
+    public static final double WHEELBASE = 70.0 / 16.0;
+    /** Forward offsets of the two extra hitboxes (blocks): nose and tail of the 8 m hull. */
+    public static final float[] SEGMENT_OFFSETS = {2.6F, -2.75F};
+
+    private static final EntityDataAccessor<Float> DATA_HEALTH =
+            SynchedEntityData.defineId(ArmoredCarEntity.class, EntityDataSerializers.FLOAT);
+    private static final EntityDataAccessor<Boolean> DATA_WRECKED =
+            SynchedEntityData.defineId(ArmoredCarEntity.class, EntityDataSerializers.BOOLEAN);
+    private static final EntityDataAccessor<Integer> DATA_SEAT_0 =
+            SynchedEntityData.defineId(ArmoredCarEntity.class, EntityDataSerializers.INT);
+    private static final EntityDataAccessor<Integer> DATA_SEAT_1 =
+            SynchedEntityData.defineId(ArmoredCarEntity.class, EntityDataSerializers.INT);
+    private static final EntityDataAccessor<Integer> DATA_SEAT_2 =
+            SynchedEntityData.defineId(ArmoredCarEntity.class, EntityDataSerializers.INT);
+    private static final EntityDataAccessor<Integer> DATA_SEAT_3 =
+            SynchedEntityData.defineId(ArmoredCarEntity.class, EntityDataSerializers.INT);
+
+    private static EntityDataAccessor<Integer> seatAccessor(int seat) {
+        return switch (seat) {
+            case 0 -> DATA_SEAT_0;
+            case 1 -> DATA_SEAT_1;
+            case 2 -> DATA_SEAT_2;
+            default -> DATA_SEAT_3;
+        };
+    }
+
+    // driving (simulated on the driver's client)
+    private float speed;
+    private float steer;               // degrees, + = left
+    private float pendingRiderYaw;
+
+    // interpolation for non-controlled instances
+    private int lerpSteps;
+    private double lerpX, lerpY, lerpZ;
+    private float lerpYRot;
+
+    // server state
+    private int gunCooldown;
+    private int wreckTicks;
+    private int shotCounter;
+    private int lastExplosionTick = -1;
+    private float lastExplosionAmount;
+    private final HullSegmentEntity[] segments = new HullSegmentEntity[SEGMENT_OFFSETS.length];
+
+    // client visuals
+    public float wheelRot, wheelRotO;
+    public float steerVis, steerVisO;
+    public float turretYaw, turretYawO, gunPitch, gunPitchO;
+    public float recoil, recoilO;
+    public int flashTicks;
+    public float clientSpeed;
+    private int clientWreckAge;
+
+    public ArmoredCarEntity(EntityType<? extends ArmoredCarEntity> type, Level level) {
+        super(type, level);
+        this.blocksBuilding = true;
+    }
+
+    // ------------------------------------------------------------------ data
+
+    @Override
+    protected void defineSynchedData(SynchedEntityData.Builder builder) {
+        builder.define(DATA_HEALTH, ModConfig.get().maxHealth);
+        builder.define(DATA_WRECKED, false);
+        builder.define(DATA_SEAT_0, -1);
+        builder.define(DATA_SEAT_1, -1);
+        builder.define(DATA_SEAT_2, -1);
+        builder.define(DATA_SEAT_3, -1);
+    }
+
+    public float getHealth() {
+        return this.entityData.get(DATA_HEALTH);
+    }
+
+    public void setHealth(float health) {
+        this.entityData.set(DATA_HEALTH, Mth.clamp(health, 0.0F, getMaxHealth()));
+    }
+
+    public float getMaxHealth() {
+        return ModConfig.get().maxHealth;
+    }
+
+    public boolean isWrecked() {
+        return this.entityData.get(DATA_WRECKED);
+    }
+
+    public boolean hasDriver() {
+        return getControllingPassenger() != null;
+    }
+
+    @Override
+    protected void readAdditionalSaveData(CompoundTag tag) {
+        if (tag.contains("Health")) {
+            setHealth(tag.getFloat("Health"));
+        }
+        this.entityData.set(DATA_WRECKED, tag.getBoolean("Wrecked"));
+        this.wreckTicks = tag.getInt("WreckTicks");
+    }
+
+    @Override
+    protected void addAdditionalSaveData(CompoundTag tag) {
+        tag.putFloat("Health", getHealth());
+        tag.putBoolean("Wrecked", isWrecked());
+        tag.putInt("WreckTicks", this.wreckTicks);
+    }
+
+    // ------------------------------------------------------------------ physics basics
+
+    @Override
+    public boolean canBeCollidedWith() {
+        return !this.isRemoved();
+    }
+
+    @Override
+    public boolean canCollideWith(Entity other) {
+        if (other instanceof HullSegmentEntity seg && seg.belongsTo(this)) {
+            return false;
+        }
+        return (other.canBeCollidedWith() || other.isPushable()) && !this.isPassengerOfSameVehicle(other);
+    }
+
+    @Override
+    public boolean isPushable() {
+        return false;
+    }
+
+    @Override
+    public boolean isPickable() {
+        return !this.isRemoved();
+    }
+
+    @Override
+    public float maxUpStep() {
+        return 1.05F;
+    }
+
+    @Override
+    public AABB getBoundingBoxForCulling() {
+        return this.getBoundingBox().inflate(4.0, 0.5, 4.0);
+    }
+
+    @Override
+    public ItemStack getPickResult() {
+        return new ItemStack(ArmoredCarMod.BUSSING_A5P_ITEM);
+    }
+
+    /** Converts a car-relative offset (blocks) into a world position. */
+    public Vec3 localToWorld(double right, double up, double forward) {
+        return localToWorld(this.getX(), this.getY(), this.getZ(), this.getYRot(), right, up, forward);
+    }
+
+    private static Vec3 localToWorld(double x, double y, double z, float yawDeg, double right, double up, double forward) {
+        double yaw = Math.toRadians(yawDeg);
+        double fx = -Math.sin(yaw), fz = Math.cos(yaw);
+        double rx = -Math.cos(yaw), rz = -Math.sin(yaw);
+        return new Vec3(x + fx * forward + rx * right, y + up, z + fz * forward + rz * right);
+    }
+
+    @Override
+    public void remove(Entity.RemovalReason reason) {
+        super.remove(reason);
+        for (HullSegmentEntity s : this.segments) {
+            if (s != null && !s.isRemoved()) {
+                s.discard();
+            }
+        }
+    }
+
+    private void tickSegments() {
+        if (!(this.level() instanceof ServerLevel server)) {
+            return;
+        }
+        for (int i = 0; i < this.segments.length; i++) {
+            HullSegmentEntity s = this.segments[i];
+            if (s == null || s.isRemoved()) {
+                s = ArmoredCarMod.HULL_SEGMENT.create(server);
+                if (s == null) {
+                    continue;
+                }
+                s.attach(this, SEGMENT_OFFSETS[i]);
+                s.snapTo(this);
+                server.addFreshEntity(s);
+                this.segments[i] = s;
+            } else {
+                s.snapTo(this);
+            }
+        }
+    }
+
+    /**
+     * The 9.5 m hull is longer than the main hitbox, so the ends are tested separately against blocks:
+     * a box above step height at each end must stay clear for the car to move or turn.
+     */
+    private boolean endsClear(double x, double z, float yaw) {
+        for (float off : SEGMENT_OFFSETS) {
+            Vec3 c = localToWorld(x, this.getY(), z, yaw, 0.0, 0.0, off + Math.signum(off) * 0.6);
+            AABB box = new AABB(c.x - 0.95, this.getY() + 1.1, c.z - 0.95, c.x + 0.95, this.getY() + 2.4, c.z + 0.95);
+            if (!this.level().noCollision(this, box)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    // ------------------------------------------------------------------ seats
+
+    public int seatEntityId(int seat) {
+        return this.entityData.get(seatAccessor(seat));
+    }
+
+    private void setSeat(int seat, int entityId) {
+        this.entityData.set(seatAccessor(seat), entityId);
+    }
+
+    public int seatOf(Entity entity) {
+        for (int i = 0; i < SEATS; i++) {
+            if (seatEntityId(i) == entity.getId() && this.hasPassenger(entity)) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    @Nullable
+    public Entity entityInSeat(int seat) {
+        int id = seatEntityId(seat);
+        if (id < 0) {
+            return null;
+        }
+        for (Entity p : this.getPassengers()) {
+            if (p.getId() == id) {
+                return p;
+            }
+        }
+        return null;
+    }
+
+    private int firstFreeSeat() {
+        for (int i = 0; i < SEATS; i++) {
+            if (entityInSeat(i) == null) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    @Override
+    protected boolean canAddPassenger(Entity passenger) {
+        return this.getPassengers().size() < SEATS && !isWrecked();
+    }
+
+    @Override
+    public void addPassenger(Entity passenger) {
+        super.addPassenger(passenger);
+        if (!this.level().isClientSide && seatOf(passenger) < 0) {
+            int free = firstFreeSeat();
+            if (free >= 0) {
+                setSeat(free, passenger.getId());
+                announceSeat(passenger, free);
+            }
+        }
+    }
+
+    @Override
+    public void removePassenger(Entity passenger) {
+        int seat = seatOf(passenger);
+        super.removePassenger(passenger);
+        if (!this.level().isClientSide && seat >= 0) {
+            setSeat(seat, -1);
+        }
+    }
+
+    /** Called from the switch-seat keybind packet. Cycles to the next free seat. */
+    public void switchSeat(ServerPlayer player) {
+        int current = seatOf(player);
+        if (current < 0 || isWrecked()) {
+            return;
+        }
+        for (int i = 1; i < SEATS; i++) {
+            int s = (current + i) % SEATS;
+            if (entityInSeat(s) == null) {
+                setSeat(current, -1);
+                setSeat(s, player.getId());
+                announceSeat(player, s);
+                this.positionRider(player);
+                return;
+            }
+        }
+        player.displayClientMessage(Component.translatable("msg.ww1armor.no_free_seat"), true);
+    }
+
+    private void announceSeat(Entity passenger, int seat) {
+        if (passenger instanceof Player p) {
+            p.displayClientMessage(Component.translatable("msg.ww1armor.seat",
+                    Component.translatable("seat.ww1armor." + seat)), true);
+        }
+    }
+
+    @Nullable
+    @Override
+    public LivingEntity getControllingPassenger() {
+        if (isWrecked()) {
+            return null;
+        }
+        Entity driver = entityInSeat(DRIVER);
+        return driver instanceof Player p ? p : null;
+    }
+
+    @Override
+    public void positionRider(Entity passenger, Entity.MoveFunction moveFunction) {
+        if (!this.hasPassenger(passenger)) {
+            return;
+        }
+        int seat = seatOf(passenger);
+        if (seat < 0) {
+            seat = Math.max(0, Math.min(this.getPassengers().indexOf(passenger), SEATS - 1));
+        }
+        double[] o = SEAT_OFFSETS[seat];
+        Vec3 p = localToWorld(o[0], o[1], o[2]);
+        moveFunction.accept(passenger, p.x, p.y, p.z);
+
+        if (this.level().isClientSide && passenger instanceof Player pl && pl.isLocalPlayer() && this.pendingRiderYaw != 0.0F) {
+            passenger.setYRot(passenger.getYRot() + this.pendingRiderYaw);
+            passenger.setYHeadRot(passenger.getYHeadRot() + this.pendingRiderYaw);
+            this.pendingRiderYaw = 0.0F;
+        }
+    }
+
+    @Override
+    public Vec3 getDismountLocationForPassenger(LivingEntity passenger) {
+        for (double fwd : new double[]{-1.4, 0.0, 1.2}) {
+            for (double side : new double[]{1.0, -1.0}) {
+                Vec3 base = localToWorld(side * 2.0, 0.0, fwd);
+                for (double dy : new double[]{0.0, 1.0, -1.0, 2.0}) {
+                    Vec3 at = base.add(0.0, dy, 0.0);
+                    AABB box = passenger.getDimensions(Pose.STANDING).makeBoundingBox(at);
+                    if (this.level().noCollision(passenger, box)) {
+                        return at;
+                    }
+                }
+            }
+        }
+        return super.getDismountLocationForPassenger(passenger);
+    }
+
+    // ------------------------------------------------------------------ interaction
+
+    @Override
+    public InteractionResult interact(Player player, InteractionHand hand) {
+        if (isWrecked()) {
+            return InteractionResult.PASS;
+        }
+        ItemStack stack = player.getItemInHand(hand);
+
+        if (stack.is(Items.IRON_INGOT) && getHealth() < getMaxHealth()) {
+            if (!this.level().isClientSide) {
+                setHealth(getHealth() + ModConfig.get().repairPerIngot);
+                if (!player.getAbilities().instabuild) {
+                    stack.shrink(1);
+                }
+                this.playSound(SoundEvents.ANVIL_USE, 0.6F, 1.3F);
+            }
+            return InteractionResult.sidedSuccess(this.level().isClientSide);
+        }
+
+        if (player.isSecondaryUseActive()) {
+            if (stack.isEmpty() && this.getPassengers().isEmpty()) {
+                if (!this.level().isClientSide) {
+                    if (getHealth() < getMaxHealth()) {
+                        player.displayClientMessage(Component.translatable("msg.ww1armor.repair_first"), true);
+                    } else {
+                        this.spawnAtLocation(new ItemStack(ArmoredCarMod.BUSSING_A5P_ITEM));
+                        this.discard();
+                    }
+                }
+                return InteractionResult.sidedSuccess(this.level().isClientSide);
+            }
+            return InteractionResult.PASS;
+        }
+
+        if (player.getVehicle() == this) {
+            return InteractionResult.PASS;
+        }
+        if (!this.level().isClientSide) {
+            return player.startRiding(this) ? InteractionResult.CONSUME : InteractionResult.PASS;
+        }
+        return InteractionResult.SUCCESS;
+    }
+
+    // ------------------------------------------------------------------ armour / damage
+
+    @Override
+    public boolean hurt(DamageSource source, float amount) {
+        if (this.isInvulnerableTo(source)) {
+            return false;
+        }
+        if (this.level().isClientSide) {
+            return !isWrecked();
+        }
+        if (isWrecked() || this.isRemoved()) {
+            return false;
+        }
+        if (source.getEntity() instanceof Player p && p.getAbilities().instabuild && source.getDirectEntity() == p) {
+            this.ejectPassengers();
+            this.discard();
+            return true;
+        }
+        // one explosion can hit the body and both end hitboxes in the same tick: count it once
+        if (source.is(DamageTypeTags.IS_EXPLOSION)) {
+            if (this.tickCount == this.lastExplosionTick) {
+                if (amount <= this.lastExplosionAmount) {
+                    return false;
+                }
+                float extra = amount - this.lastExplosionAmount;
+                this.lastExplosionAmount = amount;
+                amount = extra;
+            } else {
+                this.lastExplosionTick = this.tickCount;
+                this.lastExplosionAmount = amount;
+            }
+        }
+
+        float dealt = armorFilter(source, amount);
+        if (dealt <= 0.0F) {
+            ricochet(source);
+            return false;
+        }
+        setHealth(getHealth() - dealt);
+        this.markHurt();
+        if (getHealth() <= 0.0F) {
+            destroy();
+        }
+        return true;
+    }
+
+    /** Returns the damage that gets through the armour (0 = bounced). */
+    private float armorFilter(DamageSource source, float amount) {
+        ModConfig cfg = ModConfig.get();
+        if (source.is(DamageTypeTags.IS_EXPLOSION)) {
+            return amount * cfg.explosionDamageMultiplier;
+        }
+        if (TaczCompat.isTaczDamage(source)) {
+            Set<String> ids = TaczCompat.weaponIds(source);
+            for (String id : ids) {
+                if (cfg.antiTankWeapons.contains(id)) {
+                    return Math.max(amount, 1.0F) * cfg.antiTankDamageMultiplier;
+                }
+            }
+        }
+        if (amount >= cfg.penetrationThreshold) {
+            return amount;
+        }
+        return 0.0F;
+    }
+
+    private void ricochet(DamageSource source) {
+        if (!(this.level() instanceof ServerLevel server)) {
+            return;
+        }
+        Vec3 at = source.getSourcePosition();
+        if (at == null) {
+            at = this.position().add(0.0, 1.8, 0.0);
+        }
+        server.sendParticles(ParticleTypes.CRIT, at.x, at.y, at.z, 6, 0.05, 0.05, 0.05, 0.25);
+        server.sendParticles(ParticleTypes.SMOKE, at.x, at.y, at.z, 1, 0.0, 0.0, 0.0, 0.01);
+        this.level().playSound(null, at.x, at.y, at.z, ArmoredCarMod.RICOCHET, SoundSource.NEUTRAL, 1.0F,
+                0.9F + this.random.nextFloat() * 0.3F);
+    }
+
+    private void destroy() {
+        ModConfig cfg = ModConfig.get();
+        this.entityData.set(DATA_WRECKED, true);
+        this.entityData.set(DATA_HEALTH, 0.0F);
+        this.wreckTicks = Math.max(20, cfg.wreckSeconds * 20);
+        this.speed = 0.0F;
+        this.ejectPassengers();
+        this.level().explode(this, this.getX(), this.getY() + 1.8, this.getZ(),
+                cfg.destroyExplosionPower, cfg.destroyExplosionStartsFire,
+                cfg.destroyExplosionBreaksBlocks ? Level.ExplosionInteraction.TNT : Level.ExplosionInteraction.NONE);
+        if (this.level() instanceof ServerLevel server) {
+            for (double f : new double[]{-3.0, 0.0, 3.0}) {
+                Vec3 p = localToWorld(0.0, 2.2, f);
+                server.sendParticles(ParticleTypes.LAVA, p.x, p.y, p.z, 10, 1.0, 0.6, 1.0, 0.0);
+                server.sendParticles(ParticleTypes.LARGE_SMOKE, p.x, p.y, p.z, 20, 1.2, 0.8, 1.2, 0.05);
+            }
+        }
+    }
+
+    // ------------------------------------------------------------------ MG 08 in the cupola
+
+    public void fireGun(ServerPlayer shooter) {
+        if (isWrecked() || seatOf(shooter) != GUNNER || this.gunCooldown > 0) {
+            return;
+        }
+        ModConfig cfg = ModConfig.get();
+        this.gunCooldown = Math.max(1, cfg.mgFireIntervalTicks);
+        ServerLevel server = (ServerLevel) this.level();
+
+        float pitch = Mth.clamp(shooter.getXRot(), -cfg.mgMaxElevation, cfg.mgMaxDepression);
+        Vec3 dir = Vec3.directionFromRotation(pitch, shooter.getYHeadRot());
+        dir = dir.add(this.random.nextGaussian() * cfg.mgSpread,
+                this.random.nextGaussian() * cfg.mgSpread,
+                this.random.nextGaussian() * cfg.mgSpread).normalize();
+
+        Vec3 pivot = localToWorld(0.0, GUN_PIVOT_UP, GUN_PIVOT_FWD);
+        Vec3 muzzle = pivot.add(dir.scale(MUZZLE_DIST));
+        Vec3 end = muzzle.add(dir.scale(cfg.mgRange));
+
+        BlockHitResult blockHit = this.level().clip(new ClipContext(muzzle, end,
+                ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, this));
+        if (blockHit.getType() != HitResult.Type.MISS) {
+            end = blockHit.getLocation();
+        }
+        EntityHitResult entityHit = ProjectileUtil.getEntityHitResult(this.level(), this, muzzle, end,
+                new AABB(muzzle, end).inflate(1.0),
+                e -> e != this && !this.hasPassenger(e) && !(e instanceof HullSegmentEntity s && s.belongsTo(this))
+                        && e.isPickable() && e.isAlive() && !e.isSpectator(), 0.3F);
+
+        if (entityHit != null) {
+            Entity target = entityHit.getEntity();
+            end = entityHit.getLocation();
+            if (target instanceof LivingEntity living) {
+                living.invulnerableTime = 0;
+            }
+            target.hurt(this.damageSources().mobProjectile(this, shooter), cfg.mgDamage);
+        } else if (blockHit.getType() == HitResult.Type.BLOCK) {
+            server.sendParticles(new BlockParticleOption(ParticleTypes.BLOCK, this.level().getBlockState(blockHit.getBlockPos())),
+                    end.x, end.y, end.z, 5, 0.05, 0.05, 0.05, 0.1);
+        }
+
+        server.sendParticles(ParticleTypes.SMOKE, muzzle.x, muzzle.y, muzzle.z, 2, 0.03, 0.03, 0.03, 0.02);
+        if ((this.shotCounter++ % 3) == 0) {
+            double dist = muzzle.distanceTo(end);
+            for (double d = 1.5; d < dist; d += 1.25) {
+                Vec3 p = muzzle.add(dir.scale(d));
+                server.sendParticles(ParticleTypes.ELECTRIC_SPARK, p.x, p.y, p.z, 1, 0.0, 0.0, 0.0, 0.0);
+            }
+        }
+        server.playSound(null, muzzle.x, muzzle.y, muzzle.z, ArmoredCarMod.MG_FIRE, SoundSource.PLAYERS, 1.0F,
+                0.95F + this.random.nextFloat() * 0.1F);
+        server.broadcastEntityEvent(this, (byte) 61);    // client: recoil + muzzle flash
+    }
+
+    @Override
+    public void handleEntityEvent(byte id) {
+        if (id == 61) {
+            this.flashTicks = 2;
+            this.recoil = 1.0F;
+        } else {
+            super.handleEntityEvent(id);
+        }
+    }
+
+    // ------------------------------------------------------------------ tick
+
+    @Override
+    public void tick() {
+        super.tick();
+        if (this.gunCooldown > 0) {
+            this.gunCooldown--;
+        }
+        if (isWrecked()) {
+            tickWreck();
+        }
+        tickLerp();
+
+        if (this.isControlledByLocalInstance()) {
+            LivingEntity controller = getControllingPassenger();
+            if (controller instanceof Player driver) {
+                drive(driver);
+            } else {
+                this.speed *= 0.9F;
+                this.steer *= 0.9F;
+                if (Math.abs(this.speed) < 0.001F) {
+                    this.speed = 0.0F;
+                }
+            }
+            applyMotion();
+            this.move(MoverType.SELF, this.getDeltaMovement());
+            if (this.horizontalCollision) {
+                this.speed *= 0.4F;
+            }
+        } else {
+            this.setDeltaMovement(Vec3.ZERO);
+        }
+
+        if (this.level().isClientSide) {
+            tickClientVisuals();
+        } else {
+            tickSegments();
+            if (!isWrecked()) {
+                for (Entity p : this.getPassengers()) {
+                    if (seatOf(p) < 0) {
+                        int free = firstFreeSeat();
+                        if (free >= 0) {
+                            setSeat(free, p.getId());
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /** Heavy truck model: slow throttle response, steering wheel that turns gradually, bicycle-model yaw. */
+    private void drive(Player driver) {
+        ModConfig cfg = ModConfig.get();
+        float forward = driver.zza;
+        float strafe = driver.xxa;
+
+        if (forward > 0.0F) {
+            this.speed += this.speed < 0.0F ? cfg.braking : cfg.acceleration;
+        } else if (forward < 0.0F) {
+            this.speed -= this.speed > 0.0F ? cfg.braking : cfg.acceleration * 0.7F;
+        } else {
+            this.speed *= 0.985F;
+            if (Math.abs(this.speed) < 0.002F) {
+                this.speed = 0.0F;
+            }
+        }
+        this.speed = Mth.clamp(this.speed, -cfg.maxReverseSpeed, cfg.maxSpeed);
+
+        float target = strafe > 0 ? cfg.maxSteerAngle : strafe < 0 ? -cfg.maxSteerAngle : 0.0F;
+        float rate = target == 0.0F ? cfg.steerSpeed * 1.5F : cfg.steerSpeed;
+        this.steer += Mth.clamp(target - this.steer, -rate, rate);
+
+        if (Math.abs(this.speed) > 0.001F && this.onGround()) {
+            // yaw rate = v / L * tan(steer)   (rad/tick -> deg/tick)
+            float turn = (float) Math.toDegrees(this.speed / WHEELBASE * Math.tan(Math.toRadians(this.steer)));
+            float newYaw = this.getYRot() - turn;
+            boolean wasClear = endsClear(this.getX(), this.getZ(), this.getYRot());
+            if (!wasClear || endsClear(this.getX(), this.getZ(), newYaw)) {
+                this.setYRot(newYaw);
+                if (this.level().isClientSide) {
+                    this.pendingRiderYaw -= turn;
+                }
+            } else {
+                this.speed = 0.0F;
+            }
+        }
+
+        // stop if the overhanging nose or tail would drive into a wall
+        double yaw = Math.toRadians(this.getYRot());
+        double nx = this.getX() - Math.sin(yaw) * this.speed;
+        double nz = this.getZ() + Math.cos(yaw) * this.speed;
+        if (endsClear(this.getX(), this.getZ(), this.getYRot()) && !endsClear(nx, nz, this.getYRot())) {
+            this.speed = 0.0F;
+        }
+    }
+
+    public float getSteer() {
+        return this.steer;
+    }
+
+    private void applyMotion() {
+        double yaw = Math.toRadians(this.getYRot());
+        Vec3 dm = this.getDeltaMovement();
+        double vy = this.onGround() ? -0.04 : (dm.y - 0.08) * 0.98;
+        this.setDeltaMovement(-Math.sin(yaw) * this.speed, vy, Math.cos(yaw) * this.speed);
+    }
+
+    private void tickLerp() {
+        if (this.isControlledByLocalInstance()) {
+            this.lerpSteps = 0;
+            this.syncPacketPositionCodec(this.getX(), this.getY(), this.getZ());
+        }
+        if (this.lerpSteps > 0) {
+            double x = this.getX() + (this.lerpX - this.getX()) / this.lerpSteps;
+            double y = this.getY() + (this.lerpY - this.getY()) / this.lerpSteps;
+            double z = this.getZ() + (this.lerpZ - this.getZ()) / this.lerpSteps;
+            float yr = this.getYRot() + Mth.wrapDegrees(this.lerpYRot - this.getYRot()) / this.lerpSteps;
+            this.lerpSteps--;
+            this.setPos(x, y, z);
+            this.setYRot(yr);
+        }
+    }
+
+    @Override
+    public void lerpTo(double x, double y, double z, float yRot, float xRot, int steps) {
+        this.lerpX = x;
+        this.lerpY = y;
+        this.lerpZ = z;
+        this.lerpYRot = yRot;
+        this.lerpSteps = 10;
+    }
+
+    private void tickWreck() {
+        if (!this.level().isClientSide) {
+            if (--this.wreckTicks <= 0) {
+                if (this.level() instanceof ServerLevel server) {
+                    server.sendParticles(ParticleTypes.LARGE_SMOKE, this.getX(), this.getY() + 1.5, this.getZ(),
+                            60, 2.0, 1.0, 2.0, 0.03);
+                }
+                this.discard();
+            }
+            return;
+        }
+        this.clientWreckAge++;
+        RandomSource r = this.random;
+        Vec3 top = localToWorld((r.nextDouble() - 0.5) * 2.0, 3.0, (r.nextDouble() - 0.5) * 6.0);
+        if (r.nextInt(2) == 0) {
+            this.level().addParticle(ParticleTypes.LARGE_SMOKE, top.x, top.y, top.z, 0.0, 0.07, 0.0);
+        }
+        if (this.clientWreckAge % 3 == 0) {
+            this.level().addAlwaysVisibleParticle(ParticleTypes.CAMPFIRE_COSY_SMOKE, true,
+                    top.x, top.y + 0.3, top.z, 0.0, 0.06, 0.0);
+        }
+        if (this.clientWreckAge < 600) {
+            if (r.nextInt(2) == 0) {
+                Vec3 f = localToWorld((r.nextDouble() - 0.5) * 2.2, 1.6 + r.nextDouble() * 1.6, (r.nextDouble() - 0.5) * 8.0);
+                this.level().addParticle(ParticleTypes.FLAME, f.x, f.y, f.z, 0.0, 0.03, 0.0);
+            }
+            if (r.nextInt(10) == 0) {
+                this.level().addParticle(ParticleTypes.LAVA, top.x, top.y, top.z, 0.0, 0.0, 0.0);
+            }
+        }
+    }
+
+    private void tickClientVisuals() {
+        double dx = this.getX() - this.xo;
+        double dz = this.getZ() - this.zo;
+        double yaw = Math.toRadians(this.getYRot());
+        double forward = dx * -Math.sin(yaw) + dz * Math.cos(yaw);
+        this.clientSpeed = (float) Math.abs(forward);
+
+        this.wheelRotO = this.wheelRot;
+        if (!isWrecked()) {
+            this.wheelRot += (float) (forward / WHEEL_RADIUS);
+        }
+
+        // front wheel steering: exact for the driver, estimated from the yaw rate for everyone else
+        this.steerVisO = this.steerVis;
+        float targetSteer;
+        if (this.isControlledByLocalInstance()) {
+            targetSteer = this.steer;
+        } else if (Math.abs(forward) > 0.01) {
+            float yawRate = Mth.wrapDegrees(this.yRotO - this.getYRot());
+            targetSteer = (float) Math.toDegrees(Math.atan(Math.toRadians(yawRate) * WHEELBASE / forward));
+            targetSteer = Mth.clamp(targetSteer, -ModConfig.get().maxSteerAngle, ModConfig.get().maxSteerAngle);
+        } else {
+            targetSteer = this.steerVis;
+        }
+        this.steerVis += (targetSteer - this.steerVis) * 0.5F;
+
+        // cupola follows the gunner's view
+        this.turretYawO = this.turretYaw;
+        this.gunPitchO = this.gunPitch;
+        Entity gunner = entityInSeat(GUNNER);
+        if (gunner instanceof LivingEntity g && !isWrecked()) {
+            ModConfig cfg = ModConfig.get();
+            float rel = Mth.wrapDegrees(g.getYHeadRot() - this.getYRot());
+            this.turretYaw = this.turretYawO + Mth.wrapDegrees(rel - this.turretYawO);
+            this.gunPitch = Mth.clamp(g.getXRot(), -cfg.mgMaxElevation, cfg.mgMaxDepression);
+        }
+
+        this.recoilO = this.recoil;
+        this.recoil *= 0.45F;
+        if (this.flashTicks > 0) {
+            this.flashTicks--;
+        }
+
+        if (!isWrecked() && getHealth() < getMaxHealth() * 0.35F && this.random.nextInt(3) == 0) {
+            Vec3 p = localToWorld((this.random.nextDouble() - 0.5) * 1.2, 2.6, 2.4);
+            this.level().addParticle(ParticleTypes.SMOKE, p.x, p.y, p.z, 0.0, 0.05, 0.0);
+        }
+        if (hasDriver() && !isWrecked() && this.random.nextInt(4) == 0) {   // exhaust puffs, left rear
+            Vec3 p = localToWorld(-0.6, 0.8, -3.6);
+            this.level().addParticle(ParticleTypes.SMOKE, p.x, p.y, p.z, 0.0, 0.02, 0.0);
+        }
+    }
+}

@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "id": "ww1armor",
+  "version": "${version}",
+  "name": "WW1 Armored Cars: Büssing A5P",
+  "description": "A drivable Büssing A5P armored car with a turret MG 08, four seats, TACZ-aware armor, engine sound and a burning wreck when destroyed.",
+  "authors": ["You"],
+  "license": "All-Rights-Reserved",
+  "icon": "assets/ww1armor/icon.png",
+  "environment": "*",
+  "entrypoints": {
+    "main": ["com.ww1armor.ArmoredCarMod"],
+    "client": ["com.ww1armor.client.ArmoredCarClient"]
+  },
+  "depends": {
+    "fabricloader": ">=0.16.0",
+    "minecraft": "~1.21.1",
+    "java": ">=21",
+    "fabric-api": "*"
+  },
+  "suggests": {
+    "tacz": "*"
+  }
+}

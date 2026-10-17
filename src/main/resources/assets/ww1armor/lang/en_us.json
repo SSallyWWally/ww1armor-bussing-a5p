@@ -1,0 +1,21 @@
+{
+  "entity.ww1armor.bussing_a5p": "Büssing A5P Armored Car",
+  "entity.ww1armor.hull_segment": "Büssing A5P Armored Car",
+  "item.ww1armor.bussing_a5p": "Büssing A5P Armored Car",
+  "key.categories.ww1armor": "WW1 Armored Cars",
+  "key.ww1armor.switch_seat": "Switch Seat",
+  "seat.ww1armor.0": "Driver",
+  "seat.ww1armor.1": "Turret Gunner",
+  "seat.ww1armor.2": "Passenger",
+  "seat.ww1armor.3": "Passenger",
+  "msg.ww1armor.seat": "Seat: %s",
+  "msg.ww1armor.no_free_seat": "No free seat",
+  "msg.ww1armor.repair_first": "Repair the hull (iron ingots) before packing it up",
+  "msg.ww1armor.blocked": "Not enough room to place the armored car here (it needs about 9 x 3 x 4 blocks)",
+  "hud.ww1armor.seat": "%s  ·  [%s] switch seat",
+  "hud.ww1armor.hull": "Hull %s / %s",
+  "hud.ww1armor.gunner_hint": "Hold attack to fire the MG 08",
+  "subtitles.ww1armor.mg_fire": "Machine gun fires",
+  "subtitles.ww1armor.ricochet": "Bullet ricochets off armor",
+  "subtitles.ww1armor.engine": "Armored car engine"
+}
