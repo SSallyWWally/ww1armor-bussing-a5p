@@ -697,10 +697,7 @@ public class ArmoredCarEntity extends Entity {
         }
         if (!source.is(DamageTypeTags.IS_EXPLOSION) && source.getDirectEntity() != null) {
             // a round that gets through still rings the plate, just duller
-            Vec3 at = source.getSourcePosition();
-            if (at == null) {
-                at = this.position().add(0.0, 1.8, 0.0);
-            }
+            Vec3 at = impactPoint(source);
             this.level().playSound(null, at.x, at.y, at.z, ArmoredCarMod.ARMOR_HIT, SoundSource.PLAYERS, 0.8F,
                     0.9F + this.random.nextFloat() * 0.2F);
         }
@@ -710,6 +707,62 @@ public class ArmoredCarEntity extends Entity {
             destroy();
         }
         return true;
+    }
+
+    /**
+     * Where a hit actually struck the vehicle. The damage source's own position is no good for this: for a gun it can be
+     * the shooter, and fast modded bullets (TACZ) report where they were at the start of the tick, up to ~20 blocks back,
+     * which put the spark/impact effects in the shooter's face. Instead the shot is traced onto the hull's hitboxes.
+     */
+    protected Vec3 impactPoint(DamageSource source) {
+        java.util.List<AABB> boxes = new java.util.ArrayList<>();
+        boxes.add(this.getBoundingBox());
+        for (HullSegmentEntity seg : this.segments) {
+            if (seg != null && !seg.isRemoved()) {
+                boxes.add(seg.getBoundingBox());
+            }
+        }
+        Entity direct = source.getDirectEntity();
+        Entity shooter = direct != null ? direct : source.getEntity();
+        Vec3 from = null, dir = null;
+        if (shooter instanceof LivingEntity living) {
+            from = living.getEyePosition();
+            dir = living.getLookAngle();
+        } else if (shooter != null) {
+            from = shooter.position();
+            Vec3 v = shooter.getDeltaMovement();
+            dir = v.lengthSqr() > 1.0E-6 ? v.normalize() : this.getBoundingBox().getCenter().subtract(from).normalize();
+        }
+        if (from != null) {
+            Vec3 to = from.add(dir.scale(256.0));
+            Vec3 best = null;
+            for (AABB b : boxes) {
+                if (b.inflate(0.05).contains(from)) {
+                    continue;
+                }
+                java.util.Optional<Vec3> hit = b.inflate(0.05).clip(from, to);
+                if (hit.isPresent() && (best == null || hit.get().distanceToSqr(from) < best.distanceToSqr(from))) {
+                    best = hit.get();
+                }
+            }
+            if (best != null) {
+                return best;
+            }
+            // missed every box (spread, explosion splash...): the nearest point of the hull to where it came from
+            AABB near = boxes.get(0);
+            for (AABB b : boxes) {
+                if (b.distanceToSqr(from) < near.distanceToSqr(from)) {
+                    near = b;
+                }
+            }
+            return new Vec3(Mth.clamp(from.x, near.minX, near.maxX), Mth.clamp(from.y, near.minY, near.maxY),
+                    Mth.clamp(from.z, near.minZ, near.maxZ));
+        }
+        Vec3 at = source.getSourcePosition();
+        if (at != null && this.getBoundingBox().inflate(4.5, 1.0, 4.5).contains(at)) {
+            return at;
+        }
+        return this.position().add(0.0, 1.5, 0.0);
     }
 
     /** Returns the damage that gets through the armour (0 = bounced). */
@@ -739,10 +792,7 @@ public class ArmoredCarEntity extends Entity {
         if (!(this.level() instanceof ServerLevel server)) {
             return;
         }
-        Vec3 at = source.getSourcePosition();
-        if (at == null) {
-            at = this.position().add(0.0, 1.8, 0.0);
-        }
+        Vec3 at = impactPoint(source);
         server.sendParticles(ParticleTypes.CRIT, at.x, at.y, at.z, 6, 0.05, 0.05, 0.05, 0.25);
         server.sendParticles(ParticleTypes.SMOKE, at.x, at.y, at.z, 1, 0.0, 0.0, 0.0, 0.01);
         this.level().playSound(null, at.x, at.y, at.z, ArmoredCarMod.RICOCHET, SoundSource.PLAYERS, 0.7F,
