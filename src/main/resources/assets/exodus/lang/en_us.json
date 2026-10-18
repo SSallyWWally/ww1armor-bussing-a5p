@@ -31,5 +31,7 @@
   "subtitles.exodus.engine_stop": "Armored car engine stops",
   "subtitles.exodus.engine_ramp": "Armored car engine revs",
   "key.exodus.engine": "Start / Stop Engine",
-  "hud.exodus.engine_off": "· Engine off"
+  "hud.exodus.engine_off": "· Engine off",
+  "key.exodus.parking_brake": "Parking Brake",
+  "hud.exodus.parking_brake": "· Parking brake"
 }

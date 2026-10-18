@@ -9,6 +9,7 @@ import com.exodusvehicles.compat.TaczCompat;
 import com.exodusvehicles.network.FireGunPayload;
 import com.exodusvehicles.network.ReloadPayload;
 import com.exodusvehicles.network.ToggleEnginePayload;
+import com.exodusvehicles.network.ToggleBrakePayload;
 import com.exodusvehicles.network.TracerPayload;
 import com.exodusvehicles.network.SwitchSeatPayload;
 import net.fabricmc.api.ClientModInitializer;
@@ -32,6 +33,9 @@ public class ArmoredCarClient implements ClientModInitializer {
     public static KeyMapping SWITCH_SEAT;
     public static KeyMapping RELOAD;
     public static KeyMapping ENGINE;
+    public static KeyMapping BRAKE;
+    /** Physical key state last tick, per mapping (for edge detection). */
+    private static final java.util.Map<KeyMapping, Boolean> WAS_DOWN = new java.util.HashMap<>();
 
     private static final ResourceLocation SIGHT_ZOOM = ArmoredCarMod.id("textures/gui/sight_zoom.png");
     private static int ammoCache = 0;
@@ -58,6 +62,8 @@ public class ArmoredCarClient implements ClientModInitializer {
                 "key.exodus.reload", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_B, "key.categories.exodus"));
         ENGINE = KeyBindingHelper.registerKeyBinding(new KeyMapping(
                 "key.exodus.engine", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_P, "key.categories.exodus"));
+        BRAKE = KeyBindingHelper.registerKeyBinding(new KeyMapping(
+                "key.exodus.parking_brake", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_G, "key.categories.exodus"));
 
         ClientPlayNetworking.registerGlobalReceiver(TracerPayload.TYPE, (payload, context) -> {
             Minecraft mc = context.client();
@@ -95,19 +101,24 @@ public class ArmoredCarClient implements ClientModInitializer {
         });
 
         ClientTickEvents.END_CLIENT_TICK.register(mc -> {
-            while (SWITCH_SEAT.consumeClick()) {
-                if (mc.player != null && mc.player.getVehicle() instanceof ArmoredCarEntity) {
-                    ClientPlayNetworking.send(new SwitchSeatPayload());
-                }
+            // Vehicle keys are read straight from the keyboard while riding, so another mod bound to the
+            // same key (very common for N, G, P...) can't swallow them.
+            boolean riding = mc.player != null && mc.player.getVehicle() instanceof ArmoredCarEntity && mc.screen == null;
+            if (pressed(mc, SWITCH_SEAT, riding)) {
+                ClientPlayNetworking.send(new SwitchSeatPayload());
             }
-            while (ENGINE.consumeClick()) {
-                if (mc.player != null && mc.player.getVehicle() instanceof ArmoredCarEntity) {
-                    ClientPlayNetworking.send(new ToggleEnginePayload());
-                }
+            if (pressed(mc, ENGINE, riding)) {
+                ClientPlayNetworking.send(new ToggleEnginePayload());
             }
-            while (RELOAD.consumeClick()) {
-                if (mc.player != null && mc.player.getVehicle() instanceof ArmoredCarEntity) {
-                    ClientPlayNetworking.send(new ReloadPayload());
+            if (pressed(mc, BRAKE, riding)) {
+                ClientPlayNetworking.send(new ToggleBrakePayload());
+            }
+            if (pressed(mc, RELOAD, riding)) {
+                ClientPlayNetworking.send(new ReloadPayload());
+            }
+            for (KeyMapping k : new KeyMapping[]{SWITCH_SEAT, ENGINE, BRAKE, RELOAD}) {
+                while (k.consumeClick()) {
+                    // handled above from the physical key
                 }
             }
             if (mc.player != null && ++ammoCacheAge >= 10) {
@@ -120,6 +131,14 @@ public class ArmoredCarClient implements ClientModInitializer {
             drawSight(graphics, tickCounter.getGameTimeDeltaPartialTick(true));
             drawHud(graphics);
         });
+    }
+
+    /** True on the tick the mapping's bound key goes down (only counted while riding). */
+    private static boolean pressed(Minecraft mc, KeyMapping mapping, boolean riding) {
+        boolean down = riding && GunSight.physicallyDown(mc, mapping);
+        boolean was = WAS_DOWN.getOrDefault(mapping, false);
+        WAS_DOWN.put(mapping, down);
+        return down && !was;
     }
 
     /**
@@ -172,9 +191,15 @@ public class ArmoredCarClient implements ClientModInitializer {
         Component seatLine = Component.translatable("hud.exodus.seat",
                 Component.translatable("seat.exodus." + seat), SWITCH_SEAT.getTranslatedKeyMessage());
         g.drawString(mc.font, seatLine, x, y, 0xFFE8E4D0, true);
-        if (seat == ArmoredCarEntity.DRIVER && !car.isEngineOn()) {
-            g.drawString(mc.font, Component.translatable("hud.exodus.engine_off"),
-                    x + mc.font.width(seatLine) + 8, y, 0xFFB9B6A3, true);
+        if (seat == ArmoredCarEntity.DRIVER) {
+            int sx = x + mc.font.width(seatLine) + 8;
+            if (!car.isEngineOn()) {
+                g.drawString(mc.font, Component.translatable("hud.exodus.engine_off"), sx, y, 0xFFB9B6A3, true);
+                sx += mc.font.width(Component.translatable("hud.exodus.engine_off")) + 6;
+            }
+            if (car.isParkingBrakeOn()) {
+                g.drawString(mc.font, Component.translatable("hud.exodus.parking_brake"), sx, y, 0xFFE0A040, true);
+            }
         }
 
         float hp = car.getHealth(), max = car.getMaxHealth();

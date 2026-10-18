@@ -6,6 +6,7 @@ import com.exodusvehicles.item.ArmoredCarItem;
 import com.exodusvehicles.network.FireGunPayload;
 import com.exodusvehicles.network.ReloadPayload;
 import com.exodusvehicles.network.ToggleEnginePayload;
+import com.exodusvehicles.network.ToggleBrakePayload;
 import com.exodusvehicles.network.TracerPayload;
 import com.exodusvehicles.network.SwitchSeatPayload;
 import net.fabricmc.api.ModInitializer;
@@ -89,6 +90,15 @@ public class ArmoredCarMod implements ModInitializer {
         PayloadTypeRegistry.playC2S().register(FireGunPayload.TYPE, FireGunPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(ReloadPayload.TYPE, ReloadPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(ToggleEnginePayload.TYPE, ToggleEnginePayload.CODEC);
+        PayloadTypeRegistry.playC2S().register(ToggleBrakePayload.TYPE, ToggleBrakePayload.CODEC);
+        ServerPlayNetworking.registerGlobalReceiver(ToggleBrakePayload.TYPE, (payload, context) -> {
+            ServerPlayer player = context.player();
+            player.getServer().execute(() -> {
+                if (player.getVehicle() instanceof ArmoredCarEntity car) {
+                    car.toggleParkingBrake(player);
+                }
+            });
+        });
         PayloadTypeRegistry.playS2C().register(TracerPayload.TYPE, TracerPayload.CODEC);
         ServerPlayNetworking.registerGlobalReceiver(ToggleEnginePayload.TYPE, (payload, context) -> {
             ServerPlayer player = context.player();

@@ -102,6 +102,8 @@ public class ArmoredCarEntity extends Entity {
             SynchedEntityData.defineId(ArmoredCarEntity.class, EntityDataSerializers.BOOLEAN);
     private static final EntityDataAccessor<Boolean> DATA_ENGINE =
             SynchedEntityData.defineId(ArmoredCarEntity.class, EntityDataSerializers.BOOLEAN);
+    private static final EntityDataAccessor<Boolean> DATA_BRAKE =
+            SynchedEntityData.defineId(ArmoredCarEntity.class, EntityDataSerializers.BOOLEAN);
 
     private static EntityDataAccessor<Integer> seatAccessor(int seat) {
         return switch (seat) {
@@ -184,6 +186,7 @@ public class ArmoredCarEntity extends Entity {
         builder.define(DATA_RELOAD, 0);
         builder.define(DATA_OVERHEATED, false);
         builder.define(DATA_ENGINE, false);
+        builder.define(DATA_BRAKE, false);
     }
 
     public int getBelt() {
@@ -204,6 +207,20 @@ public class ArmoredCarEntity extends Entity {
 
     public boolean isEngineOn() {
         return this.entityData.get(DATA_ENGINE) && !isWrecked();
+    }
+
+    public boolean isParkingBrakeOn() {
+        return this.entityData.get(DATA_BRAKE);
+    }
+
+    /** Parking brake key: driver only. Holds the car completely still until released. */
+    public void toggleParkingBrake(ServerPlayer player) {
+        if (isWrecked() || seatOf(player) != DRIVER) {
+            return;
+        }
+        boolean on = !isParkingBrakeOn();
+        this.entityData.set(DATA_BRAKE, on);
+        this.playSound(on ? SoundEvents.IRON_TRAPDOOR_CLOSE : SoundEvents.IRON_TRAPDOOR_OPEN, 0.7F, on ? 0.7F : 0.9F);
     }
 
     /** Engine start/stop key: only the driver can work the engine. */
@@ -250,6 +267,7 @@ public class ArmoredCarEntity extends Entity {
         this.entityData.set(DATA_HEAT, tag.getFloat("Heat"));
         this.entityData.set(DATA_OVERHEATED, tag.getBoolean("Overheated"));
         this.entityData.set(DATA_ENGINE, tag.getBoolean("Engine"));
+        this.entityData.set(DATA_BRAKE, tag.getBoolean("ParkingBrake"));
         // a reload interrupted by a save just completes on load
         int pending = tag.getInt("PendingRounds");
         if (pending > 0) {
@@ -266,6 +284,7 @@ public class ArmoredCarEntity extends Entity {
         tag.putFloat("Heat", getHeat());
         tag.putBoolean("Overheated", isOverheated());
         tag.putBoolean("Engine", this.entityData.get(DATA_ENGINE));
+        tag.putBoolean("ParkingBrake", isParkingBrakeOn());
         tag.putInt("PendingRounds", getReloadTicks() > 0 ? this.pendingRounds : 0);
     }
 
@@ -910,7 +929,7 @@ public class ArmoredCarEntity extends Entity {
             if (controller instanceof Player driver) {
                 drive(driver);
             } else {
-                this.speed *= 0.9F;
+                this.speed *= isParkingBrakeOn() ? 0.5F : 0.9F;
                 this.steer *= 0.9F;
                 this.yawVel *= 0.6F;
                 if (Math.abs(this.speed) < 0.001F) {
@@ -960,7 +979,14 @@ public class ArmoredCarEntity extends Entity {
     /** Heavy truck model: slow throttle response, steering wheel that turns gradually, bicycle-model yaw. */
     private void drive(Player driver) {
         ModConfig cfg = ModConfig.get();
-        float forward = isEngineOn() ? driver.zza : 0.0F;      // engine off: the car only coasts
+        float forward = isEngineOn() && !isParkingBrakeOn() ? driver.zza : 0.0F;   // engine off: the car only coasts
+        if (isParkingBrakeOn()) {
+            // parking brake: wheels locked, the car stops dead within a moment and stays put
+            this.speed *= 0.5F;
+            if (Math.abs(this.speed) < 0.01F) {
+                this.speed = 0.0F;
+            }
+        }
         float strafe = driver.xxa;
 
         if (forward > 0.0F) {
