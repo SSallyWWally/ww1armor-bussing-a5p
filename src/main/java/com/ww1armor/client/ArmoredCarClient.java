@@ -98,8 +98,8 @@ public class ArmoredCarClient implements ClientModInitializer {
     }
 
     /**
-     * MG 08 open sight: rear notch + front blade, drawn at screen centre (the point the gun is aimed at).
-     * Zooming in grows the sight picture and closes in a dark vision-port vignette.
+     * Gun sight: a simple cross at screen centre (the point the gun is aimed at).
+     * Zooming in closes in a dark vision-port vignette.
      */
     private static void drawSight(GuiGraphics g, float partialTick) {
         Minecraft mc = Minecraft.getInstance();
@@ -125,8 +125,8 @@ public class ArmoredCarClient implements ClientModInitializer {
             g.fill(x0, y0 + size, x0 + size, h, (int) (t * 255) << 24);
             RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
         }
-        // the iron sight: texture centre (128,128) is the aiming point
-        int s = (int) (h * (0.55F + 0.55F * t));
+        // the cross: texture centre (128,128) is the aiming point
+        int s = (int) (h * 0.5F);
         g.blit(SIGHT_IRON, w / 2 - s / 2, h / 2 - s / 2, s, s, 0.0F, 0.0F, 256, 256, 256, 256);
         RenderSystem.disableBlend();
     }
@@ -188,8 +188,6 @@ public class ArmoredCarClient implements ClientModInitializer {
                         blink ? 0xFFFF5A3A : 0xFFB04030, true);
                 status += 11;
             }
-            g.drawString(mc.font, Component.translatable("hud.ww1armor.gunner_hint", RELOAD.getTranslatedKeyMessage()),
-                    x, status, 0xFFB9B6A3, true);
         }
     }
 }
