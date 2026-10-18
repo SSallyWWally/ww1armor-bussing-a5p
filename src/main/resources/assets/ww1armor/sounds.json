@@ -74,5 +74,25 @@
         "attenuation_distance": 16
       }
     ]
+  },
+  "mg_fire_far": {
+    "subtitle": "subtitles.ww1armor.mg_fire_far",
+    "sounds": []
+  },
+  "mg_tail": {
+    "subtitle": "subtitles.ww1armor.mg_tail",
+    "sounds": []
+  },
+  "engine_start": {
+    "subtitle": "subtitles.ww1armor.engine_start",
+    "sounds": []
+  },
+  "engine_stop": {
+    "subtitle": "subtitles.ww1armor.engine_stop",
+    "sounds": []
+  },
+  "engine_ramp": {
+    "subtitle": "subtitles.ww1armor.engine_ramp",
+    "sounds": []
   }
 }

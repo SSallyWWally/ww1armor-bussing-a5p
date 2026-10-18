@@ -24,5 +24,10 @@
   "hud.ww1armor.overheated": "OVERHEATED: water jacket boiling",
   "msg.ww1armor.overheated": "MG 08 overheated, let it cool",
   "msg.ww1armor.no_ammo": "No 7.92 mm ammunition (TACZ rifle rounds or ammo box)",
-  "subtitles.ww1armor.armor_hit": "Bullet pierces armor"
+  "subtitles.ww1armor.armor_hit": "Bullet pierces armor",
+  "subtitles.ww1armor.mg_fire_far": "Distant machine gun fire",
+  "subtitles.ww1armor.mg_tail": "Machine gun stops firing",
+  "subtitles.ww1armor.engine_start": "Armored car engine starts",
+  "subtitles.ww1armor.engine_stop": "Armored car engine stops",
+  "subtitles.ww1armor.engine_ramp": "Armored car engine revs"
 }

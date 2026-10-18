@@ -40,6 +40,11 @@ public class ArmoredCarMod implements ModInitializer {
     public static SoundEvent RICOCHET;
     public static SoundEvent ENGINE;
     public static SoundEvent ARMOR_HIT;
+    public static SoundEvent MG_FIRE_FAR;
+    public static SoundEvent MG_TAIL;
+    public static SoundEvent ENGINE_START;
+    public static SoundEvent ENGINE_STOP;
+    public static SoundEvent ENGINE_RAMP;
 
     @Override
     public void onInitialize() {
@@ -68,6 +73,11 @@ public class ArmoredCarMod implements ModInitializer {
         RICOCHET = registerSound("ricochet");
         ENGINE = registerSound("engine");
         ARMOR_HIT = registerSound("armor_hit");
+        MG_FIRE_FAR = registerSound("mg_fire_far");
+        MG_TAIL = registerSound("mg_tail");
+        ENGINE_START = registerSound("engine_start");
+        ENGINE_STOP = registerSound("engine_stop");
+        ENGINE_RAMP = registerSound("engine_ramp");
 
         ItemGroupEvents.modifyEntriesEvent(CreativeModeTabs.COMBAT).register(entries -> entries.accept(BUSSING_A5P_ITEM));
 

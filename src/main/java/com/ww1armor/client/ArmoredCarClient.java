@@ -119,17 +119,15 @@ public class ArmoredCarClient implements ClientModInitializer {
         g.fill(cx - 2, cy, cx + 2, h, 0x40E8E4D0);
         g.fill(0, cy, w, cy + 1, 0xE0141412);
         g.fill(cx - 1, cy, cx + 1, h, 0xE0141412);
-        if (t > 0.01F) {
-            // vignette: a square texture covering the screen height, black bars beside it
-            RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, t);
-            int size = (int) (h * (1.6F - 0.45F * t));
+        // the sight circle and black surround are always there in first person; zoom only narrows the view
+        {
+            int size = (int) (h * 1.15F);
             int x0 = (w - size) / 2, y0 = (h - size) / 2;
             g.blit(SIGHT_ZOOM, x0, y0, size, size, 0.0F, 0.0F, 512, 512, 512, 512);
-            g.fill(0, 0, Math.max(0, x0), h, (int) (t * 255) << 24);
-            g.fill(x0 + size, 0, w, h, (int) (t * 255) << 24);
-            g.fill(x0, 0, x0 + size, Math.max(0, y0), (int) (t * 255) << 24);
-            g.fill(x0, y0 + size, x0 + size, h, (int) (t * 255) << 24);
-            RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
+            g.fill(0, 0, Math.max(0, x0), h, 0xFF000000);
+            g.fill(x0 + size, 0, w, h, 0xFF000000);
+            g.fill(x0, 0, x0 + size, Math.max(0, y0), 0xFF000000);
+            g.fill(x0, y0 + size, x0 + size, h, 0xFF000000);
         }
         RenderSystem.disableBlend();
     }

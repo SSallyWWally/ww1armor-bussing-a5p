@@ -18,6 +18,7 @@ public class CarSoundInstance extends AbstractTickableSoundInstance {
     private final ArmoredCarEntity car;
     private final Kind kind;
     private float level;
+    private int driverTicks;
 
     public CarSoundInstance(ArmoredCarEntity car, SoundEvent sound, Kind kind) {
         super(sound, SoundSource.NEUTRAL, SoundInstance.createUnseededRandom());
@@ -53,8 +54,10 @@ public class CarSoundInstance extends AbstractTickableSoundInstance {
         float speed = this.car.clientSpeed;
         float target;
         if (this.kind == Kind.ENGINE) {
-            target = this.car.hasDriver() ? 0.55F + Math.min(speed, 0.5F) * 0.8F : 0.0F;
-            this.pitch = 0.75F + Math.min(speed, 0.5F) * 1.3F;
+            this.driverTicks = this.car.hasDriver() ? this.driverTicks + 1 : 0;
+            // idle loop comes in under the tail of the start-up sound; pitch rises with road speed
+            target = this.driverTicks > 26 ? 0.6F + Math.min(speed, 0.5F) * 0.7F : 0.0F;
+            this.pitch = 1.0F + Math.min(speed, 0.5F) * 1.0F;
         } else {
             target = Mth.clamp(speed * 1.8F, 0.0F, 0.75F);
             this.pitch = 0.55F + Math.min(speed, 0.5F) * 0.8F;

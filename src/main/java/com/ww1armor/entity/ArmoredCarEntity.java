@@ -116,6 +116,12 @@ public class ArmoredCarEntity extends Entity {
     private float gunCooldown;
     private int pendingRounds;
     private int dryFireCooldown;
+    private int lastShotTick = -100;
+    private boolean burstActive;
+    private Vec3 lastMuzzle = Vec3.ZERO;
+    private int stillTicks;
+    private int rampCooldown;
+    private Vec3 lastServerPos;
     private int wreckTicks;
     private int shotCounter;
     private int lastExplosionTick = -1;
@@ -380,7 +386,16 @@ public class ArmoredCarEntity extends Entity {
             if (free >= 0) {
                 setSeat(free, passenger.getId());
                 announceSeat(passenger, free);
+                if (free == DRIVER) {
+                    engineSound(ArmoredCarMod.ENGINE_START);
+                }
             }
+        }
+    }
+
+    private void engineSound(net.minecraft.sounds.SoundEvent sound) {
+        if (!this.level().isClientSide && !isWrecked()) {
+            this.level().playSound(null, this.getX(), this.getY() + 1.0, this.getZ(), sound, SoundSource.NEUTRAL, 1.0F, 1.0F);
         }
     }
 
@@ -390,6 +405,9 @@ public class ArmoredCarEntity extends Entity {
         super.removePassenger(passenger);
         if (!this.level().isClientSide && seat >= 0) {
             setSeat(seat, -1);
+            if (seat == DRIVER) {
+                engineSound(ArmoredCarMod.ENGINE_STOP);
+            }
         }
     }
 
@@ -404,6 +422,11 @@ public class ArmoredCarEntity extends Entity {
             if (entityInSeat(s) == null) {
                 setSeat(current, -1);
                 setSeat(s, player.getId());
+                if (current == DRIVER) {
+                    engineSound(ArmoredCarMod.ENGINE_STOP);
+                } else if (s == DRIVER) {
+                    engineSound(ArmoredCarMod.ENGINE_START);
+                }
                 announceSeat(player, s);
                 this.positionRider(player);
                 return;
@@ -683,8 +706,12 @@ public class ArmoredCarEntity extends Entity {
                 server.sendParticles(ParticleTypes.ELECTRIC_SPARK, p.x, p.y, p.z, 1, 0.0, 0.0, 0.0, 0.0);
             }
         }
-        server.playSound(null, muzzle.x, muzzle.y, muzzle.z, ArmoredCarMod.MG_FIRE, SoundSource.PLAYERS, 1.0F,
-                0.95F + this.random.nextFloat() * 0.1F);
+        float p = 0.97F + this.random.nextFloat() * 0.06F;
+        server.playSound(null, muzzle.x, muzzle.y, muzzle.z, ArmoredCarMod.MG_FIRE, SoundSource.PLAYERS, 1.0F, p);
+        server.playSound(null, muzzle.x, muzzle.y, muzzle.z, ArmoredCarMod.MG_FIRE_FAR, SoundSource.PLAYERS, 1.0F, p);
+        this.lastShotTick = this.tickCount;
+        this.burstActive = true;
+        this.lastMuzzle = muzzle;
         server.broadcastEntityEvent(this, (byte) 61);    // client: recoil + muzzle flash
     }
 
@@ -708,6 +735,32 @@ public class ArmoredCarEntity extends Entity {
 
     private void tickGunServer() {
         ModConfig cfg = ModConfig.get();
+        // end of a burst: the mechanism's last clatter and the report rolling away
+        if (this.burstActive && this.tickCount - this.lastShotTick > 3) {
+            this.burstActive = false;
+            this.level().playSound(null, this.lastMuzzle.x, this.lastMuzzle.y, this.lastMuzzle.z,
+                    ArmoredCarMod.MG_TAIL, SoundSource.PLAYERS, 1.0F, 1.0F);
+        }
+        // engine revs when the car pulls away from a standstill
+        Vec3 pos = this.position();
+        double moved = this.lastServerPos == null ? 0.0 : pos.subtract(this.lastServerPos).horizontalDistance();
+        this.lastServerPos = pos;
+        if (this.rampCooldown > 0) {
+            this.rampCooldown--;
+        }
+        if (hasDriver()) {
+            if (moved < 0.02) {
+                this.stillTicks++;
+            } else {
+                if (this.stillTicks > 20 && moved > 0.03 && this.rampCooldown == 0) {
+                    engineSound(ArmoredCarMod.ENGINE_RAMP);
+                    this.rampCooldown = 70;
+                }
+                this.stillTicks = 0;
+            }
+        } else {
+            this.stillTicks = 0;
+        }
         if (this.gunCooldown > 0.0F) {
             this.gunCooldown = Math.max(0.0F, this.gunCooldown - 1.0F);
         }
