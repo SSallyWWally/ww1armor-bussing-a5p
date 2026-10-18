@@ -486,18 +486,9 @@ public class ArmoredCarEntity extends Entity {
             return InteractionResult.sidedSuccess(this.level().isClientSide);
         }
 
+        // No picking the car back up as an item: once placed it stays until destroyed
+        // (creative players can still remove it by hitting it).
         if (player.isSecondaryUseActive()) {
-            if (stack.isEmpty() && this.getPassengers().isEmpty()) {
-                if (!this.level().isClientSide) {
-                    if (getHealth() < getMaxHealth()) {
-                        player.displayClientMessage(Component.translatable("msg.ww1armor.repair_first"), true);
-                    } else {
-                        this.spawnAtLocation(new ItemStack(ArmoredCarMod.BUSSING_A5P_ITEM));
-                        this.discard();
-                    }
-                }
-                return InteractionResult.sidedSuccess(this.level().isClientSide);
-            }
             return InteractionResult.PASS;
         }
 
