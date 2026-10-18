@@ -2,20 +2,43 @@
   "mg_fire": {
     "subtitle": "subtitles.ww1armor.mg_fire",
     "sounds": [
-      { "name": "minecraft:random/explode1", "pitch": 1.9, "volume": 0.45 },
-      { "name": "minecraft:random/explode2", "pitch": 2.0, "volume": 0.45 },
-      { "name": "minecraft:random/explode3", "pitch": 1.85, "volume": 0.45 }
+      {
+        "name": "ww1armor:mg08_1",
+        "attenuation_distance": 96
+      },
+      {
+        "name": "ww1armor:mg08_2",
+        "attenuation_distance": 96
+      },
+      {
+        "name": "ww1armor:mg08_3",
+        "attenuation_distance": 96
+      }
     ]
   },
   "ricochet": {
     "subtitle": "subtitles.ww1armor.ricochet",
     "sounds": [
-      { "name": "minecraft:random/anvil_land", "pitch": 2.0, "volume": 0.35 },
-      { "name": "minecraft:random/anvil_land", "pitch": 1.7, "volume": 0.3 }
+      {
+        "name": "minecraft:random/anvil_land",
+        "pitch": 2.0,
+        "volume": 0.35
+      },
+      {
+        "name": "minecraft:random/anvil_land",
+        "pitch": 1.7,
+        "volume": 0.3
+      }
     ]
   },
   "engine": {
     "subtitle": "subtitles.ww1armor.engine",
-    "sounds": [ { "name": "ww1armor:engine_loop", "attenuation_distance": 32 } ]
+    "sounds": [
+      {
+        "name": "ww1armor:engine_loop",
+        "attenuation_distance": 40,
+        "stream": false
+      }
+    ]
   }
 }

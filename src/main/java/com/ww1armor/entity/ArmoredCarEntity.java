@@ -773,9 +773,23 @@ public class ArmoredCarEntity extends Entity {
                 }
             }
             applyMotion();
-            this.move(MoverType.SELF, this.getDeltaMovement());
+            Vec3 before = this.position();
+            Vec3 wanted = this.getDeltaMovement();
+            this.move(MoverType.SELF, wanted);
             if (this.horizontalCollision) {
-                this.speed *= 0.4F;
+                // Lose speed only in proportion to how much of the move was actually blocked:
+                // clipping a corner or a slab barely slows the car, a solid wall stops it.
+                double want = Math.hypot(wanted.x, wanted.z);
+                double got = Math.hypot(this.getX() - before.x, this.getZ() - before.z);
+                float ratio = want > 1.0E-4 ? (float) Mth.clamp(got / want, 0.0, 1.0) : 1.0F;
+                if (ratio < 0.15F) {
+                    this.speed *= 0.2F;           // driving into a wall
+                } else if (ratio < 0.85F) {
+                    this.speed *= 0.6F + 0.4F * ratio;
+                }
+            }
+            if (this.getY() - before.y > 0.4) {
+                this.speed *= 0.97F;              // climbing a block: a jolt, not a stop
             }
         } else {
             this.setDeltaMovement(Vec3.ZERO);
