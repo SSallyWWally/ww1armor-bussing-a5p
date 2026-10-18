@@ -665,15 +665,15 @@ public class ArmoredCarModel {
         this.recoil.z = 2.0F * Mth.lerp(partialTick, car.recoilO, car.recoil);   // slides back on firing
     }
 
-    /** Main pass. interiorView hides the upper hull and the cupola shell (the MG stays visible). */
+    /** Main pass. interiorView hides the upper hull and the whole cupola (drum, ports, gun) so the crew can see out. */
     public void render(PoseStack poseStack, VertexConsumer consumer, int light, int overlay, boolean interiorView) {
         for (ModelPart p : this.hidden) {
             p.visible = !interiorView;
         }
-        this.turret.skipDraw = interiorView;
+        this.turret.visible = !interiorView;     // hides every child too (skipDraw only hid the base plate)
         this.flash.visible = false;
         this.root.render(poseStack, consumer, light, overlay);
-        this.turret.skipDraw = false;
+        this.turret.visible = true;
     }
 
     /** Second pass drawing only the muzzle flash (full-bright). */

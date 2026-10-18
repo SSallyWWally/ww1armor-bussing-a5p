@@ -46,7 +46,7 @@ public class ArmoredCarRenderer extends EntityRenderer<ArmoredCarEntity> {
         this.model.setupAnim(car, partialTick);
         this.model.render(poseStack, buffers.getBuffer(RenderType.entityCutoutNoCull(tex)),
                 packedLight, OverlayTexture.NO_OVERLAY, interior);
-        if (car.flashTicks > 0 && !car.isWrecked()) {
+        if (car.flashTicks > 0 && !car.isWrecked() && !interior) {
             this.model.renderFlash(poseStack, buffers.getBuffer(RenderType.entityCutoutNoCull(tex)), OverlayTexture.NO_OVERLAY);
         }
         poseStack.popPose();

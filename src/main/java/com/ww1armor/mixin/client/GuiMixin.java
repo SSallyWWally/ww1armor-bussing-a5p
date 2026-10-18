@@ -16,4 +16,12 @@ public abstract class GuiMixin {
             ci.cancel();
         }
     }
+
+    /** Hotbar (and the bars around it) hidden while manning the gun sight. */
+    @Inject(method = "renderHotbarAndDecorations", at = @At("HEAD"), cancellable = true)
+    private void ww1armor$hideHotbar(CallbackInfo ci) {
+        if (GunSight.inSight()) {
+            ci.cancel();
+        }
+    }
 }
