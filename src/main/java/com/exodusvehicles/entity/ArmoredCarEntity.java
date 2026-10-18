@@ -462,7 +462,8 @@ public class ArmoredCarEntity extends Entity {
 
     private void engineSound(net.minecraft.sounds.SoundEvent sound) {
         if (!this.level().isClientSide && !isWrecked()) {
-            this.level().playSound(null, this.getX(), this.getY() + 1.0, this.getZ(), sound, SoundSource.NEUTRAL, 1.0F, 1.0F);
+            // same sound category as the gun, so one volume slider ("Players") covers the whole vehicle
+            this.level().playSound(null, this.getX(), this.getY() + 1.0, this.getZ(), sound, SoundSource.PLAYERS, 1.0F, 1.0F);
         }
     }
 
@@ -627,7 +628,7 @@ public class ArmoredCarEntity extends Entity {
             if (at == null) {
                 at = this.position().add(0.0, 1.8, 0.0);
             }
-            this.level().playSound(null, at.x, at.y, at.z, ArmoredCarMod.ARMOR_HIT, SoundSource.NEUTRAL, 0.8F,
+            this.level().playSound(null, at.x, at.y, at.z, ArmoredCarMod.ARMOR_HIT, SoundSource.PLAYERS, 0.8F,
                     0.9F + this.random.nextFloat() * 0.2F);
         }
         setHealth(getHealth() - dealt);
@@ -668,7 +669,7 @@ public class ArmoredCarEntity extends Entity {
         }
         server.sendParticles(ParticleTypes.CRIT, at.x, at.y, at.z, 6, 0.05, 0.05, 0.05, 0.25);
         server.sendParticles(ParticleTypes.SMOKE, at.x, at.y, at.z, 1, 0.0, 0.0, 0.0, 0.01);
-        this.level().playSound(null, at.x, at.y, at.z, ArmoredCarMod.RICOCHET, SoundSource.NEUTRAL, 0.7F,
+        this.level().playSound(null, at.x, at.y, at.z, ArmoredCarMod.RICOCHET, SoundSource.PLAYERS, 0.7F,
                 0.9F + this.random.nextFloat() * 0.3F);
     }
 
@@ -792,6 +793,7 @@ public class ArmoredCarEntity extends Entity {
                 net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(viewer, tracer);
             }
         }
+        groundAndFlyby(server, shooter, muzzle, end, blockHit.getType() == HitResult.Type.BLOCK && entityHit == null);
         playGunSound(server, muzzle, ArmoredCarMod.MG_FIRE, ArmoredCarMod.MG_FIRE_FAR,
                 0.97F + this.random.nextFloat() * 0.06F);
         this.lastShotTick = this.tickCount;
@@ -814,15 +816,68 @@ public class ArmoredCarEntity extends Entity {
             if (d > 200.0) {
                 continue;
             }
-            float farMix = this.hasPassenger(p) ? 0.0F : (float) Mth.clamp((d - 12.0) / 6.0, 0.0, 1.0);
+            if (this.hasPassenger(p)) {
+                // the crew are inside the armoured box with the gun: louder, boomier version
+                if (close == ArmoredCarMod.MG_FIRE) {
+                    p.connection.send(new net.minecraft.network.protocol.game.ClientboundSoundPacket(
+                            BuiltInRegistries.SOUND_EVENT.wrapAsHolder(ArmoredCarMod.MG_FIRE_INSIDE), SoundSource.PLAYERS,
+                            at.x, at.y, at.z, 1.0F, pitch, seed));
+                } else {
+                    p.connection.send(new net.minecraft.network.protocol.game.ClientboundSoundPacket(closeH, SoundSource.PLAYERS,
+                            at.x, at.y, at.z, 1.0F, pitch, seed));
+                }
+                continue;
+            }
+            float farMix = (float) Mth.clamp((d - 12.0) / 6.0, 0.0, 1.0);
             if (farMix < 1.0F) {
                 p.connection.send(new net.minecraft.network.protocol.game.ClientboundSoundPacket(closeH, SoundSource.PLAYERS,
-                        at.x, at.y, at.z, 1.0F - farMix, pitch, seed));
+                        at.x, at.y, at.z, 0.8F * (1.0F - farMix), pitch, seed));
             }
             if (farMix > 0.0F) {
                 p.connection.send(new net.minecraft.network.protocol.game.ClientboundSoundPacket(farH, SoundSource.PLAYERS,
                         at.x, at.y, at.z, 4.0F * farMix, pitch, seed));    // volume > 1 widens the hearing range
             }
+        }
+    }
+
+    /** Last tick each player heard a round fly past (keeps fly-bys from stacking up at 10 rounds/s). */
+    private final java.util.Map<java.util.UUID, Integer> lastFlyby = new java.util.HashMap<>();
+
+    /**
+     * Ground impact sound where a round lands, and a fly-by for anyone the round passes close to
+     * (heard only by that player, from the point where it went past them).
+     */
+    private void groundAndFlyby(ServerLevel server, ServerPlayer shooter, Vec3 from, Vec3 to, boolean hitGround) {
+        if (hitGround) {
+            server.playSound(null, to.x, to.y, to.z, ArmoredCarMod.IMPACT_GROUND, SoundSource.PLAYERS,
+                    0.7F, 0.9F + this.random.nextFloat() * 0.2F);
+        }
+        Vec3 seg = to.subtract(from);
+        double len2 = seg.lengthSqr();
+        if (len2 < 1.0) {
+            return;
+        }
+        for (ServerPlayer p : server.players()) {
+            if (p == shooter || this.hasPassenger(p) || p.isSpectator()) {
+                continue;
+            }
+            Vec3 eye = p.getEyePosition();
+            double t = eye.subtract(from).dot(seg) / len2;
+            if (t < 0.05 || t > 0.97) {
+                continue;               // not passed: in front of the gun, or it hit them / landed by them
+            }
+            Vec3 closest = from.add(seg.scale(t));
+            if (closest.distanceToSqr(eye) > 2.5 * 2.5) {
+                continue;
+            }
+            Integer last = this.lastFlyby.get(p.getUUID());
+            if (last != null && this.tickCount - last < 4) {
+                continue;
+            }
+            this.lastFlyby.put(p.getUUID(), this.tickCount);
+            p.connection.send(new net.minecraft.network.protocol.game.ClientboundSoundPacket(
+                    BuiltInRegistries.SOUND_EVENT.wrapAsHolder(ArmoredCarMod.BULLET_FLYBY), SoundSource.PLAYERS,
+                    closest.x, closest.y, closest.z, 1.0F, 0.9F + this.random.nextFloat() * 0.2F, this.random.nextLong()));
         }
     }
 
@@ -840,8 +895,13 @@ public class ArmoredCarEntity extends Entity {
         }
         this.pendingRounds = taken;
         this.entityData.set(DATA_RELOAD, Math.max(1, cfg.mgReloadTicks));
-        this.playSound(SoundEvents.ARMOR_EQUIP_CHAIN.value(), 1.0F, 0.8F);
+        gunSoundAtTurret(ArmoredCarMod.RELOAD_OUT);            // empty belt out
         return true;
+    }
+
+    private void gunSoundAtTurret(net.minecraft.sounds.SoundEvent sound) {
+        Vec3 at = localToWorld(0.0, GUN_PIVOT_UP, GUN_PIVOT_FWD);
+        this.level().playSound(null, at.x, at.y, at.z, sound, SoundSource.PLAYERS, 1.0F, 1.0F);
     }
 
     private void tickGunServer() {
@@ -891,13 +951,12 @@ public class ArmoredCarEntity extends Entity {
         if (reload > 0) {
             reload--;
             this.entityData.set(DATA_RELOAD, reload);
-            if (reload == cfg.mgReloadTicks / 2) {
-                this.playSound(SoundEvents.CROSSBOW_LOADING_MIDDLE.value(), 0.9F, 0.7F);
+            if (reload == Math.min(28, cfg.mgReloadTicks / 2)) {
+                gunSoundAtTurret(ArmoredCarMod.RELOAD_IN);         // new belt in, ends as the reload completes
             }
             if (reload == 0) {
                 this.entityData.set(DATA_BELT, Math.min(cfg.mgBeltSize, getBelt() + this.pendingRounds));
                 this.pendingRounds = 0;
-                this.playSound(SoundEvents.IRON_TRAPDOOR_CLOSE, 1.0F, 1.5F);
             }
         }
     }

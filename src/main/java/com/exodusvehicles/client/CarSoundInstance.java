@@ -21,7 +21,7 @@ public class CarSoundInstance extends AbstractTickableSoundInstance {
     private int driverTicks;
 
     public CarSoundInstance(ArmoredCarEntity car, SoundEvent sound, Kind kind) {
-        super(sound, SoundSource.NEUTRAL, SoundInstance.createUnseededRandom());
+        super(sound, SoundSource.PLAYERS, SoundInstance.createUnseededRandom());
         this.car = car;
         this.kind = kind;
         this.looping = true;

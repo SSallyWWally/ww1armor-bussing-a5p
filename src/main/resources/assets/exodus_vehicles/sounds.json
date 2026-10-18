@@ -98,5 +98,25 @@
   "mg_tail_far": {
     "subtitle": "subtitles.exodus_vehicles.mg_tail",
     "sounds": []
+  },
+  "mg_fire_inside": {
+    "subtitle": "subtitles.exodus_vehicles.mg_fire_inside",
+    "sounds": []
+  },
+  "reload_out": {
+    "subtitle": "subtitles.exodus_vehicles.reload_out",
+    "sounds": []
+  },
+  "reload_in": {
+    "subtitle": "subtitles.exodus_vehicles.reload_in",
+    "sounds": []
+  },
+  "impact_ground": {
+    "subtitle": "subtitles.exodus_vehicles.impact_ground",
+    "sounds": []
+  },
+  "bullet_flyby": {
+    "subtitle": "subtitles.exodus_vehicles.bullet_flyby",
+    "sounds": []
   }
 }

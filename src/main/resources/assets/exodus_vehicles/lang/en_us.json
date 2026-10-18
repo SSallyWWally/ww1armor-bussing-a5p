@@ -33,5 +33,10 @@
   "key.exodus_vehicles.engine": "Start / Stop Engine",
   "hud.exodus_vehicles.engine_off": "· Engine off",
   "key.exodus_vehicles.parking_brake": "Parking Brake",
-  "hud.exodus_vehicles.parking_brake": "· Parking brake"
+  "hud.exodus_vehicles.parking_brake": "· Parking brake",
+  "subtitles.exodus_vehicles.mg_fire_inside": "Machine gun fires",
+  "subtitles.exodus_vehicles.reload_out": "Belt pulled out",
+  "subtitles.exodus_vehicles.reload_in": "Belt fed in",
+  "subtitles.exodus_vehicles.impact_ground": "Bullet hits the ground",
+  "subtitles.exodus_vehicles.bullet_flyby": "Bullet flies past"
 }
