@@ -20,20 +20,29 @@
     "subtitle": "subtitles.ww1armor.ricochet",
     "sounds": [
       {
-        "name": "ww1armor:dink_1",
-        "attenuation_distance": 40
+        "name": "ww1armor:tick_1",
+        "volume": 0.55,
+        "attenuation_distance": 16
       },
       {
-        "name": "ww1armor:dink_2",
-        "attenuation_distance": 40
+        "name": "ww1armor:tick_2",
+        "volume": 0.55,
+        "attenuation_distance": 16
       },
       {
-        "name": "ww1armor:dink_3",
-        "attenuation_distance": 40
+        "name": "ww1armor:tick_3",
+        "volume": 0.55,
+        "attenuation_distance": 16
       },
       {
-        "name": "ww1armor:dink_4",
-        "attenuation_distance": 40
+        "name": "ww1armor:tick_4",
+        "volume": 0.55,
+        "attenuation_distance": 16
+      },
+      {
+        "name": "ww1armor:tick_5",
+        "volume": 0.55,
+        "attenuation_distance": 16
       }
     ]
   },
@@ -50,12 +59,19 @@
     "subtitle": "subtitles.ww1armor.armor_hit",
     "sounds": [
       {
-        "name": "ww1armor:clank_1",
-        "attenuation_distance": 40
+        "name": "ww1armor:tunk_1",
+        "volume": 0.65,
+        "attenuation_distance": 16
       },
       {
-        "name": "ww1armor:clank_2",
-        "attenuation_distance": 40
+        "name": "ww1armor:tunk_2",
+        "volume": 0.65,
+        "attenuation_distance": 16
+      },
+      {
+        "name": "ww1armor:tunk_3",
+        "volume": 0.65,
+        "attenuation_distance": 16
       }
     ]
   }

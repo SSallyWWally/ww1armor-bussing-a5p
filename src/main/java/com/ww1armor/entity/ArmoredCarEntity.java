@@ -554,7 +554,7 @@ public class ArmoredCarEntity extends Entity {
             if (at == null) {
                 at = this.position().add(0.0, 1.8, 0.0);
             }
-            this.level().playSound(null, at.x, at.y, at.z, ArmoredCarMod.ARMOR_HIT, SoundSource.NEUTRAL, 1.2F,
+            this.level().playSound(null, at.x, at.y, at.z, ArmoredCarMod.ARMOR_HIT, SoundSource.NEUTRAL, 0.8F,
                     0.9F + this.random.nextFloat() * 0.2F);
         }
         setHealth(getHealth() - dealt);
@@ -595,7 +595,7 @@ public class ArmoredCarEntity extends Entity {
         }
         server.sendParticles(ParticleTypes.CRIT, at.x, at.y, at.z, 6, 0.05, 0.05, 0.05, 0.25);
         server.sendParticles(ParticleTypes.SMOKE, at.x, at.y, at.z, 1, 0.0, 0.0, 0.0, 0.01);
-        this.level().playSound(null, at.x, at.y, at.z, ArmoredCarMod.RICOCHET, SoundSource.NEUTRAL, 1.0F,
+        this.level().playSound(null, at.x, at.y, at.z, ArmoredCarMod.RICOCHET, SoundSource.NEUTRAL, 0.7F,
                 0.9F + this.random.nextFloat() * 0.3F);
     }
 
