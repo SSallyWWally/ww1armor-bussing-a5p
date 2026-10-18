@@ -73,8 +73,10 @@ public class ArmoredCarClient implements ClientModInitializer {
                     // from the muzzle of the gun as the gunner sees it (closer, just under the sight)
                     net.minecraft.world.phys.Vec3 end = new net.minecraft.world.phys.Vec3(payload.ex(), payload.ey(), payload.ez());
                     net.minecraft.world.phys.Vec3 d = end.subtract(start).normalize();
+                    net.minecraft.world.phys.Vec3 right = new net.minecraft.world.phys.Vec3(-d.z, 0.0, d.x).normalize();
                     start = start.subtract(d.scale(ArmoredCarEntity.MUZZLE_DIST - ArmoredCarEntity.GUNNER_MUZZLE_DIST))
-                            .add(0.0, -ArmoredCarEntity.BARREL_BELOW_SIGHT, 0.0);
+                            .add(0.0, -ArmoredCarEntity.BARREL_BELOW_SIGHT, 0.0)
+                            .add(right.scale(ArmoredCarEntity.GUNNER_MUZZLE_RIGHT));
                 }
                 car.tracers.add(new ArmoredCarEntity.Tracer(start,
                         new net.minecraft.world.phys.Vec3(payload.ex(), payload.ey(), payload.ez())));
@@ -160,10 +162,8 @@ public class ArmoredCarClient implements ClientModInitializer {
         // WW1 reticle: one line across the whole sight, and a post from the centre down; no centre dot.
         // A faint light edge keeps it readable against dark ground. Drawn first so the zoom vignette crops it.
         int cx = w / 2, cy = h / 2;
-        g.fill(0, cy - 1, w, cy + 2, 0x40E8E4D0);
-        g.fill(cx - 2, cy, cx + 2, h, 0x40E8E4D0);
-        g.fill(0, cy, w, cy + 1, 0xE0141412);
-        g.fill(cx - 1, cy, cx + 1, h, 0xE0141412);
+        g.fill(0, cy, w, cy + 1, 0xFF000000);
+        g.fill(cx - 1, cy, cx + 1, h, 0xFF000000);
         // the sight circle and black surround are always there in first person; zoom only narrows the view
         {
             int size = (int) (h * 1.15F);

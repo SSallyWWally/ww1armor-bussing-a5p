@@ -54,7 +54,8 @@ public class ArmoredCarRenderer extends EntityRenderer<ArmoredCarEntity> {
         this.model.render(poseStack, buffers.getBuffer(RenderType.entityCutoutNoCull(tex)),
                 packedLight, OverlayTexture.NO_OVERLAY, interior, gunnerView);
         if (car.flashTicks > 0 && !car.isWrecked() && (!interior || gunnerView)) {
-            renderMuzzleFlash(car, partialTick, this.model.muzzlePoint(poseStack), buffers, gunnerView);
+            org.joml.Vector3f[] mz = this.model.muzzle(poseStack);
+            renderMuzzleFlash(car, partialTick, mz[0], mz[1], buffers, gunnerView);
         }
         poseStack.popPose();
         renderTracers(car, partialTick, poseStack, buffers);
@@ -65,12 +66,14 @@ public class ArmoredCarRenderer extends EntityRenderer<ArmoredCarEntity> {
      * Flat, camera-facing muzzle flash. Each round plays three stages over its 2 ticks: a small hot ignition,
      * the full starburst, then embers in a puff of smoke (seen at the end of a burst). Style, size and spin vary per round.
      */
-    private void renderMuzzleFlash(ArmoredCarEntity car, float partialTick, org.joml.Vector3f at,
+    private void renderMuzzleFlash(ArmoredCarEntity car, float partialTick, org.joml.Vector3f tip, org.joml.Vector3f dir,
                                    MultiBufferSource buffers, boolean gunnerView) {
         float age = (2 - car.flashTicks) + partialTick;
         int stage = age < 0.45F ? 0 : age < 1.3F ? 1 : 2;
         float size = 0.42F * car.flashScale * (stage == 0 ? 0.6F : stage == 1 ? 1.0F : 1.25F) * (gunnerView ? 0.5F : 1.0F);
         float u0 = car.flashStyle * 0.25F, v0 = stage / 3.0F, u1 = u0 + 0.25F, v1 = v0 + 1.0F / 3.0F;
+        // the burst blooms just ahead of the muzzle, not around the barrel
+        org.joml.Vector3f at = new org.joml.Vector3f(dir).mul(size * 0.55F).add(tip);
 
         org.joml.Quaternionf camRot = Minecraft.getInstance().gameRenderer.getMainCamera().rotation();
         float c = Mth.cos(car.flashSpin), s = Mth.sin(car.flashSpin);

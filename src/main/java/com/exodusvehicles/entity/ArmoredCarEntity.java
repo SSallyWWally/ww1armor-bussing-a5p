@@ -66,9 +66,11 @@ public class ArmoredCarEntity extends Entity {
     public static final double GUN_PIVOT_FWD = -11.5 / 16.0;
     public static final double MUZZLE_DIST = 29.3 / 16.0;
     /** How far the barrel sits below the gunner's sight line (blocks). */
-    public static final double BARREL_BELOW_SIGHT = 4.5 / 16.0;
+    public static final double BARREL_BELOW_SIGHT = 5.5 / 16.0;
     /** In the gunner's own view the whole gun sits just under the sight; its muzzle is this far ahead of the eye. */
-    public static final double GUNNER_MUZZLE_DIST = 21.0 / 16.0;
+    public static final double GUNNER_MUZZLE_DIST = 19.0 / 16.0;
+    /** ...and this far to the gunner's right. */
+    public static final double GUNNER_MUZZLE_RIGHT = 1.5 / 16.0;
     /** Tracer flight speed (blocks per tick) and lifetime (ticks). */
     public static final double TRACER_SPEED = 12.0;
     public static final int TRACER_LIFE = 12;
@@ -734,7 +736,9 @@ public class ArmoredCarEntity extends Entity {
         // below the sight, so flash, smoke and tracers start there and stay out of the gunner's view.
         Vec3 pivot = localToWorld(0.0, GUN_PIVOT_UP, GUN_PIVOT_FWD);
         Vec3 rayStart = pivot.add(dir.scale(1.0));
-        Vec3 muzzle = pivot.add(dir.scale(GUNNER_MUZZLE_DIST)).add(0.0, -BARREL_BELOW_SIGHT, 0.0);
+        Vec3 right = new Vec3(-dir.z, 0.0, dir.x).normalize();
+        Vec3 muzzle = pivot.add(dir.scale(GUNNER_MUZZLE_DIST)).add(0.0, -BARREL_BELOW_SIGHT, 0.0)
+                .add(right.scale(GUNNER_MUZZLE_RIGHT));
         Vec3 end = pivot.add(dir.scale(cfg.mgRange));
 
         BlockHitResult blockHit = this.level().clip(new ClipContext(rayStart, end,

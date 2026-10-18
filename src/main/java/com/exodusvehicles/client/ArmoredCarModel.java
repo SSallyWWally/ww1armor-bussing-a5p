@@ -33,13 +33,14 @@ public class ArmoredCarModel {
     private final List<ModelPart> allParts;
     private final ModelPart turret, gun, recoil, flash;
     private final ModelPart steerL, steerR;
-    private final float gunBaseY, gunBaseZ;
+    private final float gunBaseX, gunBaseY, gunBaseZ;
     /**
      * Gunner's view (like Battlefield vehicle guns): the whole MG sits right under the eye, breech just in front of it,
      * so the water jacket runs up from the bottom of the screen and the front sight post meets the reticle.
      */
-    private static final float GUNNER_GUN_Y = -0.5F;     // turret space; eye at -5: gun axis 4.5 px below the eye
-    private static final float GUNNER_GUN_Z = -5.0F;
+    private static final float GUNNER_GUN_X = -1.5F;     // turret space; model -x = the gunner's right
+    private static final float GUNNER_GUN_Y = 0.5F;      // eye at -5: gun axis 5.5 px below the eye
+    private static final float GUNNER_GUN_Z = -3.0F;
     private final ModelPart[] spin;
 
     public ArmoredCarModel(ModelPart root) {
@@ -51,6 +52,7 @@ public class ArmoredCarModel {
         this.gun = this.turret.getChild("gun");
         this.recoil = this.gun.getChild("recoil");
         this.flash = this.recoil.getChild("flash");
+        this.gunBaseX = this.gun.x;
         this.gunBaseY = this.gun.y;
         this.gunBaseZ = this.gun.z;
         this.steerL = root.getChild("wheel0l_steer");
@@ -684,6 +686,7 @@ public class ArmoredCarModel {
         }
         this.turret.yRot = yaw;
         this.gun.xRot = pitch;
+        this.gun.x = gunnerView != null ? GUNNER_GUN_X : this.gunBaseX;
         this.gun.y = gunnerView != null ? GUNNER_GUN_Y : this.gunBaseY;
         this.gun.z = gunnerView != null ? GUNNER_GUN_Z : this.gunBaseZ;
         this.recoil.z = 2.0F * Mth.lerp(partialTick, car.recoilO, car.recoil);   // slides back on firing
@@ -703,6 +706,7 @@ public class ArmoredCarModel {
         this.turret.visible = !interiorView || gunnerView;     // hides every child too
         if (gunnerView) {
             this.turret.skipDraw = true;
+            this.gun.skipDraw = true;          // no breech block filling the sight; jacket and barrel only
             this.turret.getAllParts().forEach(p -> {
                 if (p != this.turret && p != this.gun && p != this.recoil && p != this.flash && !isUnder(p, this.gun)) {
                     p.visible = false;
@@ -713,20 +717,23 @@ public class ArmoredCarModel {
         this.root.render(poseStack, consumer, light, overlay);
         this.turret.visible = true;
         this.turret.skipDraw = false;
+        this.gun.skipDraw = false;
         this.turret.getAllParts().forEach(p -> p.visible = true);
         this.flash.visible = false;
     }
 
-    /** Muzzle position in the space of the given pose (call with the model's render pose). */
-    public org.joml.Vector3f muzzlePoint(PoseStack poseStack) {
+    /** Barrel tip and barrel direction (unit) in the space of the given pose (call with the model's render pose). */
+    public org.joml.Vector3f[] muzzle(PoseStack poseStack) {
         poseStack.pushPose();
         this.turret.translateAndRotate(poseStack);
         this.gun.translateAndRotate(poseStack);
         this.recoil.translateAndRotate(poseStack);
         this.flash.translateAndRotate(poseStack);
-        org.joml.Vector3f v = poseStack.last().pose().transformPosition(new org.joml.Vector3f(0.0F, 0.0F, 0.1F / 16.0F));
+        org.joml.Matrix4f m = poseStack.last().pose();
+        org.joml.Vector3f tip = m.transformPosition(new org.joml.Vector3f(0.0F, 0.0F, 0.0F));
+        org.joml.Vector3f ahead = m.transformPosition(new org.joml.Vector3f(0.0F, 0.0F, -1.0F / 16.0F));
         poseStack.popPose();
-        return v;
+        return new org.joml.Vector3f[]{tip, ahead.sub(tip).normalize()};
     }
 
     private boolean isUnder(ModelPart part, ModelPart parent) {
