@@ -74,8 +74,12 @@ public class ArmoredCarClient implements ClientModInitializer {
                     net.minecraft.world.phys.Vec3 end = new net.minecraft.world.phys.Vec3(payload.ex(), payload.ey(), payload.ez());
                     net.minecraft.world.phys.Vec3 d = end.subtract(start).normalize();
                     net.minecraft.world.phys.Vec3 right = new net.minecraft.world.phys.Vec3(-d.z, 0.0, d.x).normalize();
+                    net.minecraft.world.phys.Vec3 down = d.cross(right).normalize();
+                    if (down.y > 0) {
+                        down = down.scale(-1.0);
+                    }
                     start = start.subtract(d.scale(ArmoredCarEntity.MUZZLE_DIST - ArmoredCarEntity.GUNNER_MUZZLE_DIST))
-                            .add(0.0, -ArmoredCarEntity.BARREL_BELOW_SIGHT, 0.0)
+                            .add(down.scale(ArmoredCarEntity.BARREL_BELOW_SIGHT))
                             .add(right.scale(ArmoredCarEntity.GUNNER_MUZZLE_RIGHT));
                 }
                 car.tracers.add(new ArmoredCarEntity.Tracer(start,

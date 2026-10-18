@@ -738,7 +738,11 @@ public class ArmoredCarEntity extends Entity {
         Vec3 pivot = localToWorld(0.0, GUN_PIVOT_UP, GUN_PIVOT_FWD);
         Vec3 rayStart = pivot.add(dir.scale(1.0));
         Vec3 right = new Vec3(-dir.z, 0.0, dir.x).normalize();
-        Vec3 muzzle = pivot.add(dir.scale(GUNNER_MUZZLE_DIST)).add(0.0, -BARREL_BELOW_SIGHT, 0.0)
+        Vec3 viewDown = dir.cross(right).normalize();          // "down" on the gunner's screen
+        if (viewDown.y > 0) {
+            viewDown = viewDown.scale(-1.0);
+        }
+        Vec3 muzzle = pivot.add(dir.scale(GUNNER_MUZZLE_DIST)).add(viewDown.scale(BARREL_BELOW_SIGHT))
                 .add(right.scale(GUNNER_MUZZLE_RIGHT));
         Vec3 end = pivot.add(dir.scale(cfg.mgRange));
 
@@ -850,7 +854,7 @@ public class ArmoredCarEntity extends Entity {
     private void groundAndFlyby(ServerLevel server, ServerPlayer shooter, Vec3 from, Vec3 to, boolean hitGround) {
         if (hitGround) {
             server.playSound(null, to.x, to.y, to.z, ArmoredCarMod.IMPACT_GROUND, SoundSource.PLAYERS,
-                    0.7F, 0.9F + this.random.nextFloat() * 0.2F);
+                    1.0F, 0.9F + this.random.nextFloat() * 0.2F);
         }
         Vec3 seg = to.subtract(from);
         double len2 = seg.lengthSqr();

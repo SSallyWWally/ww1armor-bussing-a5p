@@ -41,6 +41,8 @@ public class ArmoredCarModel {
     private static final float GUNNER_GUN_X = -1.5F;     // turret space; model -x = the gunner's right
     private static final float GUNNER_GUN_Y = 0.5F;      // eye at -5: gun axis 5.5 px below the eye
     private static final float GUNNER_GUN_Z = -3.0F;
+    /** Gunner's eye height in turret space (seat 1 eye = gun pivot height). */
+    private static final float EYE_Y = -5.0F;
     private final ModelPart[] spin;
 
     public ArmoredCarModel(ModelPart root) {
@@ -686,10 +688,25 @@ public class ArmoredCarModel {
         }
         this.turret.yRot = yaw;
         this.gun.xRot = pitch;
-        this.gun.x = gunnerView != null ? GUNNER_GUN_X : this.gunBaseX;
-        this.gun.y = gunnerView != null ? GUNNER_GUN_Y : this.gunBaseY;
-        this.gun.z = gunnerView != null ? GUNNER_GUN_Z : this.gunBaseZ;
-        this.recoil.z = 2.0F * Mth.lerp(partialTick, car.recoilO, car.recoil);   // slides back on firing
+        float kick = 2.0F * Mth.lerp(partialTick, car.recoilO, car.recoil);   // slides back on firing
+        if (gunnerView != null) {
+            // Locked to the gunner's view like a first-person weapon: the gun pivots around the EYE (turret space
+            // 0,-5,0), and the gun body is offset inside that pivot, so aiming up/down or turning never moves it
+            // on screen.
+            this.gun.x = 0.0F;
+            this.gun.y = EYE_Y;
+            this.gun.z = 0.0F;
+            this.recoil.x = GUNNER_GUN_X;
+            this.recoil.y = GUNNER_GUN_Y - EYE_Y;
+            this.recoil.z = GUNNER_GUN_Z + kick;
+        } else {
+            this.gun.x = this.gunBaseX;
+            this.gun.y = this.gunBaseY;
+            this.gun.z = this.gunBaseZ;
+            this.recoil.x = 0.0F;
+            this.recoil.y = 0.0F;
+            this.recoil.z = kick;
+        }
     }
 
     /** Main pass. interiorView hides the upper hull and the whole cupola (drum, ports, gun) so the crew can see out. */
