@@ -36,8 +36,7 @@
     "sounds": [
       {
         "name": "ww1armor:engine_loop",
-        "attenuation_distance": 40,
-        "stream": false
+        "attenuation_distance": 40
       }
     ]
   }

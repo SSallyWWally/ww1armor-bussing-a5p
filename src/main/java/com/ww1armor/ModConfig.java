@@ -16,6 +16,10 @@ import java.util.List;
  * Edit the file and restart the game/server to apply changes.
  */
 public class ModConfig {
+    /** Bumped when a default changes in a way old config files must pick up. Don't edit. */
+    public int configVersion = 0;
+    private static final int CURRENT_VERSION = 2;
+
     // ---- armor / damage
     public float maxHealth = 300.0F;
     /** Any single hit at or above this damage penetrates, whatever the weapon (e.g. TACZ M107 / M95). */
@@ -51,9 +55,10 @@ public class ModConfig {
     public double mgSpread = 0.012;
     public float mgMaxElevation = 20.0F;
     public float mgMaxDepression = 12.0F;
-    /** Heat 0..1. At 500 rpm the jacket boils after roughly 500-600 rounds of continuous fire. */
-    public float mgHeatPerShot = 0.005F;
-    public float mgCoolingPerTick = 0.00125F;
+    /** Heat 0..1. Continuous fire overheats the gun after about 40 rounds (~5 s at 500 rpm). */
+    public float mgHeatPerShot = 0.039F;
+    /** Full heat cools off in ~8.5 s; an overheated gun unlocks after ~6 s. */
+    public float mgCoolingPerTick = 0.0058F;
     /** After overheating the gun is locked until heat falls back to this. */
     public float mgOverheatResume = 0.3F;
     /** TACZ ammo ids the belt accepts (7.92 mm Mauser equivalents). Add "*" to accept any TACZ ammo. */
@@ -98,6 +103,14 @@ public class ModConfig {
         if (cfg.mgAmmoIds == null) {
             cfg.mgAmmoIds = new ArrayList<>();
         }
+        if (cfg.configVersion < 2) {
+            // 1.1.x heat values made the MG practically impossible to overheat
+            ModConfig d = new ModConfig();
+            cfg.mgHeatPerShot = d.mgHeatPerShot;
+            cfg.mgCoolingPerTick = d.mgCoolingPerTick;
+            cfg.mgOverheatResume = d.mgOverheatResume;
+        }
+        cfg.configVersion = CURRENT_VERSION;
         cfg.mgBeltSize = Math.max(1, cfg.mgBeltSize);
         cfg.mgSightZoom = Math.max(1.0F, Math.min(3.0F, cfg.mgSightZoom));
         cfg.turnSmoothing = Math.max(0.05F, Math.min(1.0F, cfg.turnSmoothing));
