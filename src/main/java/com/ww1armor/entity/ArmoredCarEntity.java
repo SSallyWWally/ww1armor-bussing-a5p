@@ -548,6 +548,15 @@ public class ArmoredCarEntity extends Entity {
             ricochet(source);
             return false;
         }
+        if (!source.is(DamageTypeTags.IS_EXPLOSION) && source.getDirectEntity() != null) {
+            // a round that gets through still rings the plate, just duller
+            Vec3 at = source.getSourcePosition();
+            if (at == null) {
+                at = this.position().add(0.0, 1.8, 0.0);
+            }
+            this.level().playSound(null, at.x, at.y, at.z, ArmoredCarMod.ARMOR_HIT, SoundSource.NEUTRAL, 1.2F,
+                    0.9F + this.random.nextFloat() * 0.2F);
+        }
         setHealth(getHealth() - dealt);
         this.markHurt();
         if (getHealth() <= 0.0F) {

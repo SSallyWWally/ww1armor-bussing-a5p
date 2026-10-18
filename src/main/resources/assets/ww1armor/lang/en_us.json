@@ -23,5 +23,6 @@
   "hud.ww1armor.reloading": "Feeding new belt...",
   "hud.ww1armor.overheated": "OVERHEATED: water jacket boiling",
   "msg.ww1armor.overheated": "MG 08 overheated, let it cool",
-  "msg.ww1armor.no_ammo": "No 7.92 mm ammunition (TACZ rifle rounds or ammo box)"
+  "msg.ww1armor.no_ammo": "No 7.92 mm ammunition (TACZ rifle rounds or ammo box)",
+  "subtitles.ww1armor.armor_hit": "Bullet pierces armor"
 }

@@ -20,14 +20,20 @@
     "subtitle": "subtitles.ww1armor.ricochet",
     "sounds": [
       {
-        "name": "minecraft:random/anvil_land",
-        "pitch": 2.0,
-        "volume": 0.35
+        "name": "ww1armor:dink_1",
+        "attenuation_distance": 40
       },
       {
-        "name": "minecraft:random/anvil_land",
-        "pitch": 1.7,
-        "volume": 0.3
+        "name": "ww1armor:dink_2",
+        "attenuation_distance": 40
+      },
+      {
+        "name": "ww1armor:dink_3",
+        "attenuation_distance": 40
+      },
+      {
+        "name": "ww1armor:dink_4",
+        "attenuation_distance": 40
       }
     ]
   },
@@ -36,6 +42,19 @@
     "sounds": [
       {
         "name": "ww1armor:engine_loop",
+        "attenuation_distance": 40
+      }
+    ]
+  },
+  "armor_hit": {
+    "subtitle": "subtitles.ww1armor.armor_hit",
+    "sounds": [
+      {
+        "name": "ww1armor:clank_1",
+        "attenuation_distance": 40
+      },
+      {
+        "name": "ww1armor:clank_2",
         "attenuation_distance": 40
       }
     ]
