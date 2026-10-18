@@ -489,13 +489,13 @@ public class ArmoredCarEntity extends Entity {
                 return;
             }
         }
-        player.displayClientMessage(Component.translatable("msg.exodus.no_free_seat"), true);
+        player.displayClientMessage(Component.translatable("msg.exodus_vehicles.no_free_seat"), true);
     }
 
     private void announceSeat(Entity passenger, int seat) {
         if (passenger instanceof Player p) {
-            p.displayClientMessage(Component.translatable("msg.exodus.seat",
-                    Component.translatable("seat.exodus." + seat)), true);
+            p.displayClientMessage(Component.translatable("msg.exodus_vehicles.seat",
+                    Component.translatable("seat.exodus_vehicles." + seat)), true);
         }
     }
 
@@ -701,7 +701,7 @@ public class ArmoredCarEntity extends Entity {
             if (this.dryFireCooldown <= 0) {
                 this.dryFireCooldown = 20;
                 this.playSound(SoundEvents.FIRE_EXTINGUISH, 0.5F, 1.4F);
-                shooter.displayClientMessage(Component.translatable("msg.exodus.overheated"), true);
+                shooter.displayClientMessage(Component.translatable("msg.exodus_vehicles.overheated"), true);
             }
             return;
         }
@@ -718,7 +718,7 @@ public class ArmoredCarEntity extends Entity {
             heat = 1.0F;
             this.entityData.set(DATA_OVERHEATED, true);
             this.playSound(SoundEvents.FIRE_EXTINGUISH, 1.0F, 0.8F);
-            shooter.displayClientMessage(Component.translatable("msg.exodus.overheated"), true);
+            shooter.displayClientMessage(Component.translatable("msg.exodus_vehicles.overheated"), true);
         }
         this.entityData.set(DATA_HEAT, heat);
         this.gunCooldown += 1200.0F / Math.max(60.0F, cfg.mgRoundsPerMinute);
@@ -831,7 +831,7 @@ public class ArmoredCarEntity extends Entity {
         int needed = cfg.mgBeltSize - getBelt();
         int taken = TaczCompat.takeMgAmmo(gunner, needed);
         if (taken <= 0) {
-            gunner.displayClientMessage(Component.translatable("msg.exodus.no_ammo"), true);
+            gunner.displayClientMessage(Component.translatable("msg.exodus_vehicles.no_ammo"), true);
             return false;
         }
         this.pendingRounds = taken;

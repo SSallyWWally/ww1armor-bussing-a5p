@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "id": "exodus",
+  "id": "exodus_vehicles",
   "version": "${version}",
   "name": "Exodus Vehicles",
   "description": "Drivable vehicles for Exodus. Includes the M.15 Eisenwolf armored car: turret MG 08 with sight, belts and overheating, four crew seats, TACZ-aware armor, engine start/stop and a burning wreck when destroyed.",
@@ -8,7 +8,7 @@
     "You"
   ],
   "license": "All-Rights-Reserved",
-  "icon": "assets/exodus/icon.png",
+  "icon": "assets/exodus_vehicles/icon.png",
   "environment": "*",
   "entrypoints": {
     "main": [
@@ -19,7 +19,7 @@
     ]
   },
   "mixins": [
-    "exodus.mixins.json"
+    "exodus_vehicles.mixins.json"
   ],
   "depends": {
     "fabricloader": ">=0.16.0",

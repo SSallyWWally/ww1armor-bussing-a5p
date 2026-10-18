@@ -24,7 +24,7 @@ TACZ rounds (anti-tank weapons and very heavy hits get through), and a burning w
 The water jacket overheats after about 75 rounds of continuous fire and unlocks after a few seconds of cooling.
 
 ### Settings
-`config/exodus.json` (created on first launch): armor, health, speeds, steering, fire rate, heat, ammo types, zoom.
+`config/exodus_vehicles.json` (created on first launch): armor, health, speeds, steering, fire rate, heat, ammo types, zoom.
 
 ## Requirements
 Fabric Loader, Fabric API. Optional: TaCZ Refabricated.

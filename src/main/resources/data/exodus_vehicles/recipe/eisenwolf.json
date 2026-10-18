@@ -12,5 +12,5 @@
     "F": { "item": "minecraft:blast_furnace" },
     "M": { "item": "minecraft:minecart" }
   },
-  "result": { "id": "exodus:eisenwolf", "count": 1 }
+  "result": { "id": "exodus_vehicles:eisenwolf", "count": 1 }
 }

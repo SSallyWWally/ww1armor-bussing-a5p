@@ -29,7 +29,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class ArmoredCarMod implements ModInitializer {
-    public static final String MOD_ID = "exodus";
+    public static final String MOD_ID = "exodus_vehicles";
     public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 
     public static ResourceLocation id(String path) {
@@ -52,7 +52,7 @@ public class ArmoredCarMod implements ModInitializer {
 
     @Override
     public void onInitialize() {
-        ModConfig.get(); // load / create config/exodus.json
+        ModConfig.get(); // load / create config/exodus_vehicles.json
 
         // Main hitbox covers the middle 2.75 m of the 8 m hull; two HullSegmentEntity boxes cover nose and tail.
         EISENWOLF = Registry.register(BuiltInRegistries.ENTITY_TYPE, id("eisenwolf"),

@@ -11,7 +11,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public abstract class GuiMixin {
     /** The iron sight replaces the vanilla crosshair. */
     @Inject(method = "renderCrosshair", at = @At("HEAD"), cancellable = true)
-    private void exodus$hideCrosshair(CallbackInfo ci) {
+    private void exodus_vehicles$hideCrosshair(CallbackInfo ci) {
         if (GunSight.inSight()) {
             ci.cancel();
         }
@@ -19,7 +19,7 @@ public abstract class GuiMixin {
 
     /** Hotbar (and the bars around it) hidden while manning the gun sight. */
     @Inject(method = "renderHotbarAndDecorations", at = @At("HEAD"), cancellable = true)
-    private void exodus$hideHotbar(CallbackInfo ci) {
+    private void exodus_vehicles$hideHotbar(CallbackInfo ci) {
         if (GunSight.inSight()) {
             ci.cancel();
         }

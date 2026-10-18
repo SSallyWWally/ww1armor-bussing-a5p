@@ -34,7 +34,7 @@ public class ArmoredCarItem extends Item {
             car.moveTo(at.x, at.y, at.z, yaw, 0.0F);
             if (!level.noCollision(car, car.getBoundingBox().deflate(0.05))) {
                 if (player != null) {
-                    player.displayClientMessage(Component.translatable("msg.exodus.blocked"), true);
+                    player.displayClientMessage(Component.translatable("msg.exodus_vehicles.blocked"), true);
                 }
                 return InteractionResult.FAIL;
             }

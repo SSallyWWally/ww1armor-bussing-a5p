@@ -15,7 +15,7 @@ public abstract class MouseHandlerMixin {
 
     /** Slower aim while zoomed, like a spyglass. */
     @Inject(method = "turnPlayer", at = @At("HEAD"))
-    private void exodus$zoomSensitivity(CallbackInfo ci) {
+    private void exodus_vehicles$zoomSensitivity(CallbackInfo ci) {
         double s = GunSight.sensitivityScale();
         if (s != 1.0) {
             this.accumulatedDX *= s;

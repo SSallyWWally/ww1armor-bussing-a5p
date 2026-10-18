@@ -56,14 +56,14 @@ public class ArmoredCarClient implements ClientModInitializer {
         });
 
         SWITCH_SEAT = KeyBindingHelper.registerKeyBinding(new KeyMapping(
-                "key.exodus.switch_seat", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_N, "key.categories.exodus"));
+                "key.exodus_vehicles.switch_seat", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_N, "key.categories.exodus_vehicles"));
         // not R: TACZ uses R for its own reload
         RELOAD = KeyBindingHelper.registerKeyBinding(new KeyMapping(
-                "key.exodus.reload", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_B, "key.categories.exodus"));
+                "key.exodus_vehicles.reload", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_B, "key.categories.exodus_vehicles"));
         ENGINE = KeyBindingHelper.registerKeyBinding(new KeyMapping(
-                "key.exodus.engine", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_P, "key.categories.exodus"));
+                "key.exodus_vehicles.engine", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_P, "key.categories.exodus_vehicles"));
         BRAKE = KeyBindingHelper.registerKeyBinding(new KeyMapping(
-                "key.exodus.parking_brake", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_G, "key.categories.exodus"));
+                "key.exodus_vehicles.parking_brake", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_G, "key.categories.exodus_vehicles"));
 
         ClientPlayNetworking.registerGlobalReceiver(TracerPayload.TYPE, (payload, context) -> {
             Minecraft mc = context.client();
@@ -188,22 +188,22 @@ public class ArmoredCarClient implements ClientModInitializer {
         int seat = Math.max(0, car.seatOf(mc.player));
         int x = 8, y = 8;
 
-        Component seatLine = Component.translatable("hud.exodus.seat",
-                Component.translatable("seat.exodus." + seat), SWITCH_SEAT.getTranslatedKeyMessage());
+        Component seatLine = Component.translatable("hud.exodus_vehicles.seat",
+                Component.translatable("seat.exodus_vehicles." + seat), SWITCH_SEAT.getTranslatedKeyMessage());
         g.drawString(mc.font, seatLine, x, y, 0xFFE8E4D0, true);
         if (seat == ArmoredCarEntity.DRIVER) {
             int sx = x + mc.font.width(seatLine) + 8;
             if (!car.isEngineOn()) {
-                g.drawString(mc.font, Component.translatable("hud.exodus.engine_off"), sx, y, 0xFFB9B6A3, true);
-                sx += mc.font.width(Component.translatable("hud.exodus.engine_off")) + 6;
+                g.drawString(mc.font, Component.translatable("hud.exodus_vehicles.engine_off"), sx, y, 0xFFB9B6A3, true);
+                sx += mc.font.width(Component.translatable("hud.exodus_vehicles.engine_off")) + 6;
             }
             if (car.isParkingBrakeOn()) {
-                g.drawString(mc.font, Component.translatable("hud.exodus.parking_brake"), sx, y, 0xFFE0A040, true);
+                g.drawString(mc.font, Component.translatable("hud.exodus_vehicles.parking_brake"), sx, y, 0xFFE0A040, true);
             }
         }
 
         float hp = car.getHealth(), max = car.getMaxHealth();
-        Component hull = Component.translatable("hud.exodus.hull",
+        Component hull = Component.translatable("hud.exodus_vehicles.hull",
                 String.valueOf((int) Math.ceil(hp)), String.valueOf((int) max));
         g.drawString(mc.font, hull, x, y + 12, 0xFFE8E4D0, true);
 
@@ -216,7 +216,7 @@ public class ArmoredCarClient implements ClientModInitializer {
         if (seat == ArmoredCarEntity.GUNNER) {
             int gy = y + 34;
             String reserve = ammoCache < 0 ? "\u221e" : String.valueOf(ammoCache);
-            g.drawString(mc.font, Component.translatable("hud.exodus.mg_ammo",
+            g.drawString(mc.font, Component.translatable("hud.exodus_vehicles.mg_ammo",
                     String.valueOf(car.getBelt()), String.valueOf(ModConfig.get().mgBeltSize), reserve),
                     x, gy, 0xFFE8E4D0, true);
 
@@ -228,19 +228,19 @@ public class ArmoredCarClient implements ClientModInitializer {
             // water-jacket heat
             float heat = car.getHeat();
             int heatColor = car.isOverheated() ? 0xFFE04A2A : heat > 0.7F ? 0xFFE0A030 : 0xFF6FA8C8;
-            g.drawString(mc.font, Component.translatable("hud.exodus.heat"), x, gy + 18, 0xFFB9B6A3, true);
+            g.drawString(mc.font, Component.translatable("hud.exodus_vehicles.heat"), x, gy + 18, 0xFFB9B6A3, true);
             int hx = x + 32;
             g.fill(hx, gy + 20, hx + barW - 32, gy + 24, 0x80000000);
             g.fill(hx, gy + 20, hx + (int) ((barW - 32) * heat), gy + 24, heatColor);
 
             int status = gy + 30;
             if (car.getReloadTicks() > 0) {
-                g.drawString(mc.font, Component.translatable("hud.exodus.reloading"), x, status, 0xFFE0C060, true);
+                g.drawString(mc.font, Component.translatable("hud.exodus_vehicles.reloading"), x, status, 0xFFE0C060, true);
                 status += 11;
             }
             if (car.isOverheated()) {
                 boolean blink = (mc.player.tickCount / 5) % 2 == 0;
-                g.drawString(mc.font, Component.translatable("hud.exodus.overheated"), x, status,
+                g.drawString(mc.font, Component.translatable("hud.exodus_vehicles.overheated"), x, status,
                         blink ? 0xFFFF5A3A : 0xFFB04030, true);
                 status += 11;
             }

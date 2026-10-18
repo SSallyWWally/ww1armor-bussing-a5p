@@ -12,7 +12,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Settings live in config/exodus.json (created on first launch).
+ * Settings live in config/exodus_vehicles.json (created on first launch).
  * Edit the file and restart the game/server to apply changes.
  */
 public class ModConfig {
@@ -85,7 +85,7 @@ public class ModConfig {
     }
 
     private static ModConfig load() {
-        Path path = FabricLoader.getInstance().getConfigDir().resolve("exodus.json");
+        Path path = FabricLoader.getInstance().getConfigDir().resolve("exodus_vehicles.json");
         ModConfig cfg = null;
         if (Files.exists(path)) {
             try (Reader r = Files.newBufferedReader(path)) {

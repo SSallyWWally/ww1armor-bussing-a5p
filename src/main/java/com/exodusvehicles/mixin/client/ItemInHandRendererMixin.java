@@ -11,7 +11,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public abstract class ItemInHandRendererMixin {
     /** No fist / held item over the gun sight. This is also the path shader mods (Iris) use for hands. */
     @Inject(method = "renderHandsWithItems", at = @At("HEAD"), cancellable = true)
-    private void exodus$hideHands(CallbackInfo ci) {
+    private void exodus_vehicles$hideHands(CallbackInfo ci) {
         if (GunSight.inSight()) {
             ci.cancel();
         }
