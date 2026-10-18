@@ -45,7 +45,7 @@ public class TruckRenderer extends EntityRenderer<TruckEntity> {
 
         this.model.setupAnim(truck, partialTick);
         this.model.render(poseStack, buffers.getBuffer(RenderType.entityCutoutNoCull(getTextureLocation(truck))),
-                packedLight, OverlayTexture.NO_OVERLAY, underTarp || truck.isWrecked());
+                packedLight, OverlayTexture.NO_OVERLAY, !truck.isCovered() || underTarp || truck.isWrecked(), truck.getCrates());
         poseStack.popPose();
         super.render(truck, entityYaw, partialTick, poseStack, buffers, packedLight);
     }

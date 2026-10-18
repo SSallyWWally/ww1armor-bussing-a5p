@@ -39,12 +39,16 @@
   "subtitles.exodus_vehicles.reload_in": "Belt fed in",
   "subtitles.exodus_vehicles.impact_ground": "Bullet hits the ground",
   "subtitles.exodus_vehicles.bullet_flyby": "Bullet flies past",
-  "entity.exodus_vehicles.daimler_dr": "Daimler-Marienfelde DR",
+  "entity.exodus_vehicles.daimler_dr": "Daimler-Marienfelde DR (Covered)",
   "entity.exodus_vehicles.truck_segment": "Daimler-Marienfelde DR",
-  "item.exodus_vehicles.daimler_dr": "Daimler-Marienfelde DR",
+  "item.exodus_vehicles.daimler_dr": "Daimler-Marienfelde DR (Covered)",
   "seat.exodus_vehicles.truck.0": "Driver",
   "seat.exodus_vehicles.truck.1": "Co-driver",
   "seat.exodus_vehicles.truck.2": "Load bed",
   "seat.exodus_vehicles.truck.3": "Load bed (rear)",
-  "hud.exodus_vehicles.body": "Body %s / %s"
+  "hud.exodus_vehicles.body": "Body %s / %s",
+  "entity.exodus_vehicles.daimler_dr_open": "Daimler-Marienfelde DR (Open Bed)",
+  "item.exodus_vehicles.daimler_dr_open": "Daimler-Marienfelde DR (Open Bed)",
+  "container.exodus_vehicles.truck_cargo": "Supply Crates",
+  "msg.exodus_vehicles.crate_loaded": "Crate loaded (%s / %s)"
 }

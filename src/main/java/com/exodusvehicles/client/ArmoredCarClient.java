@@ -48,6 +48,7 @@ public class ArmoredCarClient implements ClientModInitializer {
         EntityRendererRegistry.register(ArmoredCarMod.HULL_SEGMENT, NoopRenderer::new);
         EntityModelLayerRegistry.registerModelLayer(TruckModel.LAYER, TruckModel::createBodyLayer);
         EntityRendererRegistry.register(ArmoredCarMod.DAIMLER_DR, TruckRenderer::new);
+        EntityRendererRegistry.register(ArmoredCarMod.DAIMLER_DR_OPEN, TruckRenderer::new);
         EntityRendererRegistry.register(ArmoredCarMod.TRUCK_SEGMENT, NoopRenderer::new);
 
         // the engine loop is the car's only driving sound

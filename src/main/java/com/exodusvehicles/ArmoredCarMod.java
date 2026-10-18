@@ -43,6 +43,8 @@ public class ArmoredCarMod implements ModInitializer {
     public static EntityType<TruckEntity> DAIMLER_DR;
     public static EntityType<HullSegmentEntity> TRUCK_SEGMENT;
     public static Item DAIMLER_DR_ITEM;
+    public static EntityType<TruckEntity> DAIMLER_DR_OPEN;
+    public static Item DAIMLER_DR_OPEN_ITEM;
     public static SoundEvent MG_FIRE;
     public static SoundEvent RICOCHET;
     public static SoundEvent ENGINE;
@@ -88,6 +90,11 @@ public class ArmoredCarMod implements ModInitializer {
                         .sized(2.1F, 2.75F)
                         .clientTrackingRange(10)
                         .build("daimler_dr"));
+        DAIMLER_DR_OPEN = Registry.register(BuiltInRegistries.ENTITY_TYPE, id("daimler_dr_open"),
+                EntityType.Builder.<TruckEntity>of(TruckEntity::new, MobCategory.MISC)
+                        .sized(2.1F, 2.75F)
+                        .clientTrackingRange(10)
+                        .build("daimler_dr_open"));
         TRUCK_SEGMENT = Registry.register(BuiltInRegistries.ENTITY_TYPE, id("truck_segment"),
                 EntityType.Builder.<HullSegmentEntity>of(HullSegmentEntity::new, MobCategory.MISC)
                         .sized(2.1F, 2.75F)
@@ -97,6 +104,8 @@ public class ArmoredCarMod implements ModInitializer {
                         .build("truck_segment"));
         DAIMLER_DR_ITEM = Registry.register(BuiltInRegistries.ITEM, id("daimler_dr"),
                 new ArmoredCarItem(new Item.Properties().stacksTo(1), () -> DAIMLER_DR));
+        DAIMLER_DR_OPEN_ITEM = Registry.register(BuiltInRegistries.ITEM, id("daimler_dr_open"),
+                new ArmoredCarItem(new Item.Properties().stacksTo(1), () -> DAIMLER_DR_OPEN));
 
         MG_FIRE = registerSound("mg_fire");
         RICOCHET = registerSound("ricochet");
@@ -117,6 +126,7 @@ public class ArmoredCarMod implements ModInitializer {
         ItemGroupEvents.modifyEntriesEvent(CreativeModeTabs.COMBAT).register(entries -> {
             entries.accept(EISENWOLF_ITEM);
             entries.accept(DAIMLER_DR_ITEM);
+            entries.accept(DAIMLER_DR_OPEN_ITEM);
         });
 
         PayloadTypeRegistry.playC2S().register(SwitchSeatPayload.TYPE, SwitchSeatPayload.CODEC);
