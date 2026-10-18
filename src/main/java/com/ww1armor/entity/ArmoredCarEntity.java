@@ -66,7 +66,9 @@ public class ArmoredCarEntity extends Entity {
     public static final double GUN_PIVOT_FWD = -11.5 / 16.0;
     public static final double MUZZLE_DIST = 29.3 / 16.0;
     /** How far the barrel sits below the gunner's sight line (blocks). */
-    public static final double BARREL_BELOW_SIGHT = 0.4;
+    public static final double BARREL_BELOW_SIGHT = 0.15;
+    /** In the gunner's own view the whole gun sits just under the sight; its muzzle is this far ahead of the eye. */
+    public static final double GUNNER_MUZZLE_DIST = 1.0;
     /** Tracer flight speed (blocks per tick) and lifetime (ticks). */
     public static final double TRACER_SPEED = 12.0;
     public static final int TRACER_LIFE = 12;
@@ -156,6 +158,9 @@ public class ArmoredCarEntity extends Entity {
     public float turretYaw, turretYawO, gunPitch, gunPitchO;
     public float recoil, recoilO;
     public int flashTicks;
+    /** Muzzle flash look for the current round: sprite style (0-3), size and in-plane spin. */
+    public int flashStyle;
+    public float flashScale = 1.0F, flashSpin;
     public float clientSpeed;
     private int clientWreckAge;
 
@@ -710,7 +715,7 @@ public class ArmoredCarEntity extends Entity {
         // below the sight, so flash, smoke and tracers start there and stay out of the gunner's view.
         Vec3 pivot = localToWorld(0.0, GUN_PIVOT_UP, GUN_PIVOT_FWD);
         Vec3 rayStart = pivot.add(dir.scale(1.0));
-        Vec3 muzzle = pivot.add(dir.scale(MUZZLE_DIST)).add(0.0, -BARREL_BELOW_SIGHT, 0.0);
+        Vec3 muzzle = pivot.add(dir.scale(GUNNER_MUZZLE_DIST)).add(0.0, -BARREL_BELOW_SIGHT, 0.0);
         Vec3 end = pivot.add(dir.scale(cfg.mgRange));
 
         BlockHitResult blockHit = this.level().clip(new ClipContext(rayStart, end,
@@ -752,7 +757,7 @@ public class ArmoredCarEntity extends Entity {
                 if (viewer.distanceToSqr(barrelTip) > 64.0 * 64.0) {
                     continue;
                 }
-                Vec3 at = viewer == shooter ? muzzle.add(dir.scale(0.6)) : barrelTip;   // gunner: the lowered barrel
+                Vec3 at = viewer == shooter ? muzzle.add(dir.scale(0.3)) : barrelTip;   // gunner: their view of the barrel
                 server.sendParticles(viewer, ParticleTypes.WHITE_SMOKE, false, at.x, at.y + 0.05, at.z, 0,
                         dir.x * 0.02, 0.02, dir.z * 0.02, 1.0);
             }
@@ -832,14 +837,6 @@ public class ArmoredCarEntity extends Entity {
         if (this.rampCooldown > 0) {
             this.rampCooldown--;
         }
-        if (this.entityData.get(DATA_ENGINE)) {
-            // nobody at the wheel for a minute: the engine is shut off
-            this.noDriverTicks = hasDriver() ? 0 : this.noDriverTicks + 1;
-            if (this.noDriverTicks > 1200) {
-                this.entityData.set(DATA_ENGINE, false);
-                engineSound(ArmoredCarMod.ENGINE_STOP);
-            }
-        }
         if (hasDriver() && isEngineOn()) {
             if (moved < 0.02) {
                 this.stillTicks++;
@@ -886,6 +883,9 @@ public class ArmoredCarEntity extends Entity {
     public void handleEntityEvent(byte id) {
         if (id == 61) {
             this.flashTicks = 2;
+            this.flashStyle = this.random.nextInt(4);
+            this.flashScale = 0.8F + this.random.nextFloat() * 0.5F;
+            this.flashSpin = this.random.nextFloat() * Mth.TWO_PI;
             this.recoil = 1.0F;
         } else {
             super.handleEntityEvent(id);

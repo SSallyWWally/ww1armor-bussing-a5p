@@ -64,7 +64,11 @@ public class ArmoredCarClient implements ClientModInitializer {
             if (mc.level != null && mc.level.getEntity(payload.carId()) instanceof ArmoredCarEntity car) {
                 net.minecraft.world.phys.Vec3 start = new net.minecraft.world.phys.Vec3(payload.sx(), payload.sy(), payload.sz());
                 if (GunSight.inSight() && mc.player != null && car.seatOf(mc.player) == ArmoredCarEntity.GUNNER) {
-                    start = start.add(0.0, -ArmoredCarEntity.BARREL_BELOW_SIGHT, 0.0);   // from the barrel seen in the sight
+                    // from the muzzle of the gun as the gunner sees it (closer, just under the sight)
+                    net.minecraft.world.phys.Vec3 end = new net.minecraft.world.phys.Vec3(payload.ex(), payload.ey(), payload.ez());
+                    net.minecraft.world.phys.Vec3 d = end.subtract(start).normalize();
+                    start = start.subtract(d.scale(ArmoredCarEntity.MUZZLE_DIST - ArmoredCarEntity.GUNNER_MUZZLE_DIST))
+                            .add(0.0, -ArmoredCarEntity.BARREL_BELOW_SIGHT, 0.0);
                 }
                 car.tracers.add(new ArmoredCarEntity.Tracer(start,
                         new net.minecraft.world.phys.Vec3(payload.ex(), payload.ey(), payload.ez())));

@@ -19,6 +19,8 @@ import org.joml.Matrix4f;
 public class ArmoredCarRenderer extends EntityRenderer<ArmoredCarEntity> {
     private static final ResourceLocation TEXTURE = ArmoredCarMod.id("textures/entity/bussing_a5p.png");
     private static final ResourceLocation TEXTURE_WRECKED = ArmoredCarMod.id("textures/entity/bussing_a5p_wrecked.png");
+    /** 4 styles (columns) x 3 stages (rows): ignition, full burst, dying smoke and embers. 32 px frames. */
+    private static final ResourceLocation FLASH = ArmoredCarMod.id("textures/entity/muzzle_flash.png");
 
     private final ArmoredCarModel model;
 
@@ -52,11 +54,38 @@ public class ArmoredCarRenderer extends EntityRenderer<ArmoredCarEntity> {
         this.model.render(poseStack, buffers.getBuffer(RenderType.entityCutoutNoCull(tex)),
                 packedLight, OverlayTexture.NO_OVERLAY, interior, gunnerView);
         if (car.flashTicks > 0 && !car.isWrecked() && (!interior || gunnerView)) {
-            this.model.renderFlash(poseStack, buffers.getBuffer(RenderType.entityCutoutNoCull(tex)), OverlayTexture.NO_OVERLAY);
+            renderMuzzleFlash(car, partialTick, this.model.muzzlePoint(poseStack), buffers, gunnerView);
         }
         poseStack.popPose();
         renderTracers(car, partialTick, poseStack, buffers);
         super.render(car, entityYaw, partialTick, poseStack, buffers, packedLight);
+    }
+
+    /**
+     * Flat, camera-facing muzzle flash. Each round plays three stages over its 2 ticks: a small hot ignition,
+     * the full starburst, then embers in a puff of smoke (seen at the end of a burst). Style, size and spin vary per round.
+     */
+    private void renderMuzzleFlash(ArmoredCarEntity car, float partialTick, org.joml.Vector3f at,
+                                   MultiBufferSource buffers, boolean gunnerView) {
+        float age = (2 - car.flashTicks) + partialTick;
+        int stage = age < 0.45F ? 0 : age < 1.3F ? 1 : 2;
+        float size = 0.42F * car.flashScale * (stage == 0 ? 0.6F : stage == 1 ? 1.0F : 1.25F) * (gunnerView ? 0.5F : 1.0F);
+        float u0 = car.flashStyle * 0.25F, v0 = stage / 3.0F, u1 = u0 + 0.25F, v1 = v0 + 1.0F / 3.0F;
+
+        org.joml.Quaternionf camRot = Minecraft.getInstance().gameRenderer.getMainCamera().rotation();
+        float c = Mth.cos(car.flashSpin), s = Mth.sin(car.flashSpin);
+        float[][] corners = {{-1, -1}, {1, -1}, {1, 1}, {-1, 1}};
+        float[][] uvs = {{u1, v1}, {u0, v1}, {u0, v0}, {u1, v0}};
+        VertexConsumer vc = buffers.getBuffer(RenderType.entityTranslucentEmissive(FLASH));
+        for (int pass = 0; pass < 2; pass++) {               // both faces
+            for (int k = 0; k < 4; k++) {
+                int i = pass == 0 ? k : 3 - k;
+                float x = corners[i][0] * size, y = corners[i][1] * size;
+                org.joml.Vector3f p = new org.joml.Vector3f(x * c - y * s, x * s + y * c, 0.0F).rotate(camRot).add(at);
+                vc.addVertex(p.x(), p.y(), p.z()).setColor(255, 255, 255, 255).setUv(uvs[i][0], uvs[i][1])
+                        .setOverlay(OverlayTexture.NO_OVERLAY).setLight(0xF000F0).setNormal(0.0F, 1.0F, 0.0F);
+            }
+        }
     }
 
     /**

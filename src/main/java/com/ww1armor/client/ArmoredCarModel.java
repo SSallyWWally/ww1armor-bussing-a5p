@@ -33,9 +33,13 @@ public class ArmoredCarModel {
     private final List<ModelPart> allParts;
     private final ModelPart turret, gun, recoil, flash;
     private final ModelPart steerL, steerR;
-    private final float gunBaseY;
-    /** How far the barrel is drawn below the sight line in the gunner's view (model px; 6.4 px = 0.4 block). */
-    private static final float GUNNER_BARREL_DROP = 6.4F;
+    private final float gunBaseY, gunBaseZ;
+    /**
+     * Gunner's view (like Battlefield vehicle guns): the whole MG sits right under the eye, breech just in front of it,
+     * so the water jacket runs up from the bottom of the screen and the front sight post meets the reticle.
+     */
+    private static final float GUNNER_GUN_Y = -2.4F;     // turret space; eye is at -5, sight post tip 2.6 px above the pivot
+    private static final float GUNNER_GUN_Z = -1.0F;
     private final ModelPart[] spin;
 
     public ArmoredCarModel(ModelPart root) {
@@ -48,6 +52,7 @@ public class ArmoredCarModel {
         this.recoil = this.gun.getChild("recoil");
         this.flash = this.recoil.getChild("flash");
         this.gunBaseY = this.gun.y;
+        this.gunBaseZ = this.gun.z;
         this.steerL = root.getChild("wheel0l_steer");
         this.steerR = root.getChild("wheel0r_steer");
         this.spin = new ModelPart[]{
@@ -439,6 +444,10 @@ public class ArmoredCarModel {
                 .texOffs(441, 379).addBox(-1.5F, -1.5F, -13F, 3F, 3F, 11.5F, new CubeDeformation(0.04F))
                 .texOffs(470, 420).addBox(-1F, -1F, -16F, 2F, 2F, 3F, new CubeDeformation(0.06F))
                 , PartPose.offsetAndRotation(0F, 0F, 0F, 0F, 0F, 0F));
+        // front sight blade on the muzzle end of the water jacket
+        p45.addOrReplaceChild("front_sight", CubeListBuilder.create()
+                .texOffs(470, 420).addBox(-0.3F, -2.6F, -12.9F, 0.6F, 1.2F, 0.6F, new CubeDeformation(0.0F))
+                , PartPose.ZERO);
         p45.addOrReplaceChild("flash", CubeListBuilder.create()
                 .texOffs(262, 409).addBox(-2F, -2F, -5F, 4F, 4F, 5F, new CubeDeformation(0.04F))
                 .texOffs(300, 409).addBox(-0.5F, -3.5F, -3F, 1F, 7F, 2F, new CubeDeformation(0.06F))
@@ -675,7 +684,8 @@ public class ArmoredCarModel {
         }
         this.turret.yRot = yaw;
         this.gun.xRot = pitch;
-        this.gun.y = this.gunBaseY + (gunnerView != null ? GUNNER_BARREL_DROP : 0.0F);
+        this.gun.y = gunnerView != null ? GUNNER_GUN_Y : this.gunBaseY;
+        this.gun.z = gunnerView != null ? GUNNER_GUN_Z : this.gunBaseZ;
         this.recoil.z = 2.0F * Mth.lerp(partialTick, car.recoilO, car.recoil);   // slides back on firing
     }
 
@@ -705,6 +715,18 @@ public class ArmoredCarModel {
         this.turret.skipDraw = false;
         this.turret.getAllParts().forEach(p -> p.visible = true);
         this.flash.visible = false;
+    }
+
+    /** Muzzle position in the space of the given pose (call with the model's render pose). */
+    public org.joml.Vector3f muzzlePoint(PoseStack poseStack) {
+        poseStack.pushPose();
+        this.turret.translateAndRotate(poseStack);
+        this.gun.translateAndRotate(poseStack);
+        this.recoil.translateAndRotate(poseStack);
+        this.flash.translateAndRotate(poseStack);
+        org.joml.Vector3f v = poseStack.last().pose().transformPosition(new org.joml.Vector3f(0.0F, 0.0F, 0.1F / 16.0F));
+        poseStack.popPose();
+        return v;
     }
 
     private boolean isUnder(ModelPart part, ModelPart parent) {
