@@ -82,6 +82,16 @@ public class ArmoredCarEntity extends Entity {
     private static final EntityDataAccessor<Integer> DATA_SEAT_3 =
             SynchedEntityData.defineId(ArmoredCarEntity.class, EntityDataSerializers.INT);
 
+    // MG 08 state, synced so the gunner's HUD can show it
+    private static final EntityDataAccessor<Integer> DATA_BELT =
+            SynchedEntityData.defineId(ArmoredCarEntity.class, EntityDataSerializers.INT);
+    private static final EntityDataAccessor<Float> DATA_HEAT =
+            SynchedEntityData.defineId(ArmoredCarEntity.class, EntityDataSerializers.FLOAT);
+    private static final EntityDataAccessor<Integer> DATA_RELOAD =
+            SynchedEntityData.defineId(ArmoredCarEntity.class, EntityDataSerializers.INT);
+    private static final EntityDataAccessor<Boolean> DATA_OVERHEATED =
+            SynchedEntityData.defineId(ArmoredCarEntity.class, EntityDataSerializers.BOOLEAN);
+
     private static EntityDataAccessor<Integer> seatAccessor(int seat) {
         return switch (seat) {
             case 0 -> DATA_SEAT_0;
@@ -94,6 +104,7 @@ public class ArmoredCarEntity extends Entity {
     // driving (simulated on the driver's client)
     private float speed;
     private float steer;               // degrees, + = left
+    private float yawVel;              // smoothed yaw rate, degrees per tick
     private float pendingRiderYaw;
 
     // interpolation for non-controlled instances
@@ -102,7 +113,9 @@ public class ArmoredCarEntity extends Entity {
     private float lerpYRot;
 
     // server state
-    private int gunCooldown;
+    private float gunCooldown;
+    private int pendingRounds;
+    private int dryFireCooldown;
     private int wreckTicks;
     private int shotCounter;
     private int lastExplosionTick = -1;
@@ -133,6 +146,26 @@ public class ArmoredCarEntity extends Entity {
         builder.define(DATA_SEAT_1, -1);
         builder.define(DATA_SEAT_2, -1);
         builder.define(DATA_SEAT_3, -1);
+        builder.define(DATA_BELT, ModConfig.get().mgBeltSize);
+        builder.define(DATA_HEAT, 0.0F);
+        builder.define(DATA_RELOAD, 0);
+        builder.define(DATA_OVERHEATED, false);
+    }
+
+    public int getBelt() {
+        return this.entityData.get(DATA_BELT);
+    }
+
+    public float getHeat() {
+        return this.entityData.get(DATA_HEAT);
+    }
+
+    public int getReloadTicks() {
+        return this.entityData.get(DATA_RELOAD);
+    }
+
+    public boolean isOverheated() {
+        return this.entityData.get(DATA_OVERHEATED);
     }
 
     public float getHealth() {
@@ -162,6 +195,16 @@ public class ArmoredCarEntity extends Entity {
         }
         this.entityData.set(DATA_WRECKED, tag.getBoolean("Wrecked"));
         this.wreckTicks = tag.getInt("WreckTicks");
+        if (tag.contains("Belt")) {
+            this.entityData.set(DATA_BELT, Mth.clamp(tag.getInt("Belt"), 0, ModConfig.get().mgBeltSize));
+        }
+        this.entityData.set(DATA_HEAT, tag.getFloat("Heat"));
+        this.entityData.set(DATA_OVERHEATED, tag.getBoolean("Overheated"));
+        // a reload interrupted by a save just completes on load
+        int pending = tag.getInt("PendingRounds");
+        if (pending > 0) {
+            this.entityData.set(DATA_BELT, Math.min(ModConfig.get().mgBeltSize, getBelt() + pending));
+        }
     }
 
     @Override
@@ -169,6 +212,10 @@ public class ArmoredCarEntity extends Entity {
         tag.putFloat("Health", getHealth());
         tag.putBoolean("Wrecked", isWrecked());
         tag.putInt("WreckTicks", this.wreckTicks);
+        tag.putInt("Belt", getBelt());
+        tag.putFloat("Heat", getHeat());
+        tag.putBoolean("Overheated", isOverheated());
+        tag.putInt("PendingRounds", getReloadTicks() > 0 ? this.pendingRounds : 0);
     }
 
     // ------------------------------------------------------------------ physics basics
@@ -194,6 +241,15 @@ public class ArmoredCarEntity extends Entity {
     @Override
     public boolean isPickable() {
         return !this.isRemoved();
+    }
+
+    @Override
+    protected Entity.MovementEmission getMovementEmission() {
+        return Entity.MovementEmission.NONE;
+    }
+
+    @Override
+    protected void playStepSound(net.minecraft.core.BlockPos pos, net.minecraft.world.level.block.state.BlockState state) {
     }
 
     @Override
@@ -556,11 +612,35 @@ public class ArmoredCarEntity extends Entity {
     // ------------------------------------------------------------------ MG 08 in the cupola
 
     public void fireGun(ServerPlayer shooter) {
-        if (isWrecked() || seatOf(shooter) != GUNNER || this.gunCooldown > 0) {
+        if (isWrecked() || seatOf(shooter) != GUNNER || this.gunCooldown > 0.0F || getReloadTicks() > 0) {
             return;
         }
         ModConfig cfg = ModConfig.get();
-        this.gunCooldown = Math.max(1, cfg.mgFireIntervalTicks);
+        if (isOverheated()) {
+            if (this.dryFireCooldown <= 0) {
+                this.dryFireCooldown = 20;
+                this.playSound(SoundEvents.FIRE_EXTINGUISH, 0.5F, 1.4F);
+                shooter.displayClientMessage(Component.translatable("msg.ww1armor.overheated"), true);
+            }
+            return;
+        }
+        if (getBelt() <= 0) {
+            if (!startReload(shooter) && this.dryFireCooldown <= 0) {
+                this.dryFireCooldown = 10;
+                this.playSound(SoundEvents.DISPENSER_FAIL, 0.6F, 1.6F);
+            }
+            return;
+        }
+        this.entityData.set(DATA_BELT, getBelt() - 1);
+        float heat = getHeat() + cfg.mgHeatPerShot;
+        if (heat >= 1.0F) {
+            heat = 1.0F;
+            this.entityData.set(DATA_OVERHEATED, true);
+            this.playSound(SoundEvents.FIRE_EXTINGUISH, 1.0F, 0.8F);
+            shooter.displayClientMessage(Component.translatable("msg.ww1armor.overheated"), true);
+        }
+        this.entityData.set(DATA_HEAT, heat);
+        this.gunCooldown += 1200.0F / Math.max(60.0F, cfg.mgRoundsPerMinute);
         ServerLevel server = (ServerLevel) this.level();
 
         float pitch = Mth.clamp(shooter.getXRot(), -cfg.mgMaxElevation, cfg.mgMaxDepression);
@@ -608,6 +688,55 @@ public class ArmoredCarEntity extends Entity {
         server.broadcastEntityEvent(this, (byte) 61);    // client: recoil + muzzle flash
     }
 
+    /** Feeds a new belt from the gunner's ammunition. Returns false if there was nothing to load. */
+    public boolean startReload(ServerPlayer gunner) {
+        ModConfig cfg = ModConfig.get();
+        if (isWrecked() || seatOf(gunner) != GUNNER || getReloadTicks() > 0 || getBelt() >= cfg.mgBeltSize) {
+            return false;
+        }
+        int needed = cfg.mgBeltSize - getBelt();
+        int taken = TaczCompat.takeMgAmmo(gunner, needed);
+        if (taken <= 0) {
+            gunner.displayClientMessage(Component.translatable("msg.ww1armor.no_ammo"), true);
+            return false;
+        }
+        this.pendingRounds = taken;
+        this.entityData.set(DATA_RELOAD, Math.max(1, cfg.mgReloadTicks));
+        this.playSound(SoundEvents.ARMOR_EQUIP_CHAIN.value(), 1.0F, 0.8F);
+        return true;
+    }
+
+    private void tickGunServer() {
+        ModConfig cfg = ModConfig.get();
+        if (this.gunCooldown > 0.0F) {
+            this.gunCooldown = Math.max(0.0F, this.gunCooldown - 1.0F);
+        }
+        if (this.dryFireCooldown > 0) {
+            this.dryFireCooldown--;
+        }
+        float heat = getHeat();
+        if (heat > 0.0F) {
+            heat = Math.max(0.0F, heat - cfg.mgCoolingPerTick);
+            this.entityData.set(DATA_HEAT, heat);
+        }
+        if (isOverheated() && heat <= cfg.mgOverheatResume) {
+            this.entityData.set(DATA_OVERHEATED, false);
+        }
+        int reload = getReloadTicks();
+        if (reload > 0) {
+            reload--;
+            this.entityData.set(DATA_RELOAD, reload);
+            if (reload == cfg.mgReloadTicks / 2) {
+                this.playSound(SoundEvents.CROSSBOW_LOADING_MIDDLE.value(), 0.9F, 0.7F);
+            }
+            if (reload == 0) {
+                this.entityData.set(DATA_BELT, Math.min(cfg.mgBeltSize, getBelt() + this.pendingRounds));
+                this.pendingRounds = 0;
+                this.playSound(SoundEvents.IRON_TRAPDOOR_CLOSE, 1.0F, 1.5F);
+            }
+        }
+    }
+
     @Override
     public void handleEntityEvent(byte id) {
         if (id == 61) {
@@ -623,8 +752,8 @@ public class ArmoredCarEntity extends Entity {
     @Override
     public void tick() {
         super.tick();
-        if (this.gunCooldown > 0) {
-            this.gunCooldown--;
+        if (!this.level().isClientSide && !isWrecked()) {
+            tickGunServer();
         }
         if (isWrecked()) {
             tickWreck();
@@ -638,6 +767,7 @@ public class ArmoredCarEntity extends Entity {
             } else {
                 this.speed *= 0.9F;
                 this.steer *= 0.9F;
+                this.yawVel *= 0.6F;
                 if (Math.abs(this.speed) < 0.001F) {
                     this.speed = 0.0F;
                 }
@@ -686,22 +816,37 @@ public class ArmoredCarEntity extends Entity {
         }
         this.speed = Mth.clamp(this.speed, -cfg.maxReverseSpeed, cfg.maxSpeed);
 
-        float target = strafe > 0 ? cfg.maxSteerAngle : strafe < 0 ? -cfg.maxSteerAngle : 0.0F;
-        float rate = target == 0.0F ? cfg.steerSpeed * 1.5F : cfg.steerSpeed;
-        this.steer += Mth.clamp(target - this.steer, -rate, rate);
+        // Steering: less lock at speed, eased toward the target so the wheel never snaps,
+        // and the yaw rate itself is smoothed so the hull swings in and out of turns.
+        float speedFrac = Math.min(1.0F, Math.abs(this.speed) / Math.max(0.01F, cfg.maxSpeed));
+        float lock = cfg.maxSteerAngle * (1.0F - 0.3F * speedFrac);
+        float target = strafe > 0 ? lock : strafe < 0 ? -lock : 0.0F;
+        float rate = target == 0.0F ? cfg.steerReturnSpeed : cfg.steerSpeed;
+        this.steer += Mth.clamp((target - this.steer) * 0.3F, -rate, rate);
+        if (target == 0.0F && Math.abs(this.steer) < 0.05F) {
+            this.steer = 0.0F;
+        }
 
+        float turn = 0.0F;
         if (Math.abs(this.speed) > 0.001F && this.onGround()) {
             // yaw rate = v / L * tan(steer)   (rad/tick -> deg/tick)
-            float turn = (float) Math.toDegrees(this.speed / WHEELBASE * Math.tan(Math.toRadians(this.steer)));
-            float newYaw = this.getYRot() - turn;
+            turn = (float) Math.toDegrees(this.speed / WHEELBASE * Math.tan(Math.toRadians(this.steer)));
+        }
+        this.yawVel += (turn - this.yawVel) * cfg.turnSmoothing;
+        if (Math.abs(this.yawVel) < 0.002F) {
+            this.yawVel = 0.0F;
+        }
+        if (this.yawVel != 0.0F) {
+            float newYaw = this.getYRot() - this.yawVel;
             boolean wasClear = endsClear(this.getX(), this.getZ(), this.getYRot());
             if (!wasClear || endsClear(this.getX(), this.getZ(), newYaw)) {
                 this.setYRot(newYaw);
                 if (this.level().isClientSide) {
-                    this.pendingRiderYaw -= turn;
+                    this.pendingRiderYaw -= this.yawVel;
                 }
             } else {
                 this.speed = 0.0F;
+                this.yawVel = 0.0F;
             }
         }
 
@@ -747,7 +892,7 @@ public class ArmoredCarEntity extends Entity {
         this.lerpY = y;
         this.lerpZ = z;
         this.lerpYRot = yRot;
-        this.lerpSteps = 10;
+        this.lerpSteps = 3;     // short and smooth, like vanilla boats
     }
 
     private void tickWreck() {
@@ -828,6 +973,11 @@ public class ArmoredCarEntity extends Entity {
         if (!isWrecked() && getHealth() < getMaxHealth() * 0.35F && this.random.nextInt(3) == 0) {
             Vec3 p = localToWorld((this.random.nextDouble() - 0.5) * 1.2, 2.6, 2.4);
             this.level().addParticle(ParticleTypes.SMOKE, p.x, p.y, p.z, 0.0, 0.05, 0.0);
+        }
+        if (!isWrecked() && (isOverheated() || getHeat() > 0.75F) && this.random.nextInt(isOverheated() ? 1 : 4) == 0) {
+            Vec3 jacket = localToWorld(0.0, GUN_PIVOT_UP, GUN_PIVOT_FWD).add(
+                    Vec3.directionFromRotation(this.gunPitch, this.getYRot() + this.turretYaw).scale(MUZZLE_DIST * 0.6));
+            this.level().addParticle(ParticleTypes.CLOUD, jacket.x, jacket.y + 0.1, jacket.z, 0.0, 0.04, 0.0);
         }
         if (hasDriver() && !isWrecked() && this.random.nextInt(4) == 0) {   // exhaust puffs, left rear
             Vec3 p = localToWorld(-0.6, 0.8, -3.6);

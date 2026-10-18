@@ -14,8 +14,15 @@
   "msg.ww1armor.blocked": "Not enough room to place the armored car here (it needs about 9 x 3 x 4 blocks)",
   "hud.ww1armor.seat": "%s  ·  [%s] switch seat",
   "hud.ww1armor.hull": "Hull %s / %s",
-  "hud.ww1armor.gunner_hint": "Hold attack to fire the MG 08",
+  "hud.ww1armor.gunner_hint": "Attack: fire · Use: aim/zoom · [%s] reload",
   "subtitles.ww1armor.mg_fire": "Machine gun fires",
   "subtitles.ww1armor.ricochet": "Bullet ricochets off armor",
-  "subtitles.ww1armor.engine": "Armored car engine"
+  "subtitles.ww1armor.engine": "Armored car engine",
+  "key.ww1armor.reload": "Reload MG 08 (new belt)",
+  "hud.ww1armor.mg_ammo": "MG 08  %s / %s  ·  reserve %s",
+  "hud.ww1armor.heat": "Heat",
+  "hud.ww1armor.reloading": "Feeding new belt...",
+  "hud.ww1armor.overheated": "OVERHEATED: water jacket boiling",
+  "msg.ww1armor.overheated": "MG 08 overheated, let it cool",
+  "msg.ww1armor.no_ammo": "No 7.92 mm ammunition (TACZ rifle rounds or ammo box)"
 }

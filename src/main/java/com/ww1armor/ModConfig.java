@@ -38,15 +38,33 @@ public class ModConfig {
     public float acceleration = 0.0045F;    // ~5 s to full speed
     public float braking = 0.02F;
     public float maxSteerAngle = 22.0F;     // degrees; with the 4.4 m wheelbase gives an ~11 block turning radius
-    public float steerSpeed = 1.1F;         // degrees per tick the wheel can be turned (heavy steering)
+    public float steerSpeed = 1.6F;         // max degrees per tick the wheel turns in (eased, heavy steering)
+    public float steerReturnSpeed = 2.2F;   // max degrees per tick it self-centres
+    public float turnSmoothing = 0.35F;     // 0..1, lower = hull swings into turns more gradually
 
-    // ---- MG 08
+    // ---- MG 08 (7.92 mm, 250-round fabric belt, ~450-500 rounds/min, water-cooled jacket)
     public float mgDamage = 5.0F;
-    public int mgFireIntervalTicks = 2;
+    public float mgRoundsPerMinute = 500.0F;
+    public int mgBeltSize = 250;
+    public int mgReloadTicks = 90;           // 4.5 s to feed a new belt
     public double mgRange = 80.0;
     public double mgSpread = 0.012;
     public float mgMaxElevation = 20.0F;
     public float mgMaxDepression = 12.0F;
+    /** Heat 0..1. At 500 rpm the jacket boils after roughly 500-600 rounds of continuous fire. */
+    public float mgHeatPerShot = 0.005F;
+    public float mgCoolingPerTick = 0.00125F;
+    /** After overheating the gun is locked until heat falls back to this. */
+    public float mgOverheatResume = 0.3F;
+    /** TACZ ammo ids the belt accepts (7.92 mm Mauser equivalents). Add "*" to accept any TACZ ammo. */
+    public List<String> mgAmmoIds = new ArrayList<>(List.of(
+            "tacz:308", "tacz:30_06", "tacz:762x54", "tacz:792x57", "tacz:8x57", "tacz:303"));
+    /** Belts refill for free (no ammo needed). Creative players and TACZ creative ammo boxes are always free. */
+    public boolean mgInfiniteAmmo = false;
+    /** Without TACZ installed there is no ammo item, so belts refill for free unless this is false. */
+    public boolean mgFreeAmmoWithoutTacz = true;
+    /** Zoom while holding use in the gun sight (1 = none, max 3). */
+    public float mgSightZoom = 3.0F;
 
     // ---- repair
     public float repairPerIngot = 20.0F;
@@ -77,6 +95,12 @@ public class ModConfig {
         if (cfg.antiTankWeapons == null) {
             cfg.antiTankWeapons = new ArrayList<>();
         }
+        if (cfg.mgAmmoIds == null) {
+            cfg.mgAmmoIds = new ArrayList<>();
+        }
+        cfg.mgBeltSize = Math.max(1, cfg.mgBeltSize);
+        cfg.mgSightZoom = Math.max(1.0F, Math.min(3.0F, cfg.mgSightZoom));
+        cfg.turnSmoothing = Math.max(0.05F, Math.min(1.0F, cfg.turnSmoothing));
         try (Writer w = Files.newBufferedWriter(path)) {
             GSON.toJson(cfg, w); // writes defaults for any new fields
         } catch (Exception e) {

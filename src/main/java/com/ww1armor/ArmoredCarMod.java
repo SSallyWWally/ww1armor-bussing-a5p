@@ -4,6 +4,7 @@ import com.ww1armor.entity.ArmoredCarEntity;
 import com.ww1armor.entity.HullSegmentEntity;
 import com.ww1armor.item.ArmoredCarItem;
 import com.ww1armor.network.FireGunPayload;
+import com.ww1armor.network.ReloadPayload;
 import com.ww1armor.network.SwitchSeatPayload;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
@@ -70,6 +71,15 @@ public class ArmoredCarMod implements ModInitializer {
 
         PayloadTypeRegistry.playC2S().register(SwitchSeatPayload.TYPE, SwitchSeatPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(FireGunPayload.TYPE, FireGunPayload.CODEC);
+        PayloadTypeRegistry.playC2S().register(ReloadPayload.TYPE, ReloadPayload.CODEC);
+        ServerPlayNetworking.registerGlobalReceiver(ReloadPayload.TYPE, (payload, context) -> {
+            ServerPlayer player = context.player();
+            player.getServer().execute(() -> {
+                if (player.getVehicle() instanceof ArmoredCarEntity car) {
+                    car.startReload(player);
+                }
+            });
+        });
 
         ServerPlayNetworking.registerGlobalReceiver(SwitchSeatPayload.TYPE, (payload, context) -> {
             ServerPlayer player = context.player();

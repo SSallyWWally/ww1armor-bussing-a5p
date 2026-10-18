@@ -3,7 +3,11 @@ package com.ww1armor.client;
 import com.mojang.blaze3d.platform.InputConstants;
 import com.ww1armor.ArmoredCarMod;
 import com.ww1armor.entity.ArmoredCarEntity;
+import com.mojang.blaze3d.systems.RenderSystem;
+import com.ww1armor.ModConfig;
+import com.ww1armor.compat.TaczCompat;
 import com.ww1armor.network.FireGunPayload;
+import com.ww1armor.network.ReloadPayload;
 import com.ww1armor.network.SwitchSeatPayload;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientEntityEvents;
@@ -17,14 +21,19 @@ import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.entity.NoopRenderer;
-import net.minecraft.sounds.SoundEvents;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
-import net.minecraft.world.item.ItemStack;
+import net.minecraft.resources.ResourceLocation;
 import org.lwjgl.glfw.GLFW;
 
 public class ArmoredCarClient implements ClientModInitializer {
     public static KeyMapping SWITCH_SEAT;
+    public static KeyMapping RELOAD;
+
+    private static final ResourceLocation SIGHT_IRON = ArmoredCarMod.id("textures/gui/sight_iron.png");
+    private static final ResourceLocation SIGHT_ZOOM = ArmoredCarMod.id("textures/gui/sight_zoom.png");
+    private static int ammoCache = 0;
+    private static int ammoCacheAge = 0;
 
     @Override
     public void onInitializeClient() {
@@ -32,32 +41,35 @@ public class ArmoredCarClient implements ClientModInitializer {
         EntityRendererRegistry.register(ArmoredCarMod.BUSSING_A5P, ArmoredCarRenderer::new);
         EntityRendererRegistry.register(ArmoredCarMod.HULL_SEGMENT, NoopRenderer::new);
 
-        // engine + rolling sounds start when a car is loaded on this client
+        // the engine loop is the car's only driving sound
         ClientEntityEvents.ENTITY_LOAD.register((entity, world) -> {
             if (entity instanceof ArmoredCarEntity car && !car.isWrecked()) {
-                Minecraft mc = Minecraft.getInstance();
-                mc.getSoundManager().play(new CarSoundInstance(car, ArmoredCarMod.ENGINE, CarSoundInstance.Kind.ENGINE));
-                mc.getSoundManager().play(new CarSoundInstance(car, SoundEvents.MINECART_RIDING, CarSoundInstance.Kind.ROLL));
+                Minecraft.getInstance().getSoundManager()
+                        .play(new CarSoundInstance(car, ArmoredCarMod.ENGINE, CarSoundInstance.Kind.ENGINE));
             }
         });
 
         SWITCH_SEAT = KeyBindingHelper.registerKeyBinding(new KeyMapping(
                 "key.ww1armor.switch_seat", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_N, "key.categories.ww1armor"));
+        // not R: TACZ uses R for its own reload
+        RELOAD = KeyBindingHelper.registerKeyBinding(new KeyMapping(
+                "key.ww1armor.reload", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_B, "key.categories.ww1armor"));
 
-        // Gunner trigger: runs before vanilla handles the attack key, so clicks don't punch.
+        // Gunner trigger + sight: runs before vanilla reads the mouse buttons, so clicks don't punch,
+        // mine blocks or use items while manning the MG.
         ClientTickEvents.START_CLIENT_TICK.register(mc -> {
-            if (mc.player == null || mc.screen != null) {
+            if (mc.player == null) {
                 return;
             }
-            if (mc.player.getVehicle() instanceof ArmoredCarEntity car
-                    && !car.isWrecked()
-                    && car.seatOf(mc.player) == ArmoredCarEntity.GUNNER
-                    && !isHoldingTaczGun(mc.player.getMainHandItem())) {
-                if (mc.options.keyAttack.isDown()) {
-                    ClientPlayNetworking.send(new FireGunPayload());
-                }
+            GunSight.tick(mc);
+            if (mc.screen == null && GunSight.isGunner(mc)) {
+                boolean trigger = GunSight.physicallyDown(mc, mc.options.keyAttack);
+                mc.options.keyAttack.setDown(false);
                 while (mc.options.keyAttack.consumeClick()) {
                     // swallow the click
+                }
+                if (trigger) {
+                    ClientPlayNetworking.send(new FireGunPayload());
                 }
             }
         });
@@ -68,14 +80,55 @@ public class ArmoredCarClient implements ClientModInitializer {
                     ClientPlayNetworking.send(new SwitchSeatPayload());
                 }
             }
+            while (RELOAD.consumeClick()) {
+                if (mc.player != null && mc.player.getVehicle() instanceof ArmoredCarEntity) {
+                    ClientPlayNetworking.send(new ReloadPayload());
+                }
+            }
+            if (mc.player != null && ++ammoCacheAge >= 10) {
+                ammoCacheAge = 0;
+                ammoCache = TaczCompat.countMgAmmo(mc.player);
+            }
         });
 
-        HudRenderCallback.EVENT.register((graphics, tickCounter) -> drawHud(graphics));
+        HudRenderCallback.EVENT.register((graphics, tickCounter) -> {
+            drawSight(graphics, tickCounter.getGameTimeDeltaPartialTick(true));
+            drawHud(graphics);
+        });
     }
 
-    /** Lets TACZ handle shooting if the gunner is holding one of its guns. */
-    private static boolean isHoldingTaczGun(ItemStack stack) {
-        return !stack.isEmpty() && "tacz".equals(BuiltInRegistries.ITEM.getKey(stack.getItem()).getNamespace());
+    /**
+     * MG 08 open sight: rear notch + front blade, drawn at screen centre (the point the gun is aimed at).
+     * Zooming in grows the sight picture and closes in a dark vision-port vignette.
+     */
+    private static void drawSight(GuiGraphics g, float partialTick) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.options.hideGui || !GunSight.inSight()) {
+            return;
+        }
+        int w = g.guiWidth(), h = g.guiHeight();
+        float maxZoom = Math.max(1.001F, ModConfig.get().mgSightZoom);
+        float z = GunSight.zoomAmount(partialTick);
+        float t = Math.max(0.0F, Math.min(1.0F, (z - 1.0F) / (maxZoom - 1.0F)));
+
+        RenderSystem.enableBlend();
+        RenderSystem.defaultBlendFunc();
+        if (t > 0.01F) {
+            // vignette: a square texture covering the screen height, black bars beside it
+            RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, t);
+            int size = (int) (h * (1.6F - 0.45F * t));
+            int x0 = (w - size) / 2, y0 = (h - size) / 2;
+            g.blit(SIGHT_ZOOM, x0, y0, size, size, 0.0F, 0.0F, 512, 512, 512, 512);
+            g.fill(0, 0, Math.max(0, x0), h, (int) (t * 255) << 24);
+            g.fill(x0 + size, 0, w, h, (int) (t * 255) << 24);
+            g.fill(x0, 0, x0 + size, Math.max(0, y0), (int) (t * 255) << 24);
+            g.fill(x0, y0 + size, x0 + size, h, (int) (t * 255) << 24);
+            RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
+        }
+        // the iron sight: texture centre (128,128) is the aiming point
+        int s = (int) (h * (0.55F + 0.55F * t));
+        g.blit(SIGHT_IRON, w / 2 - s / 2, h / 2 - s / 2, s, s, 0.0F, 0.0F, 256, 256, 256, 256);
+        RenderSystem.disableBlend();
     }
 
     private static void drawHud(GuiGraphics g) {
@@ -105,7 +158,38 @@ public class ArmoredCarClient implements ClientModInitializer {
         g.fill(x, y + 23, x + filled, y + 27, color);
 
         if (seat == ArmoredCarEntity.GUNNER) {
-            g.drawString(mc.font, Component.translatable("hud.ww1armor.gunner_hint"), x, y + 32, 0xFFB9B6A3, true);
+            int gy = y + 34;
+            String reserve = ammoCache < 0 ? "\u221e" : String.valueOf(ammoCache);
+            g.drawString(mc.font, Component.translatable("hud.ww1armor.mg_ammo",
+                    String.valueOf(car.getBelt()), String.valueOf(ModConfig.get().mgBeltSize), reserve),
+                    x, gy, 0xFFE8E4D0, true);
+
+            // belt
+            int beltFill = (int) (barW * car.getBelt() / (float) Math.max(1, ModConfig.get().mgBeltSize));
+            g.fill(x, gy + 11, x + barW, gy + 14, 0x80000000);
+            g.fill(x, gy + 11, x + beltFill, gy + 14, 0xFFC9B37A);
+
+            // water-jacket heat
+            float heat = car.getHeat();
+            int heatColor = car.isOverheated() ? 0xFFE04A2A : heat > 0.7F ? 0xFFE0A030 : 0xFF6FA8C8;
+            g.drawString(mc.font, Component.translatable("hud.ww1armor.heat"), x, gy + 18, 0xFFB9B6A3, true);
+            int hx = x + 32;
+            g.fill(hx, gy + 20, hx + barW - 32, gy + 24, 0x80000000);
+            g.fill(hx, gy + 20, hx + (int) ((barW - 32) * heat), gy + 24, heatColor);
+
+            int status = gy + 30;
+            if (car.getReloadTicks() > 0) {
+                g.drawString(mc.font, Component.translatable("hud.ww1armor.reloading"), x, status, 0xFFE0C060, true);
+                status += 11;
+            }
+            if (car.isOverheated()) {
+                boolean blink = (mc.player.tickCount / 5) % 2 == 0;
+                g.drawString(mc.font, Component.translatable("hud.ww1armor.overheated"), x, status,
+                        blink ? 0xFFFF5A3A : 0xFFB04030, true);
+                status += 11;
+            }
+            g.drawString(mc.font, Component.translatable("hud.ww1armor.gunner_hint", RELOAD.getTranslatedKeyMessage()),
+                    x, status, 0xFFB9B6A3, true);
         }
     }
 }
