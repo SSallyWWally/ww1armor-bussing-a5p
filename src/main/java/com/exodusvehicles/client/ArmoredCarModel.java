@@ -40,7 +40,9 @@ public class ArmoredCarModel {
      */
     private static final float GUNNER_GUN_X = -1.5F;     // turret space; model -x = the gunner's right
     private static final float GUNNER_GUN_Y = 0.5F;      // eye at -5: gun axis 5.5 px below the eye
-    private static final float GUNNER_GUN_Z = -3.0F;
+    private static final float GUNNER_GUN_Z = 4.0F;      // breech end sits behind the eye: no visible back end
+    /** Barrel stretched in the gunner's view so the muzzle still reaches out in front. */
+    private static final float GUNNER_GUN_STRETCH = 1.5F;
     /** Gunner's eye height in turret space (seat 1 eye = gun pivot height). */
     private static final float EYE_Y = -5.0F;
     private final ModelPart[] spin;
@@ -699,7 +701,9 @@ public class ArmoredCarModel {
             this.recoil.x = GUNNER_GUN_X;
             this.recoil.y = GUNNER_GUN_Y - EYE_Y;
             this.recoil.z = GUNNER_GUN_Z + kick;
+            this.recoil.zScale = GUNNER_GUN_STRETCH;
         } else {
+            this.recoil.zScale = 1.0F;
             this.gun.x = this.gunBaseX;
             this.gun.y = this.gunBaseY;
             this.gun.z = this.gunBaseZ;

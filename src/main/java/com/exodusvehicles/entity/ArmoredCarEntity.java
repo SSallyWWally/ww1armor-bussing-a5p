@@ -68,7 +68,7 @@ public class ArmoredCarEntity extends Entity {
     /** How far the barrel sits below the gunner's sight line (blocks). */
     public static final double BARREL_BELOW_SIGHT = 5.5 / 16.0;
     /** In the gunner's own view the whole gun sits just under the sight; its muzzle is this far ahead of the eye. */
-    public static final double GUNNER_MUZZLE_DIST = 19.0 / 16.0;
+    public static final double GUNNER_MUZZLE_DIST = 20.0 / 16.0;    // -4 + 16 * 1.5 px
     /** ...and this far to the gunner's right. */
     public static final double GUNNER_MUZZLE_RIGHT = 1.5 / 16.0;
     /** Tracer flight speed (blocks per tick) and lifetime (ticks). */
