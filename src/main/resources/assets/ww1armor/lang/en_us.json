@@ -29,5 +29,7 @@
   "subtitles.ww1armor.mg_tail": "Machine gun stops firing",
   "subtitles.ww1armor.engine_start": "Armored car engine starts",
   "subtitles.ww1armor.engine_stop": "Armored car engine stops",
-  "subtitles.ww1armor.engine_ramp": "Armored car engine revs"
+  "subtitles.ww1armor.engine_ramp": "Armored car engine revs",
+  "key.ww1armor.engine": "Start / Stop Engine",
+  "hud.ww1armor.engine_off": "· Engine off"
 }

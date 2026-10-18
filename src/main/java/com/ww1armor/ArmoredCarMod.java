@@ -5,6 +5,8 @@ import com.ww1armor.entity.HullSegmentEntity;
 import com.ww1armor.item.ArmoredCarItem;
 import com.ww1armor.network.FireGunPayload;
 import com.ww1armor.network.ReloadPayload;
+import com.ww1armor.network.ToggleEnginePayload;
+import com.ww1armor.network.TracerPayload;
 import com.ww1armor.network.SwitchSeatPayload;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
@@ -86,6 +88,16 @@ public class ArmoredCarMod implements ModInitializer {
         PayloadTypeRegistry.playC2S().register(SwitchSeatPayload.TYPE, SwitchSeatPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(FireGunPayload.TYPE, FireGunPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(ReloadPayload.TYPE, ReloadPayload.CODEC);
+        PayloadTypeRegistry.playC2S().register(ToggleEnginePayload.TYPE, ToggleEnginePayload.CODEC);
+        PayloadTypeRegistry.playS2C().register(TracerPayload.TYPE, TracerPayload.CODEC);
+        ServerPlayNetworking.registerGlobalReceiver(ToggleEnginePayload.TYPE, (payload, context) -> {
+            ServerPlayer player = context.player();
+            player.getServer().execute(() -> {
+                if (player.getVehicle() instanceof ArmoredCarEntity car) {
+                    car.toggleEngine(player);
+                }
+            });
+        });
         ServerPlayNetworking.registerGlobalReceiver(ReloadPayload.TYPE, (payload, context) -> {
             ServerPlayer player = context.player();
             player.getServer().execute(() -> {

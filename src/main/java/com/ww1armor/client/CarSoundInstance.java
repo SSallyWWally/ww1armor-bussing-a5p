@@ -54,7 +54,7 @@ public class CarSoundInstance extends AbstractTickableSoundInstance {
         float speed = this.car.clientSpeed;
         float target;
         if (this.kind == Kind.ENGINE) {
-            this.driverTicks = this.car.hasDriver() ? this.driverTicks + 1 : 0;
+            this.driverTicks = this.car.isEngineOn() ? this.driverTicks + 1 : 0;
             // idle loop comes in under the tail of the start-up sound; pitch rises with road speed
             target = this.driverTicks > 26 ? 0.6F + Math.min(speed, 0.5F) * 0.7F : 0.0F;
             this.pitch = 1.0F + Math.min(speed, 0.5F) * 1.0F;

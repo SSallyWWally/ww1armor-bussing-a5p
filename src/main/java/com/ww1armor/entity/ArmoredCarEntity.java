@@ -3,6 +3,7 @@ package com.ww1armor.entity;
 import com.ww1armor.ArmoredCarMod;
 import com.ww1armor.ModConfig;
 import com.ww1armor.compat.TaczCompat;
+import com.ww1armor.network.TracerPayload;
 import net.minecraft.core.particles.BlockParticleOption;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.particles.ParticleTypes;
@@ -66,6 +67,9 @@ public class ArmoredCarEntity extends Entity {
     public static final double MUZZLE_DIST = 29.3 / 16.0;
     /** How far the barrel sits below the gunner's sight line (blocks). */
     public static final double BARREL_BELOW_SIGHT = 0.4;
+    /** Tracer flight speed (blocks per tick) and lifetime (ticks). */
+    public static final double TRACER_SPEED = 12.0;
+    public static final int TRACER_LIFE = 12;
     public static final double WHEEL_RADIUS = 12.5 / 16.0;
     /** Front to rear axle (blocks). */
     public static final double WHEELBASE = 70.0 / 16.0;
@@ -93,6 +97,8 @@ public class ArmoredCarEntity extends Entity {
     private static final EntityDataAccessor<Integer> DATA_RELOAD =
             SynchedEntityData.defineId(ArmoredCarEntity.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Boolean> DATA_OVERHEATED =
+            SynchedEntityData.defineId(ArmoredCarEntity.class, EntityDataSerializers.BOOLEAN);
+    private static final EntityDataAccessor<Boolean> DATA_ENGINE =
             SynchedEntityData.defineId(ArmoredCarEntity.class, EntityDataSerializers.BOOLEAN);
 
     private static EntityDataAccessor<Integer> seatAccessor(int seat) {
@@ -125,6 +131,19 @@ public class ArmoredCarEntity extends Entity {
     private int stillTicks;
     private int rampCooldown;
     private Vec3 lastServerPos;
+    private int noDriverTicks;
+    /** Client: tracers in flight from this car's MG. */
+    public final java.util.List<Tracer> tracers = new java.util.ArrayList<>();
+
+    /** A tracer round in flight (client side, visual only). */
+    public static final class Tracer {
+        public final Vec3 start, end;
+        public int age;
+        public Tracer(Vec3 start, Vec3 end) {
+            this.start = start;
+            this.end = end;
+        }
+    }
     private int wreckTicks;
     private int shotCounter;
     private int lastExplosionTick = -1;
@@ -159,6 +178,7 @@ public class ArmoredCarEntity extends Entity {
         builder.define(DATA_HEAT, 0.0F);
         builder.define(DATA_RELOAD, 0);
         builder.define(DATA_OVERHEATED, false);
+        builder.define(DATA_ENGINE, false);
     }
 
     public int getBelt() {
@@ -175,6 +195,21 @@ public class ArmoredCarEntity extends Entity {
 
     public boolean isOverheated() {
         return this.entityData.get(DATA_OVERHEATED);
+    }
+
+    public boolean isEngineOn() {
+        return this.entityData.get(DATA_ENGINE) && !isWrecked();
+    }
+
+    /** Engine start/stop key: only the driver can work the engine. */
+    public void toggleEngine(ServerPlayer player) {
+        if (isWrecked() || seatOf(player) != DRIVER) {
+            return;
+        }
+        boolean on = !this.entityData.get(DATA_ENGINE);
+        this.entityData.set(DATA_ENGINE, on);
+        this.noDriverTicks = 0;
+        engineSound(on ? ArmoredCarMod.ENGINE_START : ArmoredCarMod.ENGINE_STOP);
     }
 
     public float getHealth() {
@@ -209,6 +244,7 @@ public class ArmoredCarEntity extends Entity {
         }
         this.entityData.set(DATA_HEAT, tag.getFloat("Heat"));
         this.entityData.set(DATA_OVERHEATED, tag.getBoolean("Overheated"));
+        this.entityData.set(DATA_ENGINE, tag.getBoolean("Engine"));
         // a reload interrupted by a save just completes on load
         int pending = tag.getInt("PendingRounds");
         if (pending > 0) {
@@ -224,6 +260,7 @@ public class ArmoredCarEntity extends Entity {
         tag.putInt("Belt", getBelt());
         tag.putFloat("Heat", getHeat());
         tag.putBoolean("Overheated", isOverheated());
+        tag.putBoolean("Engine", this.entityData.get(DATA_ENGINE));
         tag.putInt("PendingRounds", getReloadTicks() > 0 ? this.pendingRounds : 0);
     }
 
@@ -268,7 +305,11 @@ public class ArmoredCarEntity extends Entity {
 
     @Override
     public AABB getBoundingBoxForCulling() {
-        return this.getBoundingBox().inflate(4.0, 0.5, 4.0);
+        AABB box = this.getBoundingBox().inflate(4.0, 0.5, 4.0);
+        for (Tracer t : this.tracers) {      // keep drawing while tracers fly off-screen from the car
+            box = box.minmax(new AABB(t.start, t.end));
+        }
+        return box;
     }
 
     @Override
@@ -389,9 +430,6 @@ public class ArmoredCarEntity extends Entity {
             if (free >= 0) {
                 setSeat(free, passenger.getId());
                 announceSeat(passenger, free);
-                if (free == DRIVER) {
-                    engineSound(ArmoredCarMod.ENGINE_START);
-                }
             }
         }
     }
@@ -408,9 +446,6 @@ public class ArmoredCarEntity extends Entity {
         super.removePassenger(passenger);
         if (!this.level().isClientSide && seat >= 0) {
             setSeat(seat, -1);
-            if (seat == DRIVER) {
-                engineSound(ArmoredCarMod.ENGINE_STOP);
-            }
         }
     }
 
@@ -425,11 +460,6 @@ public class ArmoredCarEntity extends Entity {
             if (entityInSeat(s) == null) {
                 setSeat(current, -1);
                 setSeat(s, player.getId());
-                if (current == DRIVER) {
-                    engineSound(ArmoredCarMod.ENGINE_STOP);
-                } else if (s == DRIVER) {
-                    engineSound(ArmoredCarMod.ENGINE_START);
-                }
                 announceSeat(player, s);
                 this.positionRider(player);
                 return;
@@ -701,25 +731,37 @@ public class ArmoredCarEntity extends Entity {
             }
             target.hurt(this.damageSources().mobProjectile(this, shooter), cfg.mgDamage);
         } else if (blockHit.getType() == HitResult.Type.BLOCK) {
-            server.sendParticles(new BlockParticleOption(ParticleTypes.BLOCK, this.level().getBlockState(blockHit.getBlockPos())),
-                    end.x, end.y, end.z, 5, 0.05, 0.05, 0.05, 0.1);
+            // a small kick of whatever the round hit (dirt from dirt, chips from stone), thrown upward
+            BlockParticleOption chunk = new BlockParticleOption(ParticleTypes.BLOCK, this.level().getBlockState(blockHit.getBlockPos()));
+            Vec3 n = Vec3.atLowerCornerOf(blockHit.getDirection().getNormal());
+            for (int i = 0; i < 7; i++) {
+                double vx = n.x * 0.12 + (this.random.nextDouble() - 0.5) * 0.12;
+                double vy = 0.12 + this.random.nextDouble() * 0.16 + Math.max(0.0, n.y) * 0.05;
+                double vz = n.z * 0.12 + (this.random.nextDouble() - 0.5) * 0.12;
+                server.sendParticles(chunk, end.x, end.y + 0.02, end.z, 0, vx, vy, vz, 1.0);
+            }
+            server.sendParticles(ParticleTypes.POOF, end.x, end.y + 0.05, end.z, 0, 0.0, 0.02, 0.0, 1.0);
         }
 
-        boolean tracer = (this.shotCounter++ % 3) == 0;
-        Vec3 toEnd = end.subtract(muzzle);
-        double dist = toEnd.length();
-        Vec3 tdir = dist > 1.0E-3 ? toEnd.scale(1.0 / dist) : dir;
-        for (ServerPlayer viewer : server.players()) {
-            if (viewer == shooter || viewer.distanceToSqr(muzzle) > 96.0 * 96.0) {
-                continue;     // the gunner gets no smoke or tracer start in their face
+        // the visible barrel (model) is on the sight line for onlookers; the gunner sees it lowered in the sight
+        Vec3 barrelTip = pivot.add(dir.scale(MUZZLE_DIST));
+        int shotNo = this.shotCounter++;
+        if (shotNo % 3 == 0) {
+            // a wisp of white smoke from the barrel
+            for (ServerPlayer viewer : server.players()) {
+                if (viewer.distanceToSqr(barrelTip) > 64.0 * 64.0) {
+                    continue;
+                }
+                Vec3 at = viewer == shooter ? muzzle.add(dir.scale(0.6)) : barrelTip;   // gunner: the lowered barrel
+                server.sendParticles(viewer, ParticleTypes.WHITE_SMOKE, false, at.x, at.y + 0.05, at.z, 0,
+                        dir.x * 0.02, 0.02, dir.z * 0.02, 1.0);
             }
-            server.sendParticles(viewer, ParticleTypes.SMOKE, false, muzzle.x, muzzle.y, muzzle.z, 2, 0.03, 0.03, 0.03, 0.02);
         }
-        if (tracer) {
-            // tracer starts a few blocks out so it never crosses the sight picture
-            for (double d = 4.0; d < dist; d += 1.25) {
-                Vec3 tp = muzzle.add(tdir.scale(d));
-                server.sendParticles(ParticleTypes.ELECTRIC_SPARK, tp.x, tp.y, tp.z, 1, 0.0, 0.0, 0.0, 0.0);
+        if (shotNo % 4 == 0) {
+            // every 4th round is a tracer (clients draw it flying out from the barrel)
+            TracerPayload tracer = new TracerPayload(this.getId(), barrelTip.x, barrelTip.y, barrelTip.z, end.x, end.y, end.z);
+            for (ServerPlayer viewer : net.fabricmc.fabric.api.networking.v1.PlayerLookup.tracking(this)) {
+                net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(viewer, tracer);
             }
         }
         playGunSound(server, muzzle, ArmoredCarMod.MG_FIRE, ArmoredCarMod.MG_FIRE_FAR,
@@ -790,7 +832,15 @@ public class ArmoredCarEntity extends Entity {
         if (this.rampCooldown > 0) {
             this.rampCooldown--;
         }
-        if (hasDriver()) {
+        if (this.entityData.get(DATA_ENGINE)) {
+            // nobody at the wheel for a minute: the engine is shut off
+            this.noDriverTicks = hasDriver() ? 0 : this.noDriverTicks + 1;
+            if (this.noDriverTicks > 1200) {
+                this.entityData.set(DATA_ENGINE, false);
+                engineSound(ArmoredCarMod.ENGINE_STOP);
+            }
+        }
+        if (hasDriver() && isEngineOn()) {
             if (moved < 0.02) {
                 this.stillTicks++;
             } else {
@@ -910,7 +960,7 @@ public class ArmoredCarEntity extends Entity {
     /** Heavy truck model: slow throttle response, steering wheel that turns gradually, bicycle-model yaw. */
     private void drive(Player driver) {
         ModConfig cfg = ModConfig.get();
-        float forward = driver.zza;
+        float forward = isEngineOn() ? driver.zza : 0.0F;      // engine off: the car only coasts
         float strafe = driver.xxa;
 
         if (forward > 0.0F) {
@@ -1042,6 +1092,7 @@ public class ArmoredCarEntity extends Entity {
     }
 
     private void tickClientVisuals() {
+        this.tracers.removeIf(t -> ++t.age > TRACER_LIFE);
         double dx = this.getX() - this.xo;
         double dz = this.getZ() - this.zo;
         double yaw = Math.toRadians(this.getYRot());
@@ -1094,7 +1145,7 @@ public class ArmoredCarEntity extends Entity {
                     Vec3.directionFromRotation(this.gunPitch, this.getYRot() + this.turretYaw).scale(MUZZLE_DIST * 0.6));
             this.level().addParticle(ParticleTypes.CLOUD, jacket.x, jacket.y + 0.1, jacket.z, 0.0, 0.04, 0.0);
         }
-        if (hasDriver() && !isWrecked() && this.random.nextInt(4) == 0) {   // exhaust puffs, left rear
+        if (isEngineOn() && this.random.nextInt(4) == 0) {   // exhaust puffs, left rear
             Vec3 p = localToWorld(-0.6, 0.8, -3.6);
             this.level().addParticle(ParticleTypes.SMOKE, p.x, p.y, p.z, 0.0, 0.02, 0.0);
         }

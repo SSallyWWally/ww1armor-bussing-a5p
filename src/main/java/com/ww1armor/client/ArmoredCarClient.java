@@ -8,6 +8,8 @@ import com.ww1armor.ModConfig;
 import com.ww1armor.compat.TaczCompat;
 import com.ww1armor.network.FireGunPayload;
 import com.ww1armor.network.ReloadPayload;
+import com.ww1armor.network.ToggleEnginePayload;
+import com.ww1armor.network.TracerPayload;
 import com.ww1armor.network.SwitchSeatPayload;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientEntityEvents;
@@ -29,6 +31,7 @@ import org.lwjgl.glfw.GLFW;
 public class ArmoredCarClient implements ClientModInitializer {
     public static KeyMapping SWITCH_SEAT;
     public static KeyMapping RELOAD;
+    public static KeyMapping ENGINE;
 
     private static final ResourceLocation SIGHT_ZOOM = ArmoredCarMod.id("textures/gui/sight_zoom.png");
     private static int ammoCache = 0;
@@ -53,6 +56,20 @@ public class ArmoredCarClient implements ClientModInitializer {
         // not R: TACZ uses R for its own reload
         RELOAD = KeyBindingHelper.registerKeyBinding(new KeyMapping(
                 "key.ww1armor.reload", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_B, "key.categories.ww1armor"));
+        ENGINE = KeyBindingHelper.registerKeyBinding(new KeyMapping(
+                "key.ww1armor.engine", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_P, "key.categories.ww1armor"));
+
+        ClientPlayNetworking.registerGlobalReceiver(TracerPayload.TYPE, (payload, context) -> {
+            Minecraft mc = context.client();
+            if (mc.level != null && mc.level.getEntity(payload.carId()) instanceof ArmoredCarEntity car) {
+                net.minecraft.world.phys.Vec3 start = new net.minecraft.world.phys.Vec3(payload.sx(), payload.sy(), payload.sz());
+                if (GunSight.inSight() && mc.player != null && car.seatOf(mc.player) == ArmoredCarEntity.GUNNER) {
+                    start = start.add(0.0, -ArmoredCarEntity.BARREL_BELOW_SIGHT, 0.0);   // from the barrel seen in the sight
+                }
+                car.tracers.add(new ArmoredCarEntity.Tracer(start,
+                        new net.minecraft.world.phys.Vec3(payload.ex(), payload.ey(), payload.ez())));
+            }
+        });
 
         // Gunner trigger + sight: runs before vanilla reads the mouse buttons, so clicks don't punch,
         // mine blocks or use items while manning the MG.
@@ -77,6 +94,11 @@ public class ArmoredCarClient implements ClientModInitializer {
             while (SWITCH_SEAT.consumeClick()) {
                 if (mc.player != null && mc.player.getVehicle() instanceof ArmoredCarEntity) {
                     ClientPlayNetworking.send(new SwitchSeatPayload());
+                }
+            }
+            while (ENGINE.consumeClick()) {
+                if (mc.player != null && mc.player.getVehicle() instanceof ArmoredCarEntity) {
+                    ClientPlayNetworking.send(new ToggleEnginePayload());
                 }
             }
             while (RELOAD.consumeClick()) {
@@ -146,6 +168,10 @@ public class ArmoredCarClient implements ClientModInitializer {
         Component seatLine = Component.translatable("hud.ww1armor.seat",
                 Component.translatable("seat.ww1armor." + seat), SWITCH_SEAT.getTranslatedKeyMessage());
         g.drawString(mc.font, seatLine, x, y, 0xFFE8E4D0, true);
+        if (seat == ArmoredCarEntity.DRIVER && !car.isEngineOn()) {
+            g.drawString(mc.font, Component.translatable("hud.ww1armor.engine_off"),
+                    x + mc.font.width(seatLine) + 8, y, 0xFFB9B6A3, true);
+        }
 
         float hp = car.getHealth(), max = car.getMaxHealth();
         Component hull = Component.translatable("hud.ww1armor.hull",

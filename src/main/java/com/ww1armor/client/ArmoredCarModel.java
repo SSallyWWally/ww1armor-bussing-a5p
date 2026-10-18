@@ -33,6 +33,9 @@ public class ArmoredCarModel {
     private final List<ModelPart> allParts;
     private final ModelPart turret, gun, recoil, flash;
     private final ModelPart steerL, steerR;
+    private final float gunBaseY;
+    /** How far the barrel is drawn below the sight line in the gunner's view (model px; 6.4 px = 0.4 block). */
+    private static final float GUNNER_BARREL_DROP = 6.4F;
     private final ModelPart[] spin;
 
     public ArmoredCarModel(ModelPart root) {
@@ -44,6 +47,7 @@ public class ArmoredCarModel {
         this.gun = this.turret.getChild("gun");
         this.recoil = this.gun.getChild("recoil");
         this.flash = this.recoil.getChild("flash");
+        this.gunBaseY = this.gun.y;
         this.steerL = root.getChild("wheel0l_steer");
         this.steerR = root.getChild("wheel0r_steer");
         this.spin = new ModelPart[]{
@@ -640,6 +644,11 @@ public class ArmoredCarModel {
 
 
     public void setupAnim(ArmoredCarEntity car, float partialTick) {
+        setupAnim(car, partialTick, null);
+    }
+
+    /** gunnerView: the local gunner looking through the sight; the gun follows their view exactly and sits low. */
+    public void setupAnim(ArmoredCarEntity car, float partialTick, net.minecraft.world.entity.player.Player gunnerView) {
         float wheel = Mth.lerp(partialTick, car.wheelRotO, car.wheelRot);
         for (ModelPart w : this.spin) {
             w.xRot = wheel;
@@ -656,24 +665,50 @@ public class ArmoredCarModel {
             yaw = Mth.DEG_TO_RAD * (car.turretYaw + 25.0F + (car.getId() % 5) * 6.0F);
             pitch = 0.3F;
             this.steerR.visible = false;          // front right wheel blown off
+        } else if (gunnerView != null) {
+            float carYaw = Mth.rotLerp(partialTick, car.yRotO, car.getYRot());
+            yaw = Mth.DEG_TO_RAD * Mth.wrapDegrees(gunnerView.getViewYRot(partialTick) - carYaw);
+            pitch = Mth.DEG_TO_RAD * gunnerView.getViewXRot(partialTick);
         } else {
             yaw = Mth.DEG_TO_RAD * Mth.lerp(partialTick, car.turretYawO, car.turretYaw);
             pitch = Mth.DEG_TO_RAD * Mth.lerp(partialTick, car.gunPitchO, car.gunPitch);
         }
         this.turret.yRot = yaw;
         this.gun.xRot = pitch;
+        this.gun.y = this.gunBaseY + (gunnerView != null ? GUNNER_BARREL_DROP : 0.0F);
         this.recoil.z = 2.0F * Mth.lerp(partialTick, car.recoilO, car.recoil);   // slides back on firing
     }
 
     /** Main pass. interiorView hides the upper hull and the whole cupola (drum, ports, gun) so the crew can see out. */
     public void render(PoseStack poseStack, VertexConsumer consumer, int light, int overlay, boolean interiorView) {
+        render(poseStack, consumer, light, overlay, interiorView, false);
+    }
+
+    /** gunnerView: like interiorView, but the MG itself stays visible (it shows at the bottom of the sight). */
+    public void render(PoseStack poseStack, VertexConsumer consumer, int light, int overlay, boolean interiorView,
+                       boolean gunnerView) {
         for (ModelPart p : this.hidden) {
             p.visible = !interiorView;
         }
-        this.turret.visible = !interiorView;     // hides every child too (skipDraw only hid the base plate)
+        this.turret.visible = !interiorView || gunnerView;     // hides every child too
+        if (gunnerView) {
+            this.turret.skipDraw = true;
+            this.turret.getAllParts().forEach(p -> {
+                if (p != this.turret && p != this.gun && p != this.recoil && p != this.flash && !isUnder(p, this.gun)) {
+                    p.visible = false;
+                }
+            });
+        }
         this.flash.visible = false;
         this.root.render(poseStack, consumer, light, overlay);
         this.turret.visible = true;
+        this.turret.skipDraw = false;
+        this.turret.getAllParts().forEach(p -> p.visible = true);
+        this.flash.visible = false;
+    }
+
+    private boolean isUnder(ModelPart part, ModelPart parent) {
+        return parent.getAllParts().anyMatch(p -> p == part);
     }
 
     /** Second pass drawing only the muzzle flash (full-bright). */
