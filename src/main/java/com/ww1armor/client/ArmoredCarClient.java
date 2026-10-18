@@ -30,7 +30,6 @@ public class ArmoredCarClient implements ClientModInitializer {
     public static KeyMapping SWITCH_SEAT;
     public static KeyMapping RELOAD;
 
-    private static final ResourceLocation SIGHT_IRON = ArmoredCarMod.id("textures/gui/sight_iron.png");
     private static final ResourceLocation SIGHT_ZOOM = ArmoredCarMod.id("textures/gui/sight_zoom.png");
     private static int ammoCache = 0;
     private static int ammoCacheAge = 0;
@@ -98,7 +97,7 @@ public class ArmoredCarClient implements ClientModInitializer {
     }
 
     /**
-     * Gun sight: a simple cross at screen centre (the point the gun is aimed at).
+     * Gun sight: WW1-style reticle meeting at screen centre (the point the gun is aimed at).
      * Zooming in closes in a dark vision-port vignette.
      */
     private static void drawSight(GuiGraphics g, float partialTick) {
@@ -113,6 +112,13 @@ public class ArmoredCarClient implements ClientModInitializer {
 
         RenderSystem.enableBlend();
         RenderSystem.defaultBlendFunc();
+        // WW1 reticle: one line across the whole sight, and a post from the centre down; no centre dot.
+        // A faint light edge keeps it readable against dark ground. Drawn first so the zoom vignette crops it.
+        int cx = w / 2, cy = h / 2;
+        g.fill(0, cy - 1, w, cy + 2, 0x40E8E4D0);
+        g.fill(cx - 2, cy, cx + 2, h, 0x40E8E4D0);
+        g.fill(0, cy, w, cy + 1, 0xE0141412);
+        g.fill(cx - 1, cy, cx + 1, h, 0xE0141412);
         if (t > 0.01F) {
             // vignette: a square texture covering the screen height, black bars beside it
             RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, t);
@@ -125,9 +131,6 @@ public class ArmoredCarClient implements ClientModInitializer {
             g.fill(x0, y0 + size, x0 + size, h, (int) (t * 255) << 24);
             RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
         }
-        // the cross: texture centre (128,128) is the aiming point
-        int s = (int) (h * 0.5F);
-        g.blit(SIGHT_IRON, w / 2 - s / 2, h / 2 - s / 2, s, s, 0.0F, 0.0F, 256, 256, 256, 256);
         RenderSystem.disableBlend();
     }
 
