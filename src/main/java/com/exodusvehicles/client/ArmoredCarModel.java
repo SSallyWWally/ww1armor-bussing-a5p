@@ -38,8 +38,8 @@ public class ArmoredCarModel {
      * Gunner's view (like Battlefield vehicle guns): the whole MG sits right under the eye, breech just in front of it,
      * so the water jacket runs up from the bottom of the screen and the front sight post meets the reticle.
      */
-    private static final float GUNNER_GUN_Y = -2.4F;     // turret space; eye is at -5, sight post tip 2.6 px above the pivot
-    private static final float GUNNER_GUN_Z = -1.0F;
+    private static final float GUNNER_GUN_Y = -0.5F;     // turret space; eye at -5: gun axis 4.5 px below the eye
+    private static final float GUNNER_GUN_Z = -5.0F;
     private final ModelPart[] spin;
 
     public ArmoredCarModel(ModelPart root) {
