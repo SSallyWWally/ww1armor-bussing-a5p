@@ -835,7 +835,7 @@ public class ArmoredCarEntity extends Entity {
             float farMix = (float) Mth.clamp((d - 12.0) / 6.0, 0.0, 1.0);
             if (farMix < 1.0F) {
                 p.connection.send(new net.minecraft.network.protocol.game.ClientboundSoundPacket(closeH, SoundSource.PLAYERS,
-                        at.x, at.y, at.z, 0.8F * (1.0F - farMix), pitch, seed));
+                        at.x, at.y, at.z, 1.0F - farMix, pitch, seed));
             }
             if (farMix > 0.0F) {
                 p.connection.send(new net.minecraft.network.protocol.game.ClientboundSoundPacket(farH, SoundSource.PLAYERS,
