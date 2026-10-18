@@ -2,6 +2,7 @@ package com.exodusvehicles;
 
 import com.exodusvehicles.entity.ArmoredCarEntity;
 import com.exodusvehicles.entity.HullSegmentEntity;
+import com.exodusvehicles.entity.TruckEntity;
 import com.exodusvehicles.item.ArmoredCarItem;
 import com.exodusvehicles.network.FireGunPayload;
 import com.exodusvehicles.network.ReloadPayload;
@@ -39,6 +40,9 @@ public class ArmoredCarMod implements ModInitializer {
     public static EntityType<ArmoredCarEntity> EISENWOLF;
     public static EntityType<HullSegmentEntity> HULL_SEGMENT;
     public static Item EISENWOLF_ITEM;
+    public static EntityType<TruckEntity> DAIMLER_DR;
+    public static EntityType<HullSegmentEntity> TRUCK_SEGMENT;
+    public static Item DAIMLER_DR_ITEM;
     public static SoundEvent MG_FIRE;
     public static SoundEvent RICOCHET;
     public static SoundEvent ENGINE;
@@ -76,7 +80,23 @@ public class ArmoredCarMod implements ModInitializer {
                         .build("hull_segment"));
 
         EISENWOLF_ITEM = Registry.register(BuiltInRegistries.ITEM, id("eisenwolf"),
-                new ArmoredCarItem(new Item.Properties().stacksTo(1)));
+                new ArmoredCarItem(new Item.Properties().stacksTo(1), () -> EISENWOLF));
+
+        // Daimler-Marienfelde DR lorry: 6.6 m long, 2.1 m wide; main box in the middle, one segment at each end
+        DAIMLER_DR = Registry.register(BuiltInRegistries.ENTITY_TYPE, id("daimler_dr"),
+                EntityType.Builder.<TruckEntity>of(TruckEntity::new, MobCategory.MISC)
+                        .sized(2.1F, 2.75F)
+                        .clientTrackingRange(10)
+                        .build("daimler_dr"));
+        TRUCK_SEGMENT = Registry.register(BuiltInRegistries.ENTITY_TYPE, id("truck_segment"),
+                EntityType.Builder.<HullSegmentEntity>of(HullSegmentEntity::new, MobCategory.MISC)
+                        .sized(2.1F, 2.75F)
+                        .noSave()
+                        .noSummon()
+                        .clientTrackingRange(10)
+                        .build("truck_segment"));
+        DAIMLER_DR_ITEM = Registry.register(BuiltInRegistries.ITEM, id("daimler_dr"),
+                new ArmoredCarItem(new Item.Properties().stacksTo(1), () -> DAIMLER_DR));
 
         MG_FIRE = registerSound("mg_fire");
         RICOCHET = registerSound("ricochet");
@@ -94,7 +114,10 @@ public class ArmoredCarMod implements ModInitializer {
         IMPACT_GROUND = registerSound("impact_ground");
         BULLET_FLYBY = registerSound("bullet_flyby");
 
-        ItemGroupEvents.modifyEntriesEvent(CreativeModeTabs.COMBAT).register(entries -> entries.accept(EISENWOLF_ITEM));
+        ItemGroupEvents.modifyEntriesEvent(CreativeModeTabs.COMBAT).register(entries -> {
+            entries.accept(EISENWOLF_ITEM);
+            entries.accept(DAIMLER_DR_ITEM);
+        });
 
         PayloadTypeRegistry.playC2S().register(SwitchSeatPayload.TYPE, SwitchSeatPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(FireGunPayload.TYPE, FireGunPayload.CODEC);
@@ -146,7 +169,7 @@ public class ArmoredCarMod implements ModInitializer {
 
         // The crew sit inside the armour: bullets and blows aimed at a crew member hit the hull instead.
         ServerLivingEntityEvents.ALLOW_DAMAGE.register((entity, source, amount) -> {
-            if (entity.getVehicle() instanceof ArmoredCarEntity car && !car.isWrecked()) {
+            if (entity.getVehicle() instanceof ArmoredCarEntity car && car.isArmored() && !car.isWrecked()) {
                 if (source.is(DamageTypeTags.IS_EXPLOSION) || source.is(DamageTypeTags.BYPASSES_INVULNERABILITY)) {
                     return true;
                 }

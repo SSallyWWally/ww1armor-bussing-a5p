@@ -11,7 +11,7 @@
   "msg.exodus_vehicles.seat": "Seat: %s",
   "msg.exodus_vehicles.no_free_seat": "No free seat",
   "msg.exodus_vehicles.repair_first": "Repair the hull (iron ingots) before packing it up",
-  "msg.exodus_vehicles.blocked": "Not enough room to place the armored car here (it needs about 9 x 3 x 4 blocks)",
+  "msg.exodus_vehicles.blocked": "Not enough room to place the vehicle here",
   "hud.exodus_vehicles.seat": "%s",
   "hud.exodus_vehicles.hull": "Hull %s / %s",
   "subtitles.exodus_vehicles.mg_fire": "Machine gun fires",
@@ -38,5 +38,13 @@
   "subtitles.exodus_vehicles.reload_out": "Belt pulled out",
   "subtitles.exodus_vehicles.reload_in": "Belt fed in",
   "subtitles.exodus_vehicles.impact_ground": "Bullet hits the ground",
-  "subtitles.exodus_vehicles.bullet_flyby": "Bullet flies past"
+  "subtitles.exodus_vehicles.bullet_flyby": "Bullet flies past",
+  "entity.exodus_vehicles.daimler_dr": "Daimler-Marienfelde DR",
+  "entity.exodus_vehicles.truck_segment": "Daimler-Marienfelde DR",
+  "item.exodus_vehicles.daimler_dr": "Daimler-Marienfelde DR",
+  "seat.exodus_vehicles.truck.0": "Driver",
+  "seat.exodus_vehicles.truck.1": "Co-driver",
+  "seat.exodus_vehicles.truck.2": "Load bed",
+  "seat.exodus_vehicles.truck.3": "Load bed (rear)",
+  "hud.exodus_vehicles.body": "Body %s / %s"
 }

@@ -127,7 +127,8 @@ public class HullSegmentEntity extends Entity {
 
     @Override
     public ItemStack getPickResult() {
-        return new ItemStack(ArmoredCarMod.EISENWOLF_ITEM);
+        ArmoredCarEntity car = getCar();
+        return car != null ? car.getPickResult() : new ItemStack(ArmoredCarMod.EISENWOLF_ITEM);
     }
 
     @Override

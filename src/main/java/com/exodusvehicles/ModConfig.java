@@ -46,6 +46,13 @@ public class ModConfig {
     public float steerReturnSpeed = 2.2F;   // max degrees per tick it self-centres
     public float turnSmoothing = 0.35F;     // 0..1, lower = hull swings into turns more gradually
 
+    // ---- Daimler-Marienfelde DR lorry. The real one did about 16-21 km/h; it's faster here so it outruns the car.
+    public float truckMaxSpeed = 0.55F;          // ~40 km/h
+    public float truckMaxReverseSpeed = 0.25F;
+    public float truckAcceleration = 0.0055F;    // ~5 s to full speed
+    public float truckMaxSteerAngle = 26.0F;     // 4.4 m wheelbase: ~9 block turning radius
+    public float truckMaxHealth = 150.0F;        // unarmoured: every hit counts
+
     // ---- MG 08 (7.92 mm, 250-round fabric belt, ~450-500 rounds/min, water-cooled jacket)
     public float mgDamage = 5.0F;
     public float mgRoundsPerMinute = 600.0F;  // MG 08: ~400-600 rpm; 600 = exactly one round every 2 ticks

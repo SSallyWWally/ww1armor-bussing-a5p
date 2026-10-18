@@ -154,7 +154,7 @@ public class ArmoredCarEntity extends Entity {
     private int shotCounter;
     private int lastExplosionTick = -1;
     private float lastExplosionAmount;
-    private final HullSegmentEntity[] segments = new HullSegmentEntity[SEGMENT_OFFSETS.length];
+    private final HullSegmentEntity[] segments = new HullSegmentEntity[segmentOffsets().length];
 
     // client visuals
     public float wheelRot, wheelRotO;
@@ -173,11 +173,84 @@ public class ArmoredCarEntity extends Entity {
         this.blocksBuilding = true;
     }
 
+    // ------------------------------------------------------------------ vehicle spec (overridden by other vehicles)
+
+    /** Seat feet positions in blocks: {right, up, forward}. */
+    protected double[][] seatOffsets() {
+        return SEAT_OFFSETS;
+    }
+
+    /** Whether seat 1 mans an MG. */
+    public boolean hasGun() {
+        return true;
+    }
+
+    /** Armoured: small-arms fire below the penetration threshold bounces off, and the crew are protected. */
+    public boolean isArmored() {
+        return true;
+    }
+
+    protected float[] segmentOffsets() {
+        return SEGMENT_OFFSETS;
+    }
+
+    protected EntityType<? extends HullSegmentEntity> segmentType() {
+        return ArmoredCarMod.HULL_SEGMENT;
+    }
+
+    public double wheelbase() {
+        return WHEELBASE;
+    }
+
+    public double wheelRadius() {
+        return WHEEL_RADIUS;
+    }
+
+    protected float maxSpeed() {
+        return ModConfig.get().maxSpeed;
+    }
+
+    protected float maxReverseSpeed() {
+        return ModConfig.get().maxReverseSpeed;
+    }
+
+    protected float acceleration() {
+        return ModConfig.get().acceleration;
+    }
+
+    public float maxSteerAngle() {
+        return ModConfig.get().maxSteerAngle;
+    }
+
+    protected net.minecraft.world.item.Item vehicleItem() {
+        return ArmoredCarMod.EISENWOLF_ITEM;
+    }
+
+    /** Translation key of a seat name. */
+    public String seatKey(int seat) {
+        return "seat.exodus_vehicles." + seat;
+    }
+
+    /** HUD label for the health bar ("Hull 300 / 300"). */
+    public String healthHudKey() {
+        return "hud.exodus_vehicles.hull";
+    }
+
+    /** Exhaust outlet {right, up, forward} in blocks. */
+    protected double[] exhaustOffset() {
+        return new double[]{-0.6, 0.8, -3.6};
+    }
+
+    /** Where a badly damaged engine smokes {right, up, forward}. */
+    protected double[] engineOffset() {
+        return new double[]{0.0, 2.6, 2.4};
+    }
+
     // ------------------------------------------------------------------ data
 
     @Override
     protected void defineSynchedData(SynchedEntityData.Builder builder) {
-        builder.define(DATA_HEALTH, ModConfig.get().maxHealth);
+        builder.define(DATA_HEALTH, getMaxHealth());
         builder.define(DATA_WRECKED, false);
         builder.define(DATA_SEAT_0, -1);
         builder.define(DATA_SEAT_1, -1);
@@ -340,7 +413,7 @@ public class ArmoredCarEntity extends Entity {
 
     @Override
     public ItemStack getPickResult() {
-        return new ItemStack(ArmoredCarMod.EISENWOLF_ITEM);
+        return new ItemStack(vehicleItem());
     }
 
     /** Converts a car-relative offset (blocks) into a world position. */
@@ -372,11 +445,11 @@ public class ArmoredCarEntity extends Entity {
         for (int i = 0; i < this.segments.length; i++) {
             HullSegmentEntity s = this.segments[i];
             if (s == null || s.isRemoved()) {
-                s = ArmoredCarMod.HULL_SEGMENT.create(server);
+                s = segmentType().create(server);
                 if (s == null) {
                     continue;
                 }
-                s.attach(this, SEGMENT_OFFSETS[i]);
+                s.attach(this, segmentOffsets()[i]);
                 s.snapTo(this);
                 server.addFreshEntity(s);
                 this.segments[i] = s;
@@ -391,7 +464,7 @@ public class ArmoredCarEntity extends Entity {
      * a box above step height at each end must stay clear for the car to move or turn.
      */
     private boolean endsClear(double x, double z, float yaw) {
-        for (float off : SEGMENT_OFFSETS) {
+        for (float off : segmentOffsets()) {
             Vec3 c = localToWorld(x, this.getY(), z, yaw, 0.0, 0.0, off + Math.signum(off) * 0.6);
             AABB box = new AABB(c.x - 0.95, this.getY() + 1.1, c.z - 0.95, c.x + 0.95, this.getY() + 2.4, c.z + 0.95);
             if (!this.level().noCollision(this, box)) {
@@ -498,7 +571,7 @@ public class ArmoredCarEntity extends Entity {
     private void announceSeat(Entity passenger, int seat) {
         if (passenger instanceof Player p) {
             p.displayClientMessage(Component.translatable("msg.exodus_vehicles.seat",
-                    Component.translatable("seat.exodus_vehicles." + seat)), true);
+                    Component.translatable(seatKey(seat))), true);
         }
     }
 
@@ -521,7 +594,7 @@ public class ArmoredCarEntity extends Entity {
         if (seat < 0) {
             seat = Math.max(0, Math.min(this.getPassengers().indexOf(passenger), SEATS - 1));
         }
-        double[] o = SEAT_OFFSETS[seat];
+        double[] o = seatOffsets()[seat];
         Vec3 p = localToWorld(o[0], o[1], o[2]);
         moveFunction.accept(passenger, p.x, p.y, p.z);
 
@@ -640,10 +713,13 @@ public class ArmoredCarEntity extends Entity {
     }
 
     /** Returns the damage that gets through the armour (0 = bounced). */
-    private float armorFilter(DamageSource source, float amount) {
+    protected float armorFilter(DamageSource source, float amount) {
         ModConfig cfg = ModConfig.get();
         if (source.is(DamageTypeTags.IS_EXPLOSION)) {
             return amount * cfg.explosionDamageMultiplier;
+        }
+        if (!isArmored()) {
+            return amount;
         }
         if (TaczCompat.isTaczDamage(source)) {
             Set<String> ids = TaczCompat.weaponIds(source);
@@ -696,7 +772,7 @@ public class ArmoredCarEntity extends Entity {
 
     public void fireGun(ServerPlayer shooter) {
         // the trigger is polled once per tick; a fractional cooldown lets the gun average ~16 rounds/s
-        if (isWrecked() || seatOf(shooter) != GUNNER || this.gunCooldown >= 1.0F || getReloadTicks() > 0) {
+        if (!hasGun() || isWrecked() || seatOf(shooter) != GUNNER || this.gunCooldown >= 1.0F || getReloadTicks() > 0) {
             return;
         }
         ModConfig cfg = ModConfig.get();
@@ -888,7 +964,7 @@ public class ArmoredCarEntity extends Entity {
     /** Feeds a new belt from the gunner's ammunition. Returns false if there was nothing to load. */
     public boolean startReload(ServerPlayer gunner) {
         ModConfig cfg = ModConfig.get();
-        if (isWrecked() || seatOf(gunner) != GUNNER || getReloadTicks() > 0 || getBelt() >= cfg.mgBeltSize) {
+        if (!hasGun() || isWrecked() || seatOf(gunner) != GUNNER || getReloadTicks() > 0 || getBelt() >= cfg.mgBeltSize) {
             return false;
         }
         int needed = cfg.mgBeltSize - getBelt();
@@ -1045,7 +1121,6 @@ public class ArmoredCarEntity extends Entity {
 
     /** Heavy truck model: slow throttle response, steering wheel that turns gradually, bicycle-model yaw. */
     private void drive(Player driver) {
-        ModConfig cfg = ModConfig.get();
         float forward = isEngineOn() && !isParkingBrakeOn() ? driver.zza : 0.0F;   // engine off: the car only coasts
         if (isParkingBrakeOn()) {
             // parking brake: wheels locked, the car stops dead within a moment and stays put
@@ -1057,21 +1132,22 @@ public class ArmoredCarEntity extends Entity {
         float strafe = driver.xxa;
 
         if (forward > 0.0F) {
-            this.speed += this.speed < 0.0F ? cfg.braking : cfg.acceleration;
+            this.speed += this.speed < 0.0F ? ModConfig.get().braking : acceleration();
         } else if (forward < 0.0F) {
-            this.speed -= this.speed > 0.0F ? cfg.braking : cfg.acceleration * 0.7F;
+            this.speed -= this.speed > 0.0F ? ModConfig.get().braking : acceleration() * 0.7F;
         } else {
             this.speed *= 0.985F;
             if (Math.abs(this.speed) < 0.002F) {
                 this.speed = 0.0F;
             }
         }
-        this.speed = Mth.clamp(this.speed, -cfg.maxReverseSpeed, cfg.maxSpeed);
+        this.speed = Mth.clamp(this.speed, -maxReverseSpeed(), maxSpeed());
+        ModConfig cfg = ModConfig.get();
 
         // Steering: less lock at speed, eased toward the target so the wheel never snaps,
         // and the yaw rate itself is smoothed so the hull swings in and out of turns.
-        float speedFrac = Math.min(1.0F, Math.abs(this.speed) / Math.max(0.01F, cfg.maxSpeed));
-        float lock = cfg.maxSteerAngle * (1.0F - 0.3F * speedFrac);
+        float speedFrac = Math.min(1.0F, Math.abs(this.speed) / Math.max(0.01F, maxSpeed()));
+        float lock = maxSteerAngle() * (1.0F - 0.3F * speedFrac);
         float target = strafe > 0 ? lock : strafe < 0 ? -lock : 0.0F;
         float rate = target == 0.0F ? cfg.steerReturnSpeed : cfg.steerSpeed;
         this.steer += Mth.clamp((target - this.steer) * 0.3F, -rate, rate);
@@ -1082,7 +1158,7 @@ public class ArmoredCarEntity extends Entity {
         float turn = 0.0F;
         if (Math.abs(this.speed) > 0.001F && this.onGround()) {
             // yaw rate = v / L * tan(steer)   (rad/tick -> deg/tick)
-            turn = (float) Math.toDegrees(this.speed / WHEELBASE * Math.tan(Math.toRadians(this.steer)));
+            turn = (float) Math.toDegrees(this.speed / wheelbase() * Math.tan(Math.toRadians(this.steer)));
         }
         this.yawVel += (turn - this.yawVel) * cfg.turnSmoothing;
         if (Math.abs(this.yawVel) < 0.002F) {
@@ -1194,7 +1270,7 @@ public class ArmoredCarEntity extends Entity {
 
         this.wheelRotO = this.wheelRot;
         if (!isWrecked()) {
-            this.wheelRot += (float) (forward / WHEEL_RADIUS);
+            this.wheelRot += (float) (forward / wheelRadius());
         }
 
         // front wheel steering: exact for the driver, estimated from the yaw rate for everyone else
@@ -1204,8 +1280,8 @@ public class ArmoredCarEntity extends Entity {
             targetSteer = this.steer;
         } else if (Math.abs(forward) > 0.01) {
             float yawRate = Mth.wrapDegrees(this.yRotO - this.getYRot());
-            targetSteer = (float) Math.toDegrees(Math.atan(Math.toRadians(yawRate) * WHEELBASE / forward));
-            targetSteer = Mth.clamp(targetSteer, -ModConfig.get().maxSteerAngle, ModConfig.get().maxSteerAngle);
+            targetSteer = (float) Math.toDegrees(Math.atan(Math.toRadians(yawRate) * wheelbase() / forward));
+            targetSteer = Mth.clamp(targetSteer, -maxSteerAngle(), maxSteerAngle());
         } else {
             targetSteer = this.steerVis;
         }
@@ -1215,7 +1291,7 @@ public class ArmoredCarEntity extends Entity {
         this.turretYawO = this.turretYaw;
         this.gunPitchO = this.gunPitch;
         Entity gunner = entityInSeat(GUNNER);
-        if (gunner instanceof LivingEntity g && !isWrecked()) {
+        if (hasGun() && gunner instanceof LivingEntity g && !isWrecked()) {
             ModConfig cfg = ModConfig.get();
             float rel = Mth.wrapDegrees(g.getYHeadRot() - this.getYRot());
             this.turretYaw = this.turretYawO + Mth.wrapDegrees(rel - this.turretYawO);
@@ -1229,17 +1305,19 @@ public class ArmoredCarEntity extends Entity {
         }
 
         if (!isWrecked() && getHealth() < getMaxHealth() * 0.35F && this.random.nextInt(3) == 0) {
-            Vec3 p = localToWorld((this.random.nextDouble() - 0.5) * 1.2, 2.6, 2.4);
+            double[] e = engineOffset();
+            Vec3 p = localToWorld(e[0] + (this.random.nextDouble() - 0.5) * 1.2, e[1], e[2]);
             this.level().addParticle(ParticleTypes.SMOKE, p.x, p.y, p.z, 0.0, 0.05, 0.0);
         }
-        if (!isWrecked() && (isOverheated() || getHeat() > 0.75F) && this.random.nextInt(isOverheated() ? 1 : 4) == 0
+        if (hasGun() && !isWrecked() && (isOverheated() || getHeat() > 0.75F) && this.random.nextInt(isOverheated() ? 1 : 4) == 0
                 && !isLocalGunnerInFirstPerson()) {
             Vec3 jacket = localToWorld(0.0, GUN_PIVOT_UP, GUN_PIVOT_FWD).add(
                     Vec3.directionFromRotation(this.gunPitch, this.getYRot() + this.turretYaw).scale(MUZZLE_DIST * 0.6));
             this.level().addParticle(ParticleTypes.CLOUD, jacket.x, jacket.y + 0.1, jacket.z, 0.0, 0.04, 0.0);
         }
         if (isEngineOn() && this.random.nextInt(4) == 0) {   // exhaust puffs, left rear
-            Vec3 p = localToWorld(-0.6, 0.8, -3.6);
+            double[] e = exhaustOffset();
+            Vec3 p = localToWorld(e[0], e[1], e[2]);
             this.level().addParticle(ParticleTypes.SMOKE, p.x, p.y, p.z, 0.0, 0.02, 0.0);
         }
     }

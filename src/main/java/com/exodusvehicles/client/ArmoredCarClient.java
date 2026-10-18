@@ -46,6 +46,9 @@ public class ArmoredCarClient implements ClientModInitializer {
         EntityModelLayerRegistry.registerModelLayer(ArmoredCarModel.LAYER, ArmoredCarModel::createBodyLayer);
         EntityRendererRegistry.register(ArmoredCarMod.EISENWOLF, ArmoredCarRenderer::new);
         EntityRendererRegistry.register(ArmoredCarMod.HULL_SEGMENT, NoopRenderer::new);
+        EntityModelLayerRegistry.registerModelLayer(TruckModel.LAYER, TruckModel::createBodyLayer);
+        EntityRendererRegistry.register(ArmoredCarMod.DAIMLER_DR, TruckRenderer::new);
+        EntityRendererRegistry.register(ArmoredCarMod.TRUCK_SEGMENT, NoopRenderer::new);
 
         // the engine loop is the car's only driving sound
         ClientEntityEvents.ENTITY_LOAD.register((entity, world) -> {
@@ -193,7 +196,7 @@ public class ArmoredCarClient implements ClientModInitializer {
         int x = 8, y = 8;
 
         Component seatLine = Component.translatable("hud.exodus_vehicles.seat",
-                Component.translatable("seat.exodus_vehicles." + seat), SWITCH_SEAT.getTranslatedKeyMessage());
+                Component.translatable(car.seatKey(seat)), SWITCH_SEAT.getTranslatedKeyMessage());
         g.drawString(mc.font, seatLine, x, y, 0xFFE8E4D0, true);
         if (seat == ArmoredCarEntity.DRIVER) {
             int sx = x + mc.font.width(seatLine) + 8;
@@ -207,7 +210,7 @@ public class ArmoredCarClient implements ClientModInitializer {
         }
 
         float hp = car.getHealth(), max = car.getMaxHealth();
-        Component hull = Component.translatable("hud.exodus_vehicles.hull",
+        Component hull = Component.translatable(car.healthHudKey(),
                 String.valueOf((int) Math.ceil(hp)), String.valueOf((int) max));
         g.drawString(mc.font, hull, x, y + 12, 0xFFE8E4D0, true);
 
@@ -217,7 +220,7 @@ public class ArmoredCarClient implements ClientModInitializer {
         g.fill(x, y + 23, x + barW, y + 27, 0x80000000);
         g.fill(x, y + 23, x + filled, y + 27, color);
 
-        if (seat == ArmoredCarEntity.GUNNER) {
+        if (seat == ArmoredCarEntity.GUNNER && car.hasGun()) {
             int gy = y + 34;
             String reserve = ammoCache < 0 ? "\u221e" : String.valueOf(ammoCache);
             g.drawString(mc.font, Component.translatable("hud.exodus_vehicles.mg_ammo",

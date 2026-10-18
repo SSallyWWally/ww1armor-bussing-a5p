@@ -1,0 +1,30 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "WWW",
+    "PIF",
+    "M M"
+  ],
+  "key": {
+    "W": {
+      "item": "minecraft:white_wool"
+    },
+    "P": {
+      "tag": "minecraft:planks"
+    },
+    "I": {
+      "item": "minecraft:iron_block"
+    },
+    "F": {
+      "item": "minecraft:furnace"
+    },
+    "M": {
+      "item": "minecraft:minecart"
+    }
+  },
+  "result": {
+    "id": "exodus_vehicles:daimler_dr",
+    "count": 1
+  }
+}

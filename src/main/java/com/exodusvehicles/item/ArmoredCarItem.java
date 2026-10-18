@@ -13,8 +13,12 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 
 public class ArmoredCarItem extends Item {
-    public ArmoredCarItem(Properties properties) {
+    private final java.util.function.Supplier<? extends net.minecraft.world.entity.EntityType<? extends ArmoredCarEntity>> type;
+
+    public ArmoredCarItem(Properties properties,
+                          java.util.function.Supplier<? extends net.minecraft.world.entity.EntityType<? extends ArmoredCarEntity>> type) {
         super(properties);
+        this.type = type;
     }
 
     @Override
@@ -26,7 +30,7 @@ public class ArmoredCarItem extends Item {
             at = Vec3.atBottomCenterOf(ctx.getClickedPos().relative(ctx.getClickedFace()));
         }
         if (level instanceof ServerLevel server) {
-            ArmoredCarEntity car = ArmoredCarMod.EISENWOLF.create(server);
+            ArmoredCarEntity car = this.type.get().create(server);
             if (car == null) {
                 return InteractionResult.FAIL;
             }

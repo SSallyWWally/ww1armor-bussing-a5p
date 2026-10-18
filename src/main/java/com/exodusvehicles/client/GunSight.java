@@ -29,6 +29,7 @@ public final class GunSight {
         return mc.player != null
                 && mc.player.getVehicle() instanceof ArmoredCarEntity car
                 && !car.isWrecked()
+                && car.hasGun()
                 && car.seatOf(mc.player) == ArmoredCarEntity.GUNNER
                 && !isHoldingTaczGun(mc.player.getMainHandItem());
     }
