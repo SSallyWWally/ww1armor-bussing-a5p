@@ -4,6 +4,7 @@ import com.ww1armor.ArmoredCarMod;
 import com.ww1armor.ModConfig;
 import com.ww1armor.compat.TaczCompat;
 import net.minecraft.core.particles.BlockParticleOption;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
@@ -63,6 +64,8 @@ public class ArmoredCarEntity extends Entity {
     public static final double GUN_PIVOT_UP = 55.0 / 16.0;
     public static final double GUN_PIVOT_FWD = -11.5 / 16.0;
     public static final double MUZZLE_DIST = 29.3 / 16.0;
+    /** How far the barrel sits below the gunner's sight line (blocks). */
+    public static final double BARREL_BELOW_SIGHT = 0.4;
     public static final double WHEEL_RADIUS = 12.5 / 16.0;
     /** Front to rear axle (blocks). */
     public static final double WHEELBASE = 70.0 / 16.0;
@@ -635,7 +638,8 @@ public class ArmoredCarEntity extends Entity {
     // ------------------------------------------------------------------ MG 08 in the cupola
 
     public void fireGun(ServerPlayer shooter) {
-        if (isWrecked() || seatOf(shooter) != GUNNER || this.gunCooldown > 0.0F || getReloadTicks() > 0) {
+        // the trigger is polled once per tick; a fractional cooldown lets the gun average ~16 rounds/s
+        if (isWrecked() || seatOf(shooter) != GUNNER || this.gunCooldown >= 1.0F || getReloadTicks() > 0) {
             return;
         }
         ModConfig cfg = ModConfig.get();
@@ -672,17 +676,20 @@ public class ArmoredCarEntity extends Entity {
                 this.random.nextGaussian() * cfg.mgSpread,
                 this.random.nextGaussian() * cfg.mgSpread).normalize();
 
+        // Rounds travel along the sight line (so they land on the reticle); the barrel itself sits
+        // below the sight, so flash, smoke and tracers start there and stay out of the gunner's view.
         Vec3 pivot = localToWorld(0.0, GUN_PIVOT_UP, GUN_PIVOT_FWD);
-        Vec3 muzzle = pivot.add(dir.scale(MUZZLE_DIST));
-        Vec3 end = muzzle.add(dir.scale(cfg.mgRange));
+        Vec3 rayStart = pivot.add(dir.scale(1.0));
+        Vec3 muzzle = pivot.add(dir.scale(MUZZLE_DIST)).add(0.0, -BARREL_BELOW_SIGHT, 0.0);
+        Vec3 end = pivot.add(dir.scale(cfg.mgRange));
 
-        BlockHitResult blockHit = this.level().clip(new ClipContext(muzzle, end,
+        BlockHitResult blockHit = this.level().clip(new ClipContext(rayStart, end,
                 ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, this));
         if (blockHit.getType() != HitResult.Type.MISS) {
             end = blockHit.getLocation();
         }
-        EntityHitResult entityHit = ProjectileUtil.getEntityHitResult(this.level(), this, muzzle, end,
-                new AABB(muzzle, end).inflate(1.0),
+        EntityHitResult entityHit = ProjectileUtil.getEntityHitResult(this.level(), this, rayStart, end,
+                new AABB(rayStart, end).inflate(1.0),
                 e -> e != this && !this.hasPassenger(e) && !(e instanceof HullSegmentEntity s && s.belongsTo(this))
                         && e.isPickable() && e.isAlive() && !e.isSpectator(), 0.3F);
 
@@ -698,21 +705,55 @@ public class ArmoredCarEntity extends Entity {
                     end.x, end.y, end.z, 5, 0.05, 0.05, 0.05, 0.1);
         }
 
-        server.sendParticles(ParticleTypes.SMOKE, muzzle.x, muzzle.y, muzzle.z, 2, 0.03, 0.03, 0.03, 0.02);
-        if ((this.shotCounter++ % 3) == 0) {
-            double dist = muzzle.distanceTo(end);
-            for (double d = 1.5; d < dist; d += 1.25) {
-                Vec3 p = muzzle.add(dir.scale(d));
-                server.sendParticles(ParticleTypes.ELECTRIC_SPARK, p.x, p.y, p.z, 1, 0.0, 0.0, 0.0, 0.0);
+        boolean tracer = (this.shotCounter++ % 3) == 0;
+        Vec3 toEnd = end.subtract(muzzle);
+        double dist = toEnd.length();
+        Vec3 tdir = dist > 1.0E-3 ? toEnd.scale(1.0 / dist) : dir;
+        for (ServerPlayer viewer : server.players()) {
+            if (viewer == shooter || viewer.distanceToSqr(muzzle) > 96.0 * 96.0) {
+                continue;     // the gunner gets no smoke or tracer start in their face
+            }
+            server.sendParticles(viewer, ParticleTypes.SMOKE, false, muzzle.x, muzzle.y, muzzle.z, 2, 0.03, 0.03, 0.03, 0.02);
+        }
+        if (tracer) {
+            // tracer starts a few blocks out so it never crosses the sight picture
+            for (double d = 4.0; d < dist; d += 1.25) {
+                Vec3 tp = muzzle.add(tdir.scale(d));
+                server.sendParticles(ParticleTypes.ELECTRIC_SPARK, tp.x, tp.y, tp.z, 1, 0.0, 0.0, 0.0, 0.0);
             }
         }
-        float p = 0.97F + this.random.nextFloat() * 0.06F;
-        server.playSound(null, muzzle.x, muzzle.y, muzzle.z, ArmoredCarMod.MG_FIRE, SoundSource.PLAYERS, 1.0F, p);
-        server.playSound(null, muzzle.x, muzzle.y, muzzle.z, ArmoredCarMod.MG_FIRE_FAR, SoundSource.PLAYERS, 1.0F, p);
+        playGunSound(server, muzzle, ArmoredCarMod.MG_FIRE, ArmoredCarMod.MG_FIRE_FAR,
+                0.97F + this.random.nextFloat() * 0.06F);
         this.lastShotTick = this.tickCount;
         this.burstActive = true;
         this.lastMuzzle = muzzle;
         server.broadcastEntityEvent(this, (byte) 61);    // client: recoil + muzzle flash
+    }
+
+    /**
+     * Close sound for listeners within ~15 blocks (and the crew), distant sound beyond, crossfaded between 12 and 18.
+     * Sent per player so each one hears only the version that fits their distance.
+     */
+    private void playGunSound(ServerLevel server, Vec3 at, net.minecraft.sounds.SoundEvent close,
+                              net.minecraft.sounds.SoundEvent far, float pitch) {
+        long seed = this.random.nextLong();
+        net.minecraft.core.Holder<net.minecraft.sounds.SoundEvent> closeH = BuiltInRegistries.SOUND_EVENT.wrapAsHolder(close);
+        net.minecraft.core.Holder<net.minecraft.sounds.SoundEvent> farH = BuiltInRegistries.SOUND_EVENT.wrapAsHolder(far);
+        for (ServerPlayer p : server.players()) {
+            double d = Math.sqrt(p.distanceToSqr(at));
+            if (d > 200.0) {
+                continue;
+            }
+            float farMix = this.hasPassenger(p) ? 0.0F : (float) Mth.clamp((d - 12.0) / 6.0, 0.0, 1.0);
+            if (farMix < 1.0F) {
+                p.connection.send(new net.minecraft.network.protocol.game.ClientboundSoundPacket(closeH, SoundSource.PLAYERS,
+                        at.x, at.y, at.z, 1.0F - farMix, pitch, seed));
+            }
+            if (farMix > 0.0F) {
+                p.connection.send(new net.minecraft.network.protocol.game.ClientboundSoundPacket(farH, SoundSource.PLAYERS,
+                        at.x, at.y, at.z, 4.0F * farMix, pitch, seed));    // volume > 1 widens the hearing range
+            }
+        }
     }
 
     /** Feeds a new belt from the gunner's ammunition. Returns false if there was nothing to load. */
@@ -738,8 +779,9 @@ public class ArmoredCarEntity extends Entity {
         // end of a burst: the mechanism's last clatter and the report rolling away
         if (this.burstActive && this.tickCount - this.lastShotTick > 3) {
             this.burstActive = false;
-            this.level().playSound(null, this.lastMuzzle.x, this.lastMuzzle.y, this.lastMuzzle.z,
-                    ArmoredCarMod.MG_TAIL, SoundSource.PLAYERS, 1.0F, 1.0F);
+            if (this.level() instanceof ServerLevel server) {
+                playGunSound(server, this.lastMuzzle, ArmoredCarMod.MG_TAIL, ArmoredCarMod.MG_TAIL_FAR, 1.0F);
+            }
         }
         // engine revs when the car pulls away from a standstill
         Vec3 pos = this.position();
@@ -994,6 +1036,11 @@ public class ArmoredCarEntity extends Entity {
         }
     }
 
+    /** Client only: true when this client's player is the gunner looking through the sight. */
+    private boolean isLocalGunnerInFirstPerson() {
+        return com.ww1armor.client.GunSight.inSight();
+    }
+
     private void tickClientVisuals() {
         double dx = this.getX() - this.xo;
         double dz = this.getZ() - this.zo;
@@ -1041,7 +1088,8 @@ public class ArmoredCarEntity extends Entity {
             Vec3 p = localToWorld((this.random.nextDouble() - 0.5) * 1.2, 2.6, 2.4);
             this.level().addParticle(ParticleTypes.SMOKE, p.x, p.y, p.z, 0.0, 0.05, 0.0);
         }
-        if (!isWrecked() && (isOverheated() || getHeat() > 0.75F) && this.random.nextInt(isOverheated() ? 1 : 4) == 0) {
+        if (!isWrecked() && (isOverheated() || getHeat() > 0.75F) && this.random.nextInt(isOverheated() ? 1 : 4) == 0
+                && !isLocalGunnerInFirstPerson()) {
             Vec3 jacket = localToWorld(0.0, GUN_PIVOT_UP, GUN_PIVOT_FWD).add(
                     Vec3.directionFromRotation(this.gunPitch, this.getYRot() + this.turretYaw).scale(MUZZLE_DIST * 0.6));
             this.level().addParticle(ParticleTypes.CLOUD, jacket.x, jacket.y + 0.1, jacket.z, 0.0, 0.04, 0.0);

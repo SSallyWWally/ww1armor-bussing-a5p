@@ -42,6 +42,7 @@ public class ArmoredCarMod implements ModInitializer {
     public static SoundEvent ARMOR_HIT;
     public static SoundEvent MG_FIRE_FAR;
     public static SoundEvent MG_TAIL;
+    public static SoundEvent MG_TAIL_FAR;
     public static SoundEvent ENGINE_START;
     public static SoundEvent ENGINE_STOP;
     public static SoundEvent ENGINE_RAMP;
@@ -75,6 +76,7 @@ public class ArmoredCarMod implements ModInitializer {
         ARMOR_HIT = registerSound("armor_hit");
         MG_FIRE_FAR = registerSound("mg_fire_far");
         MG_TAIL = registerSound("mg_tail");
+        MG_TAIL_FAR = registerSound("mg_tail_far");
         ENGINE_START = registerSound("engine_start");
         ENGINE_STOP = registerSound("engine_stop");
         ENGINE_RAMP = registerSound("engine_ramp");

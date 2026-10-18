@@ -94,5 +94,9 @@
   "engine_ramp": {
     "subtitle": "subtitles.ww1armor.engine_ramp",
     "sounds": []
+  },
+  "mg_tail_far": {
+    "subtitle": "subtitles.ww1armor.mg_tail",
+    "sounds": []
   }
 }

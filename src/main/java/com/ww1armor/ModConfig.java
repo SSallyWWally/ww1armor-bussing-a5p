@@ -18,7 +18,7 @@ import java.util.List;
 public class ModConfig {
     /** Bumped when a default changes in a way old config files must pick up. Don't edit. */
     public int configVersion = 0;
-    private static final int CURRENT_VERSION = 2;
+    private static final int CURRENT_VERSION = 3;
 
     // ---- armor / damage
     public float maxHealth = 300.0F;
@@ -48,15 +48,15 @@ public class ModConfig {
 
     // ---- MG 08 (7.92 mm, 250-round fabric belt, ~450-500 rounds/min, water-cooled jacket)
     public float mgDamage = 5.0F;
-    public float mgRoundsPerMinute = 500.0F;
+    public float mgRoundsPerMinute = 950.0F;  // matches the MG 08/15 firing sound
     public int mgBeltSize = 250;
     public int mgReloadTicks = 90;           // 4.5 s to feed a new belt
     public double mgRange = 80.0;
     public double mgSpread = 0.012;
     public float mgMaxElevation = 20.0F;
     public float mgMaxDepression = 12.0F;
-    /** Heat 0..1. Continuous fire overheats the gun after about 40 rounds (~5 s at 500 rpm). */
-    public float mgHeatPerShot = 0.039F;
+    /** Heat 0..1. Continuous fire overheats the gun after about 40 rounds (~2.5 s at 950 rpm). */
+    public float mgHeatPerShot = 0.0325F;
     /** Full heat cools off in ~8.5 s; an overheated gun unlocks after ~6 s. */
     public float mgCoolingPerTick = 0.0058F;
     /** After overheating the gun is locked until heat falls back to this. */
@@ -109,6 +109,13 @@ public class ModConfig {
             cfg.mgHeatPerShot = d.mgHeatPerShot;
             cfg.mgCoolingPerTick = d.mgCoolingPerTick;
             cfg.mgOverheatResume = d.mgOverheatResume;
+        }
+        if (cfg.configVersion < 3) {
+            // 1.3: fire rate raised to match the new MG sound, heat rebalanced for it
+            ModConfig d = new ModConfig();
+            cfg.mgRoundsPerMinute = d.mgRoundsPerMinute;
+            cfg.mgHeatPerShot = d.mgHeatPerShot;
+            cfg.mgCoolingPerTick = d.mgCoolingPerTick;
         }
         cfg.configVersion = CURRENT_VERSION;
         cfg.mgBeltSize = Math.max(1, cfg.mgBeltSize);
