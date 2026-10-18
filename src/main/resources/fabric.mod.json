@@ -1,18 +1,26 @@
 {
   "schemaVersion": 1,
-  "id": "ww1armor",
+  "id": "exodus",
   "version": "${version}",
-  "name": "WW1 Armored Cars: Büssing A5P",
-  "description": "A drivable Büssing A5P armored car with a turret MG 08, four seats, TACZ-aware armor, engine sound and a burning wreck when destroyed.",
-  "authors": ["You"],
+  "name": "Exodus Vehicles",
+  "description": "Drivable vehicles for Exodus. Includes the M.15 Eisenwolf armored car: turret MG 08 with sight, belts and overheating, four crew seats, TACZ-aware armor, engine start/stop and a burning wreck when destroyed.",
+  "authors": [
+    "You"
+  ],
   "license": "All-Rights-Reserved",
-  "icon": "assets/ww1armor/icon.png",
+  "icon": "assets/exodus/icon.png",
   "environment": "*",
   "entrypoints": {
-    "main": ["com.ww1armor.ArmoredCarMod"],
-    "client": ["com.ww1armor.client.ArmoredCarClient"]
+    "main": [
+      "com.exodusvehicles.ArmoredCarMod"
+    ],
+    "client": [
+      "com.exodusvehicles.client.ArmoredCarClient"
+    ]
   },
-  "mixins": ["ww1armor.mixins.json"],
+  "mixins": [
+    "exodus.mixins.json"
+  ],
   "depends": {
     "fabricloader": ">=0.16.0",
     "minecraft": "~1.21.1",

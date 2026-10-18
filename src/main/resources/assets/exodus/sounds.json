@@ -1,0 +1,102 @@
+{
+  "mg_fire": {
+    "subtitle": "subtitles.exodus.mg_fire",
+    "sounds": [
+      {
+        "name": "exodus:mg08_1",
+        "attenuation_distance": 96
+      },
+      {
+        "name": "exodus:mg08_2",
+        "attenuation_distance": 96
+      },
+      {
+        "name": "exodus:mg08_3",
+        "attenuation_distance": 96
+      }
+    ]
+  },
+  "ricochet": {
+    "subtitle": "subtitles.exodus.ricochet",
+    "sounds": [
+      {
+        "name": "exodus:tick_1",
+        "volume": 0.55,
+        "attenuation_distance": 16
+      },
+      {
+        "name": "exodus:tick_2",
+        "volume": 0.55,
+        "attenuation_distance": 16
+      },
+      {
+        "name": "exodus:tick_3",
+        "volume": 0.55,
+        "attenuation_distance": 16
+      },
+      {
+        "name": "exodus:tick_4",
+        "volume": 0.55,
+        "attenuation_distance": 16
+      },
+      {
+        "name": "exodus:tick_5",
+        "volume": 0.55,
+        "attenuation_distance": 16
+      }
+    ]
+  },
+  "engine": {
+    "subtitle": "subtitles.exodus.engine",
+    "sounds": [
+      {
+        "name": "exodus:engine_loop",
+        "attenuation_distance": 40
+      }
+    ]
+  },
+  "armor_hit": {
+    "subtitle": "subtitles.exodus.armor_hit",
+    "sounds": [
+      {
+        "name": "exodus:tunk_1",
+        "volume": 0.65,
+        "attenuation_distance": 16
+      },
+      {
+        "name": "exodus:tunk_2",
+        "volume": 0.65,
+        "attenuation_distance": 16
+      },
+      {
+        "name": "exodus:tunk_3",
+        "volume": 0.65,
+        "attenuation_distance": 16
+      }
+    ]
+  },
+  "mg_fire_far": {
+    "subtitle": "subtitles.exodus.mg_fire_far",
+    "sounds": []
+  },
+  "mg_tail": {
+    "subtitle": "subtitles.exodus.mg_tail",
+    "sounds": []
+  },
+  "engine_start": {
+    "subtitle": "subtitles.exodus.engine_start",
+    "sounds": []
+  },
+  "engine_stop": {
+    "subtitle": "subtitles.exodus.engine_stop",
+    "sounds": []
+  },
+  "engine_ramp": {
+    "subtitle": "subtitles.exodus.engine_ramp",
+    "sounds": []
+  },
+  "mg_tail_far": {
+    "subtitle": "subtitles.exodus.mg_tail",
+    "sounds": []
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "IDI",
+    "IFI",
+    "M M"
+  ],
+  "key": {
+    "I": { "item": "minecraft:iron_block" },
+    "D": { "item": "minecraft:dispenser" },
+    "F": { "item": "minecraft:blast_furnace" },
+    "M": { "item": "minecraft:minecart" }
+  },
+  "result": { "id": "exodus:eisenwolf", "count": 1 }
+}
