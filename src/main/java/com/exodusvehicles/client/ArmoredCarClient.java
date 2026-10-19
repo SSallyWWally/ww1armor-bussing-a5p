@@ -211,7 +211,7 @@ public class ArmoredCarClient implements ClientModInitializer {
         int x = 8, y = 8;
 
         Component seatLine = Component.translatable("hud.exodus_vehicles.seat",
-                Component.translatable(car.seatKey(seat)), SWITCH_SEAT.getTranslatedKeyMessage());
+                car.seatName(seat), SWITCH_SEAT.getTranslatedKeyMessage());
         g.drawString(mc.font, seatLine, x, y, 0xFFE8E4D0, true);
         if (seat == ArmoredCarEntity.DRIVER) {
             int sx = x + mc.font.width(seatLine) + 8;

@@ -50,7 +50,15 @@ import java.util.Set;
  * vanilla vehicle-move packet; everything else (damage, seats, MG, wreck) is server-authoritative.
  */
 public class ArmoredCarEntity extends Entity {
-    public static final int SEATS = 4;
+    /** Number of seats (Eisenwolf: 4). */
+    public int seatCount() {
+        return 4;
+    }
+
+    /** A seat that can't be used right now (e.g. cargo stacked on it). */
+    public boolean isSeatBlocked(int seat) {
+        return false;
+    }
     public static final int DRIVER = 0;
     public static final int GUNNER = 1;
 
@@ -84,14 +92,10 @@ public class ArmoredCarEntity extends Entity {
             SynchedEntityData.defineId(ArmoredCarEntity.class, EntityDataSerializers.FLOAT);
     private static final EntityDataAccessor<Boolean> DATA_WRECKED =
             SynchedEntityData.defineId(ArmoredCarEntity.class, EntityDataSerializers.BOOLEAN);
-    private static final EntityDataAccessor<Integer> DATA_SEAT_0 =
-            SynchedEntityData.defineId(ArmoredCarEntity.class, EntityDataSerializers.INT);
-    private static final EntityDataAccessor<Integer> DATA_SEAT_1 =
-            SynchedEntityData.defineId(ArmoredCarEntity.class, EntityDataSerializers.INT);
-    private static final EntityDataAccessor<Integer> DATA_SEAT_2 =
-            SynchedEntityData.defineId(ArmoredCarEntity.class, EntityDataSerializers.INT);
-    private static final EntityDataAccessor<Integer> DATA_SEAT_3 =
-            SynchedEntityData.defineId(ArmoredCarEntity.class, EntityDataSerializers.INT);
+    /** Entity id in each seat (-1 = empty), as an int array "s"; one tag so vehicles can have any number of seats. */
+    private static final EntityDataAccessor<CompoundTag> DATA_SEATS =
+            SynchedEntityData.defineId(ArmoredCarEntity.class, EntityDataSerializers.COMPOUND_TAG);
+    public static final int MAX_SEATS = 16;
 
     // MG 08 state, synced so the gunner's HUD can show it
     private static final EntityDataAccessor<Integer> DATA_BELT =
@@ -106,15 +110,6 @@ public class ArmoredCarEntity extends Entity {
             SynchedEntityData.defineId(ArmoredCarEntity.class, EntityDataSerializers.BOOLEAN);
     private static final EntityDataAccessor<Boolean> DATA_BRAKE =
             SynchedEntityData.defineId(ArmoredCarEntity.class, EntityDataSerializers.BOOLEAN);
-
-    private static EntityDataAccessor<Integer> seatAccessor(int seat) {
-        return switch (seat) {
-            case 0 -> DATA_SEAT_0;
-            case 1 -> DATA_SEAT_1;
-            case 2 -> DATA_SEAT_2;
-            default -> DATA_SEAT_3;
-        };
-    }
 
     // driving (simulated on the driver's client)
     private float speed;
@@ -226,9 +221,9 @@ public class ArmoredCarEntity extends Entity {
         return ArmoredCarMod.EISENWOLF_ITEM;
     }
 
-    /** Translation key of a seat name. */
-    public String seatKey(int seat) {
-        return "seat.exodus_vehicles." + seat;
+    /** Name of a seat, for the HUD and seat messages. */
+    public Component seatName(int seat) {
+        return Component.translatable("seat.exodus_vehicles." + seat);
     }
 
     /** HUD label for the health bar ("Hull 300 / 300"). */
@@ -252,10 +247,11 @@ public class ArmoredCarEntity extends Entity {
     protected void defineSynchedData(SynchedEntityData.Builder builder) {
         builder.define(DATA_HEALTH, getMaxHealth());
         builder.define(DATA_WRECKED, false);
-        builder.define(DATA_SEAT_0, -1);
-        builder.define(DATA_SEAT_1, -1);
-        builder.define(DATA_SEAT_2, -1);
-        builder.define(DATA_SEAT_3, -1);
+        CompoundTag seats = new CompoundTag();
+        int[] empty = new int[MAX_SEATS];
+        java.util.Arrays.fill(empty, -1);
+        seats.putIntArray("s", empty);
+        builder.define(DATA_SEATS, seats);
         builder.define(DATA_BELT, ModConfig.get().mgBeltSize);
         builder.define(DATA_HEAT, 0.0F);
         builder.define(DATA_RELOAD, 0);
@@ -477,15 +473,23 @@ public class ArmoredCarEntity extends Entity {
     // ------------------------------------------------------------------ seats
 
     public int seatEntityId(int seat) {
-        return this.entityData.get(seatAccessor(seat));
+        int[] ids = this.entityData.get(DATA_SEATS).getIntArray("s");
+        return seat >= 0 && seat < ids.length ? ids[seat] : -1;
     }
 
-    private void setSeat(int seat, int entityId) {
-        this.entityData.set(seatAccessor(seat), entityId);
+    protected void setSeat(int seat, int entityId) {
+        int[] ids = this.entityData.get(DATA_SEATS).getIntArray("s").clone();
+        if (seat < 0 || seat >= ids.length) {
+            return;
+        }
+        ids[seat] = entityId;
+        CompoundTag t = new CompoundTag();
+        t.putIntArray("s", ids);
+        this.entityData.set(DATA_SEATS, t);
     }
 
     public int seatOf(Entity entity) {
-        for (int i = 0; i < SEATS; i++) {
+        for (int i = 0; i < seatCount(); i++) {
             if (seatEntityId(i) == entity.getId() && this.hasPassenger(entity)) {
                 return i;
             }
@@ -507,9 +511,9 @@ public class ArmoredCarEntity extends Entity {
         return null;
     }
 
-    private int firstFreeSeat() {
-        for (int i = 0; i < SEATS; i++) {
-            if (entityInSeat(i) == null) {
+    protected int firstFreeSeat() {
+        for (int i = 0; i < seatCount(); i++) {
+            if (entityInSeat(i) == null && !isSeatBlocked(i)) {
                 return i;
             }
         }
@@ -518,7 +522,7 @@ public class ArmoredCarEntity extends Entity {
 
     @Override
     protected boolean canAddPassenger(Entity passenger) {
-        return this.getPassengers().size() < SEATS && !isWrecked();
+        return !isWrecked() && firstFreeSeat() >= 0;
     }
 
     @Override
@@ -555,9 +559,9 @@ public class ArmoredCarEntity extends Entity {
         if (current < 0 || isWrecked()) {
             return;
         }
-        for (int i = 1; i < SEATS; i++) {
-            int s = (current + i) % SEATS;
-            if (entityInSeat(s) == null) {
+        for (int i = 1; i < seatCount(); i++) {
+            int s = (current + i) % seatCount();
+            if (entityInSeat(s) == null && !isSeatBlocked(s)) {
                 setSeat(current, -1);
                 setSeat(s, player.getId());
                 announceSeat(player, s);
@@ -568,10 +572,10 @@ public class ArmoredCarEntity extends Entity {
         player.displayClientMessage(Component.translatable("msg.exodus_vehicles.no_free_seat"), true);
     }
 
-    private void announceSeat(Entity passenger, int seat) {
+    protected void announceSeat(Entity passenger, int seat) {
         if (passenger instanceof Player p) {
             p.displayClientMessage(Component.translatable("msg.exodus_vehicles.seat",
-                    Component.translatable(seatKey(seat))), true);
+                    seatName(seat)), true);
         }
     }
 
@@ -592,7 +596,7 @@ public class ArmoredCarEntity extends Entity {
         }
         int seat = seatOf(passenger);
         if (seat < 0) {
-            seat = Math.max(0, Math.min(this.getPassengers().indexOf(passenger), SEATS - 1));
+            seat = Math.max(0, Math.min(this.getPassengers().indexOf(passenger), seatCount() - 1));
         }
         double[] o = seatOffsets()[seat];
         Vec3 p = localToWorld(o[0], o[1], o[2]);

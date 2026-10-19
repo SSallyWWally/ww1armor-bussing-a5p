@@ -44,8 +44,6 @@
   "item.exodus_vehicles.daimler_dr": "Daimler-Marienfelde DR (Covered)",
   "seat.exodus_vehicles.truck.0": "Driver",
   "seat.exodus_vehicles.truck.1": "Co-driver",
-  "seat.exodus_vehicles.truck.2": "Load bed",
-  "seat.exodus_vehicles.truck.3": "Load bed (rear)",
   "hud.exodus_vehicles.body": "Body %s / %s",
   "entity.exodus_vehicles.daimler_dr_open": "Daimler-Marienfelde DR (Open Bed)",
   "item.exodus_vehicles.daimler_dr_open": "Daimler-Marienfelde DR (Open Bed)",
@@ -89,5 +87,8 @@
   "hud.exodus_vehicles.hit": "Successful hit",
   "hud.exodus_vehicles.hit_kill": "Successful hit - kill",
   "subtitles.exodus_vehicles.shell_flight": "Shell flies overhead",
-  "subtitles.exodus_vehicles.gun_push": "Gun being moved"
+  "subtitles.exodus_vehicles.gun_push": "Gun being moved",
+  "seat.exodus_vehicles.truck.bench": "%s bench, place %s",
+  "seat.exodus_vehicles.truck.left": "Left",
+  "seat.exodus_vehicles.truck.right": "Right"
 }
