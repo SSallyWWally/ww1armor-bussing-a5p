@@ -245,34 +245,6 @@ public class MorserModel {
         return x * x * (3.0F - 2.0F * x);
     }
 
-    /**
-     * Loading drill, timed in ticks of a 10 s reload (scaled for other reload times) so the breech sounds line up:
-     * crank up and breech swings open, the spent case is pulled out and dropped, a new round is lifted in behind the
-     * breech and rammed home, then the breech swings shut and the crank goes back down.
-     */
-    private void reloadAnim(MorserEntity gun, float partialTick) {
-        int total = gun.getReloadTotal();
-        int left = gun.getReload();
-        float t = left > 0 ? (total - left + partialTick) * (200.0F / total) : 999.0F;
-        float open = ease(t, 62, 74) - ease(t, 186, 197);
-        float crank = ease(t, 56, 66) - ease(t, 193, 200);
-        this.breech.yRot = -1.65F * open;
-        this.crank.zRot = -1.4F * crank;
-        // spent case: out along the bore, then it tips off and drops
-        this.spent.visible = t > 74 && t < 108;
-        float out = ease(t, 74, 90);
-        float drop = ease(t, 90, 106);
-        this.spent.z = this.spentZ + 16.0F * out + 4.0F * drop;
-        this.spent.y = this.spentY + 14.0F * drop * drop;
-        this.spent.xRot = 1.2F * drop;
-        // new round: brought up behind the breech, then rammed in
-        this.round.visible = t > 108 && t < 154;
-        float lift = ease(t, 108, 122);
-        float ram = ease(t, 126, 152);
-        this.round.z = this.roundZ + 24.0F * (1.0F - ram);
-        this.round.y = this.roundY + 8.0F * (1.0F - lift);
-    }
-
     private float roundZ = Float.NaN, roundY, spentZ, spentY;
 
     public void setupAnim(MorserEntity gun, float partialTick, float traverse, float elevation) {
@@ -282,7 +254,11 @@ public class MorserModel {
             this.spentZ = this.spent.z;
             this.spentY = this.spent.y;
         }
-        reloadAnim(gun, partialTick);
+        // no loading animation: breech shut, no round or case showing
+        this.breech.yRot = 0.0F;
+        this.crank.zRot = 0.0F;
+        this.round.visible = false;
+        this.spent.visible = false;
         float wheel = Mth.lerp(partialTick, gun.wheelRotO, gun.wheelRot);
         for (ModelPart w : this.wheels) {
             w.xRot = wheel;
