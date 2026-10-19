@@ -207,7 +207,7 @@ public class ArmoredCarMod implements ModInitializer {
             player.getServer().execute(() -> {
                 if (player.getVehicle() instanceof ArmoredCarEntity car) {
                     car.startReload(player);
-
+                }
             });
         });
 
@@ -216,7 +216,7 @@ public class ArmoredCarMod implements ModInitializer {
             player.getServer().execute(() -> {
                 if (player.getVehicle() instanceof ArmoredCarEntity car) {
                     car.switchSeat(player);
-
+                }
             });
         });
         ServerPlayNetworking.registerGlobalReceiver(FireGunPayload.TYPE, (payload, context) -> {
