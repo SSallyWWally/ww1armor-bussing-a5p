@@ -570,7 +570,9 @@ public class MorserEntity extends Entity {
         if (reload > 0) {
             this.entityData.set(DATA_RELOAD, --reload);
             int total = getReloadTotal();
-            if (reload == total - 20) {
+            // the breech-open sound's clank (3.7 s in) lands as the breech swings open (37% through the reload)
+            int openAt = Math.max(1, Math.round(total * 0.365F) - 73);
+            if (total - reload == openAt) {
                 breechSound(ArmoredCarMod.BREECH_OPEN);
             }
             if (reload == 36) {
