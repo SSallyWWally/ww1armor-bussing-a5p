@@ -163,13 +163,14 @@ public class MorserEntity extends Entity {
     }
 
     /**
-     * Barrel elevation for a range: lobbed at 45 degrees close in, flatter (32) at full range, and never so steep that
+     * Barrel elevation for a range: lobbed steeply close in, flatter at full range, and never so steep that
      * the shell climbs above the ceiling (the clouds), where it would be lost from view. The propellant charge (muzzle
      * speed) is then chosen to reach the target at that elevation.
      */
     public static double arcElevation(double range, double min, double max, double gunY, double ceilingY) {
+        // steep (70) close in, down to 25 at full range, so the barrel visibly rises and falls as the range changes
         double t = Mth.clamp((range - min) / Math.max(1.0, max - min), 0.0, 1.0);
-        double a = Mth.lerp(t, 45.0, 32.0);
+        double a = 70.0 - 45.0 * Math.pow(t, 0.7);
         double room = Math.max(8.0, ceilingY - gunY);
         double aMax = Math.toDegrees(Math.atan(4.0 * room / Math.max(1.0, range)));    // apex ~ range * tan(a) / 4
         return Math.max(10.0, Math.min(a, aMax));
