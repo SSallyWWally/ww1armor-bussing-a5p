@@ -157,7 +157,7 @@ public final class ArtilleryClient {
             if (d < near) {
                 float k = (float) (1.0 - d / near);
                 flash = Math.max(flash, 0.55F * k + 0.25F);
-                dim = Math.max(dim, 120.0F + 120.0F * k);
+                dim = Math.max(dim, 90.0F + 90.0F * k);
                 shakeLong = Math.max(shakeLong, 40 + (int) (60 * k));     // the ground keeps trembling a while
                 mc.getSoundManager().play(SimpleSoundInstance.forUI(ArmoredCarMod.SHELL_SHOCK, 1.0F, 0.45F + 0.55F * k));
                 splatter(mc, k);
