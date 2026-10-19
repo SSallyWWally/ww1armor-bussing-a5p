@@ -57,9 +57,6 @@ public class ArmoredCarClient implements ClientModInitializer {
 
         // the engine loop is the car's only driving sound
         ClientEntityEvents.ENTITY_LOAD.register((entity, world) -> {
-            if (entity instanceof com.exodusvehicles.entity.MorserEntity gun) {
-                Minecraft.getInstance().getSoundManager().play(new GunCrankSound(gun, ArmoredCarMod.GUN_TRAVERSE));
-            }
             if (entity instanceof ArmoredCarEntity car && !car.isWrecked()) {
                 Minecraft.getInstance().getSoundManager()
                         .play(new CarSoundInstance(car, ArmoredCarMod.ENGINE, CarSoundInstance.Kind.ENGINE));

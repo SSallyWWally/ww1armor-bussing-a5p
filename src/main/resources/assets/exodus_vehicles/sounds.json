@@ -180,5 +180,9 @@
         "attenuation_distance": 40
       }
     ]
+  },
+  "gun_push": {
+    "subtitle": "subtitles.exodus_vehicles.gun_push",
+    "sounds": []
   }
 }

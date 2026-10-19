@@ -57,6 +57,7 @@ public class ArmoredCarMod implements ModInitializer {
     public static SoundEvent BREECH_OPEN;
     public static SoundEvent BREECH_CLOSE;
     public static SoundEvent GUN_TRAVERSE;
+    public static SoundEvent GUN_PUSH;
     public static SoundEvent SHELL_IMPACT_CLOSE;
     public static SoundEvent SHELL_IMPACT_FAR;
     public static SoundEvent SHELL_SHOCK;
@@ -141,6 +142,7 @@ public class ArmoredCarMod implements ModInitializer {
         BREECH_OPEN = registerSound("breech_open");
         BREECH_CLOSE = registerSound("breech_close");
         GUN_TRAVERSE = registerSound("gun_traverse");
+        GUN_PUSH = registerSound("gun_push");
         SHELL_IMPACT_CLOSE = registerSound("shell_impact_close");
         SHELL_IMPACT_FAR = registerSound("shell_impact_far");
         SHELL_SHOCK = registerSound("shell_shock");

@@ -362,7 +362,46 @@ public final class ArtilleryClient {
         phaseTicks = 0;
     }
 
+    /** Looping aim / push sounds for each howitzer nearby; restarted if the sound engine ever dropped them. */
+    private static final java.util.Map<Integer, GunLoopSound[]> GUN_SOUNDS = new java.util.HashMap<>();
+
+    private static void tickGunSounds(Minecraft mc) {
+        if (mc.level == null || mc.player == null) {
+            GUN_SOUNDS.clear();
+            return;
+        }
+        java.util.Set<Integer> seen = new java.util.HashSet<>();
+        for (MorserEntity gun : mc.level.getEntitiesOfClass(MorserEntity.class, mc.player.getBoundingBox().inflate(48.0))) {
+            seen.add(gun.getId());
+            GunLoopSound[] s = GUN_SOUNDS.computeIfAbsent(gun.getId(), k -> new GunLoopSound[2]);
+            GunLoopSound.Kind[] kinds = GunLoopSound.Kind.values();
+            for (int i = 0; i < 2; i++) {
+                if (s[i] == null || !s[i].isFor(gun) || !mc.getSoundManager().isActive(s[i])) {
+                    if (s[i] != null) {
+                        mc.getSoundManager().stop(s[i]);
+                    }
+                    s[i] = new GunLoopSound(gun, i == 0 ? ArmoredCarMod.GUN_TRAVERSE : ArmoredCarMod.GUN_PUSH, kinds[i]);
+                    mc.getSoundManager().play(s[i]);
+                }
+            }
+        }
+        GUN_SOUNDS.entrySet().removeIf(e -> {
+            if (seen.contains(e.getKey())) {
+                return false;
+            }
+            for (GunLoopSound s : e.getValue()) {
+                if (s != null) {
+                    mc.getSoundManager().stop(s);
+                }
+            }
+            return true;
+        });
+    }
+
     public static void endTick(Minecraft mc) {
+        if (mc.player != null && mc.player.tickCount % 10 == 0) {
+            tickGunSounds(mc);
+        }
         if (hitTicks > 0 && --hitTicks == 0) {
             hitKill = false;
         }
