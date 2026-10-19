@@ -176,8 +176,11 @@ public final class ShellManager {
         Entity owner = ownerId == null ? null : level.getPlayerByUUID(ownerId);
         // a little above the surface, so the blast isn't swallowed by the block it struck
         Vec3 c = at.add(0, 0.5, 0);
+        // the explosion carries the close impact sound (in place of the vanilla bang) to everyone within ~64 blocks
         level.explode(null, level.damageSources().explosion(null, owner), null, c.x, c.y, c.z,
-                cfg.shellPower, false, cfg.shellBreaksBlocks ? Level.ExplosionInteraction.TNT : Level.ExplosionInteraction.NONE);
+                cfg.shellPower, false, cfg.shellBreaksBlocks ? Level.ExplosionInteraction.TNT : Level.ExplosionInteraction.NONE,
+                ParticleTypes.EXPLOSION, ParticleTypes.EXPLOSION_EMITTER,
+                BuiltInRegistries.SOUND_EVENT.wrapAsHolder(ArmoredCarMod.SHELL_IMPACT_CLOSE));
 
         // vehicles: a heavy shell wrecks an armoured car on a direct hit and badly hurts it close by
         double r = cfg.shellVehicleRadius;
@@ -206,10 +209,10 @@ public final class ShellManager {
                 level.sendParticles(p, ParticleTypes.CAMPFIRE_SIGNAL_SMOKE, true, c.x, c.y + 1, c.z, 14, 1.6, 1.2, 1.6, 0.03);
                 level.sendParticles(p, ParticleTypes.LARGE_SMOKE, true, c.x, c.y + 1, c.z, 40, 2.0, 1.5, 2.0, 0.08);
             }
-            if (d > 48 && d < 900) {
-                // the blast rolling in from a distance
-                float vol = (float) Math.max(0.15, 1.0 - d / 900.0);
-                soundTo(p, ArmoredCarMod.MORSER_FAR, c, vol, 0.7F + rnd.nextFloat() * 0.1F, true);
+            if (d > 56 && d < 1000) {
+                // the blast rolling in from a distance, arriving late
+                float vol = (float) Math.max(0.2, 1.0 - (d - 56) / 944.0);
+                soundTo(p, ArmoredCarMod.SHELL_IMPACT_FAR, c, vol, 0.95F + rnd.nextFloat() * 0.1F, true);
             }
         }
     }

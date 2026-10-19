@@ -100,5 +100,7 @@
   "subtitles.exodus_vehicles.shell_whistle": "Shell incoming",
   "subtitles.exodus_vehicles.breech_open": "Breech opens",
   "subtitles.exodus_vehicles.breech_close": "Breech closes",
-  "subtitles.exodus_vehicles.gun_traverse": "Gun traversing"
+  "subtitles.exodus_vehicles.gun_traverse": "Gun traversing",
+  "subtitles.exodus_vehicles.shell_impact_close": "Shell explodes",
+  "subtitles.exodus_vehicles.shell_impact_far": "Distant shell explosion"
 }
