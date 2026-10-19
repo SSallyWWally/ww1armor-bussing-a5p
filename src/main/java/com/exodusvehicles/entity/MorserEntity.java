@@ -590,7 +590,7 @@ public class MorserEntity extends Entity {
         Vec3 dir = new Vec3(-Math.sin(yaw) * Math.cos(e), Math.sin(e), Math.cos(yaw) * Math.cos(e));
         Vec3 muzzle = trunnions().add(dir.scale(BARREL));
         // the ballistic solution is worked out from the trunnions; start the shell there so the numbers hold
-        ShellManager.fire(server, trunnions(), dir.scale(v), player.getUUID(), aimPoint().y);
+        ShellManager.fire(server, trunnions(), dir.scale(v), player.getUUID(), aimPoint().y, this);
 
         // blast, flash and a smoke cloud that gives the battery away
         server.sendParticles(ParticleTypes.EXPLOSION, muzzle.x, muzzle.y, muzzle.z, 3, 0.3, 0.3, 0.3, 0.0);

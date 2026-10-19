@@ -59,8 +59,10 @@ public final class ShellManager {
         final int whistleAt;
         final Vec3 predicted;
         final UUID owner;
+        final Entity gun;
 
-        Shell(ServerLevel level, Vec3 pos, Vec3 vel, UUID owner, Vec3 predicted, int flightTicks) {
+        Shell(ServerLevel level, Vec3 pos, Vec3 vel, UUID owner, Vec3 predicted, int flightTicks, Entity gun) {
+            this.gun = gun;
             this.level = level;
             this.pos = pos;
             this.vel = vel;
@@ -74,17 +76,22 @@ public final class ShellManager {
                            long seed, long at, boolean nearListener) {}
 
     /** Fires a shell; groundY is the height it is expected to come down at (for the whistle and chunk ticket). */
-    public static void fire(ServerLevel level, Vec3 pos, Vec3 vel, UUID owner, double groundY) {
+    public static void fire(ServerLevel level, Vec3 pos, Vec3 vel, UUID owner, double groundY, Entity gun) {
         Vec3 p = pos, v = vel;
         int t = 0;
         while (t < 2000 && !(v.y < 0 && p.y <= groundY)) {
-            p = p.add(v);
+            p = step(p, v);
             v = v.add(0, -GRAVITY, 0);
             t++;
         }
         ChunkPos cp = new ChunkPos(BlockPos.containing(p));
         level.getChunkSource().addRegionTicket(TICKET, cp, 2, cp);
-        SHELLS.add(new Shell(level, pos, vel, owner, p, t));
+        SHELLS.add(new Shell(level, pos, vel, owner, p, t, gun));
+    }
+
+    /** One tick of flight; the half-step of gravity makes it the exact parabola the gun's tables assume. */
+    private static Vec3 step(Vec3 pos, Vec3 vel) {
+        return pos.add(vel.x, vel.y - GRAVITY * 0.5, vel.z);
     }
 
     /**
@@ -134,7 +141,7 @@ public final class ShellManager {
                     }
                 }
             }
-            Vec3 next = s.pos.add(s.vel);
+            Vec3 next = step(s.pos, s.vel);
             if (level.hasChunkAt(BlockPos.containing(next)) && level.hasChunkAt(BlockPos.containing(s.pos))) {
                 Vec3 hit = null;
                 BlockHitResult bh = level.clip(new ClipContext(s.pos, next, ClipContext.Block.COLLIDER, ClipContext.Fluid.ANY,
@@ -144,7 +151,7 @@ public final class ShellManager {
                 }
                 Vec3 end = hit != null ? hit : next;
                 for (Entity e : level.getEntities((Entity) null, new AABB(s.pos, end).inflate(1.0),
-                        e -> e.isPickable() && !e.isSpectator())) {
+                        e -> e.isPickable() && !e.isSpectator() && e != s.gun && !(s.gun != null && s.gun.hasPassenger(e)))) {
                     Optional<Vec3> eh = e.getBoundingBox().inflate(0.3).clip(s.pos, end);
                     if (eh.isPresent() && (hit == null || eh.get().distanceToSqr(s.pos) < hit.distanceToSqr(s.pos))) {
                         hit = eh.get();
