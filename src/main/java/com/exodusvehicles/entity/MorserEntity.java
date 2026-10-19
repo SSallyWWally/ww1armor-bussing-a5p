@@ -582,7 +582,7 @@ public class MorserEntity extends Entity {
         Player op = getOperator();
         if (isDeployed() && getWork() == 0 && op != null) {
             float lim = traverseLimit();
-            float want = Mth.clamp(Mth.wrapDegrees(op.getYHeadRot() - this.getYRot()), -lim, lim);
+            float want = Mth.clamp(Mth.wrapDegrees(op.getYRot() - this.getYRot()), -lim, lim);
             float t = getTraverse();
             this.entityData.set(DATA_TRAV, t + Mth.clamp(want - t, -TRAVERSE_RATE, TRAVERSE_RATE));
             this.entityData.set(DATA_RANGE, rangeForPitch(op.getXRot(), minRange(), maxRange()));
