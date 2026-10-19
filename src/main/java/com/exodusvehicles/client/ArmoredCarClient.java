@@ -49,6 +49,7 @@ public class ArmoredCarClient implements ClientModInitializer {
         EntityModelLayerRegistry.registerModelLayer(TruckModel.LAYER, TruckModel::createBodyLayer);
         EntityRendererRegistry.register(ArmoredCarMod.DAIMLER_DR, TruckRenderer::new);
         EntityRendererRegistry.register(ArmoredCarMod.DAIMLER_DR_OPEN, TruckRenderer::new);
+        net.minecraft.client.gui.screens.MenuScreens.register(ArmoredCarMod.CARGO_MENU, CargoScreen::new);
         EntityRendererRegistry.register(ArmoredCarMod.TRUCK_SEGMENT, NoopRenderer::new);
 
         // the engine loop is the car's only driving sound

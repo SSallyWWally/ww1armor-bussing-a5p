@@ -45,6 +45,7 @@ public class ArmoredCarMod implements ModInitializer {
     public static Item DAIMLER_DR_ITEM;
     public static EntityType<TruckEntity> DAIMLER_DR_OPEN;
     public static Item DAIMLER_DR_OPEN_ITEM;
+    public static net.minecraft.world.inventory.MenuType<com.exodusvehicles.menu.CargoMenu> CARGO_MENU;
     public static SoundEvent MG_FIRE;
     public static SoundEvent RICOCHET;
     public static SoundEvent ENGINE;
@@ -106,6 +107,10 @@ public class ArmoredCarMod implements ModInitializer {
                 new ArmoredCarItem(new Item.Properties().stacksTo(1), () -> DAIMLER_DR));
         DAIMLER_DR_OPEN_ITEM = Registry.register(BuiltInRegistries.ITEM, id("daimler_dr_open"),
                 new ArmoredCarItem(new Item.Properties().stacksTo(1), () -> DAIMLER_DR_OPEN));
+
+        CARGO_MENU = Registry.register(BuiltInRegistries.MENU, id("truck_cargo"),
+                new net.minecraft.world.inventory.MenuType<>(com.exodusvehicles.menu.CargoMenu::new,
+                        net.minecraft.world.flag.FeatureFlags.VANILLA_SET));
 
         MG_FIRE = registerSound("mg_fire");
         RICOCHET = registerSound("ricochet");

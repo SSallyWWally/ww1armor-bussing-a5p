@@ -16,8 +16,6 @@ import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.SimpleMenuProvider;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.inventory.ChestMenu;
-import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -29,8 +27,8 @@ import net.minecraft.world.level.Level;
  * Unarmoured and unarmed: every hit counts and the crew sit in the open.
  * Seat 0 = driver (cab, left), 1 = co-driver (cab, right), 2 + 3 = men on the benches in the bed.
  * Two variants (entity types): with the canvas tilt and with an open bed.
- * Sneak + use with a chest loads a supply crate into the bed (up to 6); each crate is one row of 9 slots,
- * opened with sneak + use (any other item / empty hand).
+ * Sneak + use with chests loads supply crates into the bed (up to 6); each crate holds a chest's worth (27 slots),
+ * all opened together as one inventory with sneak + use (any other item / empty hand).
  */
 public class TruckEntity extends ArmoredCarEntity {
     /** {right, up, forward} in blocks; feet so the hips rest on the cab bench (1.375 m) / bed benches (1.5 m). */
@@ -49,7 +47,7 @@ public class TruckEntity extends ArmoredCarEntity {
             SynchedEntityData.defineId(TruckEntity.class, EntityDataSerializers.INT);
 
     /** Cargo in the crates: crate n holds slots 9n..9n+8. */
-    private final SimpleContainer cargo = new SimpleContainer(MAX_CRATES * 9) {
+    private final SimpleContainer cargo = new SimpleContainer(MAX_CRATES * com.exodusvehicles.menu.CargoMenu.SLOTS_PER_CRATE) {
         @Override
         public boolean stillValid(Player player) {
             return !TruckEntity.this.isRemoved() && !TruckEntity.this.isWrecked()
@@ -140,16 +138,28 @@ public class TruckEntity extends ArmoredCarEntity {
     }
 
     private void openCargo(Player player) {
-        int rows = getCrates();
-        MenuType<ChestMenu> type = switch (rows) {
-            case 1 -> MenuType.GENERIC_9x1;
-            case 2 -> MenuType.GENERIC_9x2;
-            case 3 -> MenuType.GENERIC_9x3;
-            case 4 -> MenuType.GENERIC_9x4;
-            case 5 -> MenuType.GENERIC_9x5;
-            default -> MenuType.GENERIC_9x6;
+        net.minecraft.world.inventory.ContainerData data = new net.minecraft.world.inventory.ContainerData() {
+            private int page;
+
+            @Override
+            public int get(int index) {
+                return index == 0 ? getCrates() : this.page;
+            }
+
+            @Override
+            public void set(int index, int value) {
+                if (index == 1) {
+                    this.page = value;
+                }
+            }
+
+            @Override
+            public int getCount() {
+                return 2;
+            }
         };
-        player.openMenu(new SimpleMenuProvider((id, inventory, p) -> new ChestMenu(type, id, inventory, this.cargo, rows),
+        player.openMenu(new SimpleMenuProvider(
+                (id, inventory, p) -> new com.exodusvehicles.menu.CargoMenu(id, inventory, this.cargo, data),
                 Component.translatable("container.exodus_vehicles.truck_cargo")));
     }
 
