@@ -53,6 +53,25 @@ public class ModConfig {
     public float truckMaxSteerAngle = 26.0F;     // 4.4 m wheelbase: ~9 block turning radius
     public float truckMaxHealth = 150.0F;        // unarmoured: every hit counts
 
+    // ---- 21 cm Mörser 16 heavy howitzer. Ranges in blocks (the real gun reached ~10 km; scaled to what a server keeps loaded).
+    public float morserMaxHealth = 200.0F;
+    /** Charge 2 maximum range; charge 1 covers the shorter half. Elevation 45-75 degrees gives ~200 to this. */
+    public float morserMaxRange = 800.0F;
+    public float morserTraverse = 10.0F;          // degrees either side; beyond that pack up and turn the gun
+    public int morserReloadTicks = 600;           // 30 s with one man
+    public int morserReloadTicksTwoCrew = 360;    // 18 s with a loader
+    public int morserEmplaceTicks = 600;          // 30 s to dig in
+    public int morserPackTicks = 200;             // 10 s to pack up
+    /** Scatter (1 sigma) as a fraction of range: long/short and left/right. */
+    public double morserRangeSpread = 0.012;
+    public double morserLateralSpread = 0.006;
+    public float shellPower = 6.0F;               // explosion power (TNT = 4)
+    public boolean shellBreaksBlocks = false;
+    public float shellVehicleDamage = 400.0F;     // extra damage to vehicles at the point of impact...
+    public double shellVehicleRadius = 5.0;       // ...falling to nothing at this distance
+    /** Spyglass target read-out rounds coordinates to this many blocks (the observer's error). */
+    public int observerRounding = 10;
+
     // ---- MG 08 (7.92 mm, 250-round fabric belt, ~450-500 rounds/min, water-cooled jacket)
     public float mgDamage = 5.0F;
     public float mgRoundsPerMinute = 600.0F;  // MG 08: ~400-600 rpm; 600 = exactly one round every 2 ticks

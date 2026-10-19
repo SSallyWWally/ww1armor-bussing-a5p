@@ -1,0 +1,24 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "III",
+    " F ",
+    "L L"
+  ],
+  "key": {
+    "I": {
+      "item": "minecraft:iron_block"
+    },
+    "F": {
+      "item": "minecraft:blast_furnace"
+    },
+    "L": {
+      "tag": "minecraft:logs"
+    }
+  },
+  "result": {
+    "id": "exodus_vehicles:morser16",
+    "count": 1
+  }
+}

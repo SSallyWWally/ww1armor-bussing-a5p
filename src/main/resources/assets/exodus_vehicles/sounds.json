@@ -118,5 +118,30 @@
   "bullet_flyby": {
     "subtitle": "subtitles.exodus_vehicles.bullet_flyby",
     "sounds": []
+  },
+  "morser_close": {
+    "subtitle": "subtitles.exodus_vehicles.morser_close",
+    "sounds": []
+  },
+  "morser_distant": {
+    "subtitle": "subtitles.exodus_vehicles.morser_distant",
+    "sounds": []
+  },
+  "morser_far": {
+    "subtitle": "subtitles.exodus_vehicles.morser_far",
+    "sounds": []
+  },
+  "morser_reload": {
+    "subtitle": "subtitles.exodus_vehicles.morser_reload",
+    "sounds": []
+  },
+  "shell_whistle": {
+    "subtitle": "subtitles.exodus_vehicles.shell_whistle",
+    "sounds": [
+      {
+        "name": "exodus_vehicles:shell_whistle",
+        "attenuation_distance": 80
+      }
+    ]
   }
 }

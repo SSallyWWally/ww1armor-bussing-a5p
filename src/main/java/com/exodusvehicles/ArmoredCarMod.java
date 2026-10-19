@@ -46,6 +46,14 @@ public class ArmoredCarMod implements ModInitializer {
     public static EntityType<TruckEntity> DAIMLER_DR_OPEN;
     public static Item DAIMLER_DR_OPEN_ITEM;
     public static net.minecraft.world.inventory.MenuType<com.exodusvehicles.menu.CargoMenu> CARGO_MENU;
+    public static EntityType<com.exodusvehicles.entity.MorserEntity> MORSER;
+    public static Item MORSER_ITEM;
+    public static Item SHELL_ITEM;
+    public static SoundEvent MORSER_CLOSE;
+    public static SoundEvent MORSER_DISTANT;
+    public static SoundEvent MORSER_FAR;
+    public static SoundEvent MORSER_RELOAD;
+    public static SoundEvent SHELL_WHISTLE;
     public static SoundEvent MG_FIRE;
     public static SoundEvent RICOCHET;
     public static SoundEvent ENGINE;
@@ -108,6 +116,34 @@ public class ArmoredCarMod implements ModInitializer {
         DAIMLER_DR_OPEN_ITEM = Registry.register(BuiltInRegistries.ITEM, id("daimler_dr_open"),
                 new ArmoredCarItem(new Item.Properties().stacksTo(1), () -> DAIMLER_DR_OPEN));
 
+        MORSER = Registry.register(BuiltInRegistries.ENTITY_TYPE, id("morser16"),
+                EntityType.Builder.<com.exodusvehicles.entity.MorserEntity>of(com.exodusvehicles.entity.MorserEntity::new, MobCategory.MISC)
+                        .sized(2.4F, 2.2F)
+                        .fireImmune()
+                        .clientTrackingRange(12)
+                        .updateInterval(2)
+                        .build("morser16"));
+        MORSER_ITEM = Registry.register(BuiltInRegistries.ITEM, id("morser16"),
+                new ArmoredCarItem(new Item.Properties().stacksTo(1), () -> MORSER));
+        SHELL_ITEM = Registry.register(BuiltInRegistries.ITEM, id("shell_21cm"), new Item(new Item.Properties().stacksTo(4)));
+        MORSER_CLOSE = registerSound("morser_close");
+        MORSER_DISTANT = registerSound("morser_distant");
+        MORSER_FAR = registerSound("morser_far");
+        MORSER_RELOAD = registerSound("morser_reload");
+        SHELL_WHISTLE = registerSound("shell_whistle");
+        net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents.END_WORLD_TICK.register(
+                com.exodusvehicles.artillery.ShellManager::tick);
+        PayloadTypeRegistry.playC2S().register(com.exodusvehicles.network.SetTargetPayload.TYPE,
+                com.exodusvehicles.network.SetTargetPayload.CODEC);
+        ServerPlayNetworking.registerGlobalReceiver(com.exodusvehicles.network.SetTargetPayload.TYPE, (payload, context) -> {
+            ServerPlayer player = context.player();
+            player.getServer().execute(() -> {
+                if (player.getVehicle() instanceof com.exodusvehicles.entity.MorserEntity gun) {
+                    gun.setTarget(player, payload.x(), payload.z(), payload.addRange(), payload.right());
+                }
+            });
+        });
+
         CARGO_MENU = Registry.register(BuiltInRegistries.MENU, id("truck_cargo"),
                 new net.minecraft.world.inventory.MenuType<>(com.exodusvehicles.menu.CargoMenu::new,
                         net.minecraft.world.flag.FeatureFlags.VANILLA_SET));
@@ -132,6 +168,8 @@ public class ArmoredCarMod implements ModInitializer {
             entries.accept(EISENWOLF_ITEM);
             entries.accept(DAIMLER_DR_ITEM);
             entries.accept(DAIMLER_DR_OPEN_ITEM);
+            entries.accept(MORSER_ITEM);
+            entries.accept(SHELL_ITEM);
         });
 
         PayloadTypeRegistry.playC2S().register(SwitchSeatPayload.TYPE, SwitchSeatPayload.CODEC);
@@ -153,6 +191,8 @@ public class ArmoredCarMod implements ModInitializer {
             player.getServer().execute(() -> {
                 if (player.getVehicle() instanceof ArmoredCarEntity car) {
                     car.toggleEngine(player);
+                } else if (player.getVehicle() instanceof com.exodusvehicles.entity.MorserEntity gun) {
+                    gun.toggleEmplace(player);
                 }
             });
         });
@@ -161,6 +201,8 @@ public class ArmoredCarMod implements ModInitializer {
             player.getServer().execute(() -> {
                 if (player.getVehicle() instanceof ArmoredCarEntity car) {
                     car.startReload(player);
+                } else if (player.getVehicle() instanceof com.exodusvehicles.entity.MorserEntity gun) {
+                    gun.startLoading(player);
                 }
             });
         });
@@ -170,6 +212,8 @@ public class ArmoredCarMod implements ModInitializer {
             player.getServer().execute(() -> {
                 if (player.getVehicle() instanceof ArmoredCarEntity car) {
                     car.switchSeat(player);
+                } else if (player.getVehicle() instanceof com.exodusvehicles.entity.MorserEntity gun) {
+                    gun.switchSeat(player);
                 }
             });
         });
@@ -178,6 +222,8 @@ public class ArmoredCarMod implements ModInitializer {
             player.getServer().execute(() -> {
                 if (player.getVehicle() instanceof ArmoredCarEntity car) {
                     car.fireGun(player);
+                } else if (player.getVehicle() instanceof com.exodusvehicles.entity.MorserEntity gun) {
+                    gun.fire(player);
                 }
             });
         });

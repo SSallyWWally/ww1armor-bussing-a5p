@@ -1,0 +1,24 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    " C ",
+    "ITI",
+    " I "
+  ],
+  "key": {
+    "C": {
+      "item": "minecraft:copper_ingot"
+    },
+    "I": {
+      "item": "minecraft:iron_ingot"
+    },
+    "T": {
+      "item": "minecraft:tnt"
+    }
+  },
+  "result": {
+    "id": "exodus_vehicles:shell_21cm",
+    "count": 1
+  }
+}

@@ -34,6 +34,8 @@ public class ArmoredCarClient implements ClientModInitializer {
     public static KeyMapping RELOAD;
     public static KeyMapping ENGINE;
     public static KeyMapping BRAKE;
+    public static KeyMapping FIRE_CONTROL;
+    private static boolean morserTriggerWas;
     /** Physical key state last tick, per mapping (for edge detection). */
     private static final java.util.Map<KeyMapping, Boolean> WAS_DOWN = new java.util.HashMap<>();
 
@@ -50,6 +52,8 @@ public class ArmoredCarClient implements ClientModInitializer {
         EntityRendererRegistry.register(ArmoredCarMod.DAIMLER_DR, TruckRenderer::new);
         EntityRendererRegistry.register(ArmoredCarMod.DAIMLER_DR_OPEN, TruckRenderer::new);
         net.minecraft.client.gui.screens.MenuScreens.register(ArmoredCarMod.CARGO_MENU, CargoScreen::new);
+        EntityModelLayerRegistry.registerModelLayer(MorserModel.LAYER, MorserModel::createBodyLayer);
+        EntityRendererRegistry.register(ArmoredCarMod.MORSER, MorserRenderer::new);
         EntityRendererRegistry.register(ArmoredCarMod.TRUCK_SEGMENT, NoopRenderer::new);
 
         // the engine loop is the car's only driving sound
@@ -69,6 +73,8 @@ public class ArmoredCarClient implements ClientModInitializer {
                 "key.exodus_vehicles.engine", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_P, "key.categories.exodus_vehicles"));
         BRAKE = KeyBindingHelper.registerKeyBinding(new KeyMapping(
                 "key.exodus_vehicles.parking_brake", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_G, "key.categories.exodus_vehicles"));
+        FIRE_CONTROL = KeyBindingHelper.registerKeyBinding(new KeyMapping(
+                "key.exodus_vehicles.fire_control", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_J, "key.categories.exodus_vehicles"));
 
         ClientPlayNetworking.registerGlobalReceiver(TracerPayload.TYPE, (payload, context) -> {
             Minecraft mc = context.client();
@@ -99,6 +105,21 @@ public class ArmoredCarClient implements ClientModInitializer {
                 return;
             }
             GunSight.tick(mc);
+            // howitzer layer: left click fires (once per press), and never punches or mines meanwhile
+            if (mc.screen == null && mc.player.getVehicle() instanceof com.exodusvehicles.entity.MorserEntity gun
+                    && gun.seatOf(mc.player) == com.exodusvehicles.entity.MorserEntity.LAYER) {
+                boolean down = GunSight.physicallyDown(mc, mc.options.keyAttack);
+                mc.options.keyAttack.setDown(false);
+                while (mc.options.keyAttack.consumeClick()) {
+                    // swallow
+                }
+                if (down && !morserTriggerWas) {
+                    ClientPlayNetworking.send(new FireGunPayload());
+                }
+                morserTriggerWas = down;
+            } else {
+                morserTriggerWas = false;
+            }
             if (mc.screen == null && GunSight.isGunner(mc)) {
                 boolean trigger = GunSight.physicallyDown(mc, mc.options.keyAttack);
                 mc.options.keyAttack.setDown(false);
@@ -114,7 +135,11 @@ public class ArmoredCarClient implements ClientModInitializer {
         ClientTickEvents.END_CLIENT_TICK.register(mc -> {
             // Vehicle keys are read straight from the keyboard while riding, so another mod bound to the
             // same key (very common for N, G, P...) can't swallow them.
-            boolean riding = mc.player != null && mc.player.getVehicle() instanceof ArmoredCarEntity && mc.screen == null;
+            boolean riding = mc.player != null && mc.screen == null && (mc.player.getVehicle() instanceof ArmoredCarEntity
+                    || mc.player.getVehicle() instanceof com.exodusvehicles.entity.MorserEntity);
+            if (pressed(mc, FIRE_CONTROL, riding) && mc.player.getVehicle() instanceof com.exodusvehicles.entity.MorserEntity gun) {
+                mc.setScreen(new FireControlScreen(gun));
+            }
             if (pressed(mc, SWITCH_SEAT, riding)) {
                 ClientPlayNetworking.send(new SwitchSeatPayload());
             }
@@ -127,7 +152,7 @@ public class ArmoredCarClient implements ClientModInitializer {
             if (pressed(mc, RELOAD, riding)) {
                 ClientPlayNetworking.send(new ReloadPayload());
             }
-            for (KeyMapping k : new KeyMapping[]{SWITCH_SEAT, ENGINE, BRAKE, RELOAD}) {
+            for (KeyMapping k : new KeyMapping[]{SWITCH_SEAT, ENGINE, BRAKE, RELOAD, FIRE_CONTROL}) {
                 while (k.consumeClick()) {
                     // handled above from the physical key
                 }
@@ -141,6 +166,8 @@ public class ArmoredCarClient implements ClientModInitializer {
         HudRenderCallback.EVENT.register((graphics, tickCounter) -> {
             drawSight(graphics, tickCounter.getGameTimeDeltaPartialTick(true));
             drawHud(graphics);
+            drawSpyglass(graphics, tickCounter.getGameTimeDeltaPartialTick(true));
+            drawMorserHud(graphics);
         });
     }
 
@@ -184,6 +211,113 @@ public class ArmoredCarClient implements ClientModInitializer {
             g.fill(x0, y0 + size, x0 + size, h, 0xFF000000);
         }
         RenderSystem.disableBlend();
+    }
+
+    /** Observer's read-out: where the spyglass is pointing, rounded like a map reading. */
+    private static void drawSpyglass(GuiGraphics g, float partialTick) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player == null || mc.options.hideGui || !mc.player.isScoping()) {
+            return;
+        }
+        net.minecraft.world.phys.HitResult hit = mc.player.pick(1024.0, partialTick, false);
+        int w = g.guiWidth(), h = g.guiHeight();
+        Component line;
+        if (hit.getType() == net.minecraft.world.phys.HitResult.Type.MISS) {
+            line = Component.translatable("hud.exodus_vehicles.observer_none");
+        } else {
+            int r = Math.max(1, ModConfig.get().observerRounding);
+            net.minecraft.world.phys.Vec3 p = hit.getLocation();
+            int x = Math.round((float) p.x / r) * r, z = Math.round((float) p.z / r) * r;
+            int dist = Math.round((float) mc.player.getEyePosition().distanceTo(p) / 10.0F) * 10;
+            line = Component.translatable("hud.exodus_vehicles.observer", x, z, dist);
+        }
+        g.drawCenteredString(mc.font, line, w / 2, h - 60, 0xFFF0E8C8);
+    }
+
+    private static void drawMorserHud(GuiGraphics g) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player == null || mc.options.hideGui || !(mc.player.getVehicle() instanceof com.exodusvehicles.entity.MorserEntity gun)) {
+            return;
+        }
+        int x = 8, y = 8, white = 0xFFE8E4D0, grey = 0xFFB9B6A3, amber = 0xFFE0A040, red = 0xFFE0603A, green = 0xFF9FD08A;
+        int seat = Math.max(0, gun.seatOf(mc.player));
+        Component seatLine = Component.translatable("hud.exodus_vehicles.seat",
+                Component.translatable("seat.exodus_vehicles.morser." + seat), SWITCH_SEAT.getTranslatedKeyMessage());
+        g.drawString(mc.font, seatLine, x, y, white, true);
+        y += 12;
+        // state of the gun
+        Component state;
+        int col = white;
+        int work = gun.getWork();
+        if (gun.isTowed()) {
+            state = Component.translatable("hud.exodus_vehicles.morser_towed");
+        } else if (work > 0) {
+            state = Component.translatable("hud.exodus_vehicles.morser_digging", work * 100 / Math.max(1, ModConfig.get().morserEmplaceTicks));
+            col = amber;
+        } else if (work < 0) {
+            state = Component.translatable("hud.exodus_vehicles.morser_packing", -work * 100 / Math.max(1, ModConfig.get().morserPackTicks));
+            col = amber;
+        } else if (gun.isEmplaced()) {
+            state = Component.translatable("hud.exodus_vehicles.morser_emplaced", ENGINE.getTranslatedKeyMessage());
+            col = green;
+        } else {
+            state = Component.translatable("hud.exodus_vehicles.morser_travel", ENGINE.getTranslatedKeyMessage());
+        }
+        g.drawString(mc.font, state, x, y, col, true);
+        y += 12;
+        // ammunition
+        Component ammo;
+        if (gun.isLoaded()) {
+            ammo = Component.translatable("hud.exodus_vehicles.morser_loaded");
+            col = green;
+        } else if (gun.getLoading() > 0) {
+            ammo = Component.translatable("hud.exodus_vehicles.morser_loading", (gun.getLoading() + 19) / 20);
+            col = amber;
+        } else {
+            ammo = Component.translatable("hud.exodus_vehicles.morser_empty", RELOAD.getTranslatedKeyMessage());
+            col = grey;
+        }
+        g.drawString(mc.font, ammo, x, y, col, true);
+        y += 12;
+        // fire control
+        if (!gun.hasTarget()) {
+            g.drawString(mc.font, Component.translatable("hud.exodus_vehicles.morser_no_target", FIRE_CONTROL.getTranslatedKeyMessage()), x, y, grey, true);
+            y += 12;
+        } else {
+            g.drawString(mc.font, Component.translatable("hud.exodus_vehicles.morser_target", gun.targetX(), gun.targetZ(),
+                    signed(gun.corrAdd()), signed(gun.corrRight())), x, y, white, true);
+            y += 12;
+            int st = gun.getStatus();
+            if (st == com.exodusvehicles.entity.MorserEntity.STATUS_OK) {
+                float bearing = (gun.getBearing() + 180.0F) % 360.0F;     // compass: 0 = north
+                g.drawString(mc.font, Component.translatable("hud.exodus_vehicles.morser_solution", Math.round(gun.getRange()),
+                        Math.round(bearing), gun.getCharge(), String.format("%.1f", gun.getWantedElevation()),
+                        String.format("%.0f", gun.getFlightTicks() / 20.0F)), x, y, white, true);
+                y += 12;
+                boolean laid = gun.isLaid();
+                g.drawString(mc.font, Component.translatable(laid ? "hud.exodus_vehicles.morser_laid" : "hud.exodus_vehicles.morser_laying",
+                        String.format("%.1f", gun.getElevation())), x, y, laid ? green : amber, true);
+                y += 12;
+            } else {
+                String key = st == com.exodusvehicles.entity.MorserEntity.STATUS_RANGE_LONG ? "hud.exodus_vehicles.morser_too_far"
+                        : st == com.exodusvehicles.entity.MorserEntity.STATUS_RANGE_SHORT ? "hud.exodus_vehicles.morser_too_close"
+                        : "hud.exodus_vehicles.morser_traverse";
+                g.drawString(mc.font, Component.translatable(key, Math.round(gun.getRange())), x, y, red, true);
+                y += 12;
+            }
+        }
+        if (seat == com.exodusvehicles.entity.MorserEntity.LAYER && gun.isEmplaced() && gun.isLoaded() && gun.isLaid()) {
+            g.drawString(mc.font, Component.translatable("hud.exodus_vehicles.morser_ready"), x, y, green, true);
+            y += 12;
+        }
+        float hp = gun.getHealth(), max = gun.getMaxHealth();
+        int barW = 100, filled = (int) (barW * Math.max(0.0F, Math.min(1.0F, hp / max)));
+        g.fill(x, y + 2, x + barW, y + 6, 0x80000000);
+        g.fill(x, y + 2, x + filled, y + 6, hp / max > 0.5F ? 0xFF8D977A : hp / max > 0.25F ? 0xFFD9A441 : 0xFFC4553A);
+    }
+
+    private static String signed(int v) {
+        return v > 0 ? "+" + v : String.valueOf(v);
     }
 
     private static void drawHud(GuiGraphics g) {
