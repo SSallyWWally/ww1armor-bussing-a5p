@@ -70,7 +70,11 @@ public class CargoMenu extends AbstractContainerMenu {
     public boolean clickMenuButton(Player player, int id) {
         int p = page() + (id == BUTTON_NEXT ? 1 : id == BUTTON_PREV ? -1 : 0);
         p = Math.max(0, Math.min(pages() - 1, p));
-        this.data.set(1, p);
+        if (p != page()) {
+            this.data.set(1, p);
+            // every screen slot now shows a different cargo slot: resend the whole page
+            this.sendAllDataToRemote();
+        }
         return true;
     }
 
