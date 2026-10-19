@@ -60,7 +60,55 @@ public final class ArtilleryClient {
     private static long shakeSeed = 1;
     private static boolean triggerWas, useWas;
 
+    /**
+     * Where the shells will fall: a red ring the size of the scatter drawn on the ground. Only on the operator's own
+     * screen, only while they are on the gun (gone the moment they get off), only where their client has the ground.
+     */
+    private static void renderRing(net.fabricmc.fabric.api.client.rendering.v1.WorldRenderContext ctx) {
+        Minecraft mc = Minecraft.getInstance();
+        MorserEntity gun = operatedGun();
+        if (gun == null || mc.player == null || mc.level == null || ctx.consumers() == null || ctx.matrixStack() == null) {
+            return;
+        }
+        float pt = ctx.tickCounter().getGameTimeDeltaPartialTick(true);
+        float range = localRange(gun, mc.player, pt);
+        Vec3 aim = gun.aimPoint(localTraverse(gun, mc.player, pt), range);
+        if (!mc.level.hasChunkAt(BlockPos.containing(aim))) {
+            return;
+        }
+        float r = gun.dispersionAt(range);
+        Vec3 cam = ctx.camera().getPosition();
+        com.mojang.blaze3d.vertex.PoseStack ps = ctx.matrixStack();
+        ps.pushPose();
+        ps.translate(-cam.x, -cam.y, -cam.z);
+        com.mojang.blaze3d.vertex.PoseStack.Pose pose = ps.last();
+        com.mojang.blaze3d.vertex.VertexConsumer vc = ctx.consumers().getBuffer(net.minecraft.client.renderer.RenderType.lines());
+        int n = 48;
+        Vec3 prev = null;
+        for (int i = 0; i <= n; i++) {
+            double a = i * Mth.TWO_PI / n;
+            double x = aim.x + Math.cos(a) * r, z = aim.z + Math.sin(a) * r;
+            double y = mc.level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING, Mth.floor(x), Mth.floor(z)) + 0.15;
+            Vec3 p = new Vec3(x, y, z);
+            if (prev != null) {
+                line(vc, pose, prev, p);
+            }
+            prev = p;
+        }
+        double cy = aim.y + 0.15;
+        line(vc, pose, new Vec3(aim.x - 1.5, cy, aim.z), new Vec3(aim.x + 1.5, cy, aim.z));
+        line(vc, pose, new Vec3(aim.x, cy, aim.z - 1.5), new Vec3(aim.x, cy, aim.z + 1.5));
+        ps.popPose();
+    }
+
+    private static void line(com.mojang.blaze3d.vertex.VertexConsumer vc, com.mojang.blaze3d.vertex.PoseStack.Pose pose, Vec3 a, Vec3 b) {
+        Vec3 n = b.subtract(a).normalize();
+        vc.addVertex(pose, (float) a.x, (float) a.y, (float) a.z).setColor(230, 50, 35, 255).setNormal(pose, (float) n.x, (float) n.y, (float) n.z);
+        vc.addVertex(pose, (float) b.x, (float) b.y, (float) b.z).setColor(230, 50, 35, 255).setNormal(pose, (float) n.x, (float) n.y, (float) n.z);
+    }
+
     public static void init() {
+        net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents.AFTER_ENTITIES.register(ArtilleryClient::renderRing);
         ClientPlayNetworking.registerGlobalReceiver(com.exodusvehicles.network.HitMarkerPayload.TYPE, (p, ctx) -> {
             hitTicks = 50;
             hitKill = hitKill && hitTicks > 0 || p.kill();
@@ -103,14 +151,16 @@ public final class ArtilleryClient {
             double d = mc.player.getEyePosition().distanceTo(at);
             float r = Math.max(2.0F, p.radius());
             // screen shake reaches well beyond the blast; shell shock only close in
-            float s = (float) Math.max(0.0, 1.0 - d / (r * 6.0));
-            addShake(7.0F * s * s);
-            double near = r * 1.6;
+            float s = (float) Math.max(0.0, 1.0 - d / (r * 7.0));
+            addShake(16.0F * (float) Math.pow(s, 1.5));
+            double near = r * 1.8;
             if (d < near) {
                 float k = (float) (1.0 - d / near);
                 flash = Math.max(flash, 0.55F * k + 0.25F);
-                dim = Math.max(dim, 60.0F + 80.0F * k);
-                mc.getSoundManager().play(SimpleSoundInstance.forUI(ArmoredCarMod.SHELL_SHOCK, 1.0F, 0.35F + 0.65F * k));
+                dim = Math.max(dim, 120.0F + 120.0F * k);
+                shakeLong = Math.max(shakeLong, 40 + (int) (60 * k));     // the ground keeps trembling a while
+                mc.getSoundManager().play(SimpleSoundInstance.forUI(ArmoredCarMod.SHELL_SHOCK, 1.0F, 0.45F + 0.55F * k));
+                splatter(mc, k);
             }
         });
     }
@@ -178,8 +228,41 @@ public final class ArtilleryClient {
     private static int hitTicks;
     private static boolean hitKill;
 
+    // dirt thrown onto the screen by a close hit
+    private static final class Splat {
+        final int tex;
+        final float x, y, size;
+        int life;
+        final int maxLife;
+
+        Splat(int tex, float x, float y, float size, int life) {
+            this.tex = tex;
+            this.x = x;
+            this.y = y;
+            this.size = size;
+            this.life = life;
+            this.maxLife = life;
+        }
+    }
+
+    private static final List<Splat> SPLATS = new ArrayList<>();
+    private static final net.minecraft.resources.ResourceLocation[] SPLAT_TEX = {
+            ArmoredCarMod.id("textures/gui/dirt_splat_0.png"), ArmoredCarMod.id("textures/gui/dirt_splat_1.png"),
+            ArmoredCarMod.id("textures/gui/dirt_splat_2.png")};
+    private static int shakeLong;
+
+    private static void splatter(Minecraft mc, float k) {
+        java.util.Random r = new java.util.Random();
+        int n = 3 + (int) (9 * k);
+        for (int i = 0; i < n && SPLATS.size() < 24; i++) {
+            float size = 0.18F + r.nextFloat() * (0.2F + 0.25F * k);      // fraction of screen height
+            SPLATS.add(new Splat(r.nextInt(SPLAT_TEX.length), r.nextFloat(), r.nextFloat() * 0.9F, size,
+                    70 + r.nextInt(50) + (int) (60 * k)));
+        }
+    }
+
     private static void addShake(float amp) {
-        shakeAmp = Math.min(8.0F, Math.max(shakeAmp, amp));
+        shakeAmp = Math.min(16.0F, Math.max(shakeAmp, amp));
         shakeSeed++;
     }
 
@@ -284,7 +367,16 @@ public final class ArtilleryClient {
             hitKill = false;
         }
         shakeAmpO = shakeAmp;
-        shakeAmp *= 0.86F;
+        shakeAmp *= 0.9F;
+        if (shakeLong > 0) {
+            shakeLong--;
+            shakeAmp = Math.max(shakeAmp, 0.6F * Math.min(1.0F, shakeLong / 30.0F));     // lingering tremor
+        }
+        for (int i = SPLATS.size() - 1; i >= 0; i--) {
+            if (--SPLATS.get(i).life <= 0) {
+                SPLATS.remove(i);
+            }
+        }
         if (shakeAmp < 0.02F) {
             shakeAmp = 0.0F;
         }
@@ -344,26 +436,6 @@ public final class ArtilleryClient {
             }
             if (!(mc.player.getVehicle() instanceof MorserEntity)) {
                 phase = Phase.NONE;
-            }
-        }
-        // where the shells will fall: a ring the size of the scatter (only where the ground is loaded)
-        MorserEntity gun = operatedGun();
-        if (gun != null && mc.player.tickCount % 4 == 0) {
-            float trav = localTraverse(gun, mc.player, 1.0F);
-            float range = localRange(gun, mc.player, 1.0F);
-            Vec3 aim = gun.aimPoint(trav, range);
-            if (mc.level.hasChunkAt(BlockPos.containing(aim))) {
-                float r = gun.dispersionAt(range);
-                DustParticleOptions dust = new DustParticleOptions(new Vector3f(1.0F, 0.25F, 0.15F), 3.0F);
-                int n = 20;
-                for (int i = 0; i < n; i++) {
-                    double a = (i + (mc.player.tickCount / 4) % 2 * 0.5) / n * Mth.TWO_PI;
-                    double x = aim.x + Math.cos(a) * r, z = aim.z + Math.sin(a) * r;
-                    int bx = Mth.floor(x), bz = Mth.floor(z);
-                    double y = mc.level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING, bx, bz) + 0.3;
-                    mc.level.addAlwaysVisibleParticle(dust, true, x, y, z, 0, 0, 0);
-                }
-                mc.level.addAlwaysVisibleParticle(dust, true, aim.x, aim.y + 0.3, aim.z, 0, 0, 0);
             }
         }
     }
@@ -481,6 +553,20 @@ public final class ArtilleryClient {
         float f = Mth.lerp(pt, flashO, flash);
         if (f > 0.01F) {
             g.fill(0, 0, w, h, ((int) (Math.min(1.0F, f) * 255) << 24) | 0xFFF4E8);
+        }
+        if (!SPLATS.isEmpty()) {
+            com.mojang.blaze3d.systems.RenderSystem.enableBlend();
+            com.mojang.blaze3d.systems.RenderSystem.defaultBlendFunc();
+            for (Splat sp : SPLATS) {
+                float a = Math.min(1.0F, (sp.life - pt) / 30.0F);
+                int px = (int) (sp.size * h);
+                int x = (int) (sp.x * w) - px / 2;
+                int y = (int) (sp.y * h) - px / 2 + (int) ((sp.maxLife - sp.life + pt) * 0.08F);   // slides down slowly
+                g.setColor(1.0F, 1.0F, 1.0F, a);
+                g.blit(SPLAT_TEX[sp.tex], x, y, px, px, 0.0F, 0.0F, 128, 128, 128, 128);
+            }
+            g.setColor(1.0F, 1.0F, 1.0F, 1.0F);
+            com.mojang.blaze3d.systems.RenderSystem.disableBlend();
         }
         float d = Mth.lerp(pt, dimO, dim);
         if (d > 0.5F) {
