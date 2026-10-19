@@ -275,22 +275,14 @@ public final class ShellManager {
                     0.9F + rnd.nextFloat() * 0.15F);
         }
 
-        // ---- effects (kept modest: dozens of guns may be firing)
-        BlockState ground = level.getBlockState(BlockPos.containing(at.x, at.y - 0.5, at.z));
-        level.sendParticles(ParticleTypes.EXPLOSION_EMITTER, c.x, c.y, c.z, 1, 0.0, 0.0, 0.0, 0.0);
-        if (!ground.isAir()) {
-            BlockParticleOption chunk = new BlockParticleOption(ParticleTypes.BLOCK, ground);
-            for (int i = 0; i < 24; i++) {
-                level.sendParticles(chunk, c.x, c.y, c.z, 0, (rnd.nextDouble() - 0.5) * 0.8, 0.5 + rnd.nextDouble() * 0.8,
-                        (rnd.nextDouble() - 0.5) * 0.8, 1.0);
-            }
-        }
+        // ---- effects: players within IMPACT_RADIUS draw the full blast themselves from the impact packet (no particle
+        // traffic); further out they only see the smoke column
         ShellImpactPayload burst = new ShellImpactPayload(shellId, c.x, c.y, c.z, radius);
         for (ServerPlayer p : level.players()) {
             double d = Math.sqrt(p.distanceToSqr(c));
-            if (d < 256) {
-                level.sendParticles(p, ParticleTypes.CAMPFIRE_SIGNAL_SMOKE, true, c.x, c.y + 0.5, c.z, 4, 1.2, 0.6, 1.2, 0.02);
-                level.sendParticles(p, ParticleTypes.LARGE_SMOKE, true, c.x, c.y + 0.5, c.z, 12, 1.6, 1.0, 1.6, 0.06);
+            if (d >= IMPACT_RADIUS && d < 384) {
+                level.sendParticles(p, ParticleTypes.CAMPFIRE_SIGNAL_SMOKE, true, c.x, c.y + 1.0, c.z, 6, 1.5, 1.0, 1.5, 0.03);
+                level.sendParticles(p, ParticleTypes.EXPLOSION_EMITTER, true, c.x, c.y + 0.5, c.z, 1, 0.0, 0.0, 0.0, 0.0);
             }
             if (d < IMPACT_RADIUS || p == owner) {
                 ServerPlayNetworking.send(p, burst);

@@ -92,6 +92,7 @@ public final class ArtilleryClient {
             if (mc.player == null) {
                 return;
             }
+            blast(mc, at);
             double d = mc.player.getEyePosition().distanceTo(at);
             float r = Math.max(2.0F, p.radius());
             // screen shake reaches well beyond the blast; shell shock only close in
@@ -105,6 +106,66 @@ public final class ArtilleryClient {
                 mc.getSoundManager().play(SimpleSoundInstance.forUI(ArmoredCarMod.SHELL_SHOCK, 1.0F, 0.35F + 0.65F * k));
             }
         });
+    }
+
+    /**
+     * The visible burst, drawn locally from the impact packet: flash, fireballs, a fountain of whatever the ground is
+     * made of, a ring of dust rolling outward, and a smoke cloud with a tall column that hangs for a while.
+     */
+    private static void blast(Minecraft mc, Vec3 c) {
+        net.minecraft.client.multiplayer.ClientLevel lvl = mc.level;
+        if (lvl == null) {
+            return;
+        }
+        float k = Math.max(0.25F, ModConfig.get().shellEffectScale);
+        java.util.Random r = new java.util.Random();
+        int n;
+        lvl.addAlwaysVisibleParticle(ParticleTypes.FLASH, true, c.x, c.y + 1.0, c.z, 0, 0, 0);
+        // fireballs
+        lvl.addAlwaysVisibleParticle(ParticleTypes.EXPLOSION_EMITTER, true, c.x, c.y + 0.5, c.z, 0, 0, 0);
+        for (int i = 0; i < 4; i++) {
+            double a = i * Math.PI / 2 + r.nextDouble();
+            lvl.addAlwaysVisibleParticle(ParticleTypes.EXPLOSION_EMITTER, true, c.x + Math.cos(a) * 2.2 * k,
+                    c.y + 0.8 + r.nextDouble() * 1.5 * k, c.z + Math.sin(a) * 2.2 * k, 0, 0, 0);
+        }
+        n = (int) (22 * k);
+        for (int i = 0; i < n; i++) {
+            lvl.addAlwaysVisibleParticle(ParticleTypes.EXPLOSION, true, c.x + (r.nextDouble() - 0.5) * 6 * k,
+                    c.y + r.nextDouble() * 3.5 * k, c.z + (r.nextDouble() - 0.5) * 6 * k, 0, 0, 0);
+        }
+        // earth thrown up in a column and raining back down
+        net.minecraft.world.level.block.state.BlockState ground = lvl.getBlockState(BlockPos.containing(c.x, c.y - 1.0, c.z));
+        if (ground.isAir()) {
+            ground = net.minecraft.world.level.block.Blocks.DIRT.defaultBlockState();
+        }
+        net.minecraft.core.particles.BlockParticleOption dirt =
+                new net.minecraft.core.particles.BlockParticleOption(ParticleTypes.BLOCK, ground);
+        n = (int) (90 * k);
+        for (int i = 0; i < n; i++) {
+            double sp = 0.25 + r.nextDouble() * 0.45;
+            double a = r.nextDouble() * Math.PI * 2;
+            lvl.addAlwaysVisibleParticle(dirt, true, c.x + (r.nextDouble() - 0.5) * 2, c.y + r.nextDouble(), c.z + (r.nextDouble() - 0.5) * 2,
+                    Math.cos(a) * sp * 0.6 * k, (0.7 + r.nextDouble() * 1.3) * k, Math.sin(a) * sp * 0.6 * k);
+        }
+        // shock ring of dust along the ground
+        n = (int) (28 * k);
+        for (int i = 0; i < n; i++) {
+            double a = i * Math.PI * 2 / n;
+            lvl.addAlwaysVisibleParticle(ParticleTypes.POOF, true, c.x + Math.cos(a), c.y + 0.3, c.z + Math.sin(a),
+                    Math.cos(a) * 0.55 * k, 0.02, Math.sin(a) * 0.55 * k);
+        }
+        // smoke cloud and the column that marks the strike from afar
+        n = (int) (40 * k);
+        for (int i = 0; i < n; i++) {
+            lvl.addAlwaysVisibleParticle(ParticleTypes.LARGE_SMOKE, true, c.x + (r.nextDouble() - 0.5) * 6 * k,
+                    c.y + 0.5 + r.nextDouble() * 4 * k, c.z + (r.nextDouble() - 0.5) * 6 * k,
+                    (r.nextDouble() - 0.5) * 0.08, 0.04 + r.nextDouble() * 0.08, (r.nextDouble() - 0.5) * 0.08);
+        }
+        n = (int) (12 * k);
+        for (int i = 0; i < n; i++) {
+            lvl.addAlwaysVisibleParticle(ParticleTypes.CAMPFIRE_SIGNAL_SMOKE, true, c.x + (r.nextDouble() - 0.5) * 3 * k,
+                    c.y + 0.5 + r.nextDouble() * 2, c.z + (r.nextDouble() - 0.5) * 3 * k, 0, 0.05 + r.nextDouble() * 0.05, 0);
+        }
     }
 
     private static void addShake(float amp) {
