@@ -22,7 +22,7 @@ public abstract class GameRendererMixin {
     /** No hand / held item drawn over the sight. */
     @Inject(method = "renderItemInHand", at = @At("HEAD"), cancellable = true)
     private void exodus_vehicles$hideHand(CallbackInfo ci) {
-        if (GunSight.inSight()) {
+        if (GunSight.inSight() || com.exodusvehicles.client.ArtilleryClient.cameraActive()) {
             ci.cancel();
         }
     }

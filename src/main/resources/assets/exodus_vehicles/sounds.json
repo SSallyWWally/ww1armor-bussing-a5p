@@ -163,5 +163,13 @@
   "shell_impact_far": {
     "subtitle": "subtitles.exodus_vehicles.shell_impact_far",
     "sounds": []
+  },
+  "shell_shock": {
+    "subtitle": "subtitles.exodus_vehicles.shell_shock",
+    "sounds": [
+      {
+        "name": "exodus_vehicles:shell_shock"
+      }
+    ]
   }
 }

@@ -59,6 +59,7 @@ public class ArmoredCarMod implements ModInitializer {
     public static SoundEvent GUN_TRAVERSE;
     public static SoundEvent SHELL_IMPACT_CLOSE;
     public static SoundEvent SHELL_IMPACT_FAR;
+    public static SoundEvent SHELL_SHOCK;
     public static SoundEvent MG_FIRE;
     public static SoundEvent RICOCHET;
     public static SoundEvent ENGINE;
@@ -141,18 +142,13 @@ public class ArmoredCarMod implements ModInitializer {
         GUN_TRAVERSE = registerSound("gun_traverse");
         SHELL_IMPACT_CLOSE = registerSound("shell_impact_close");
         SHELL_IMPACT_FAR = registerSound("shell_impact_far");
+        SHELL_SHOCK = registerSound("shell_shock");
         net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents.END_WORLD_TICK.register(
                 com.exodusvehicles.artillery.ShellManager::tick);
-        PayloadTypeRegistry.playC2S().register(com.exodusvehicles.network.SetTargetPayload.TYPE,
-                com.exodusvehicles.network.SetTargetPayload.CODEC);
-        ServerPlayNetworking.registerGlobalReceiver(com.exodusvehicles.network.SetTargetPayload.TYPE, (payload, context) -> {
-            ServerPlayer player = context.player();
-            player.getServer().execute(() -> {
-                if (player.getVehicle() instanceof com.exodusvehicles.entity.MorserEntity gun) {
-                    gun.setTarget(player, payload.x(), payload.z(), payload.addRange(), payload.right());
-                }
-            });
-        });
+        PayloadTypeRegistry.playS2C().register(com.exodusvehicles.network.ShellFiredPayload.TYPE,
+                com.exodusvehicles.network.ShellFiredPayload.CODEC);
+        PayloadTypeRegistry.playS2C().register(com.exodusvehicles.network.ShellImpactPayload.TYPE,
+                com.exodusvehicles.network.ShellImpactPayload.CODEC);
 
         CARGO_MENU = Registry.register(BuiltInRegistries.MENU, id("truck_cargo"),
                 new net.minecraft.world.inventory.MenuType<>(com.exodusvehicles.menu.CargoMenu::new,
@@ -202,7 +198,7 @@ public class ArmoredCarMod implements ModInitializer {
                 if (player.getVehicle() instanceof ArmoredCarEntity car) {
                     car.toggleEngine(player);
                 } else if (player.getVehicle() instanceof com.exodusvehicles.entity.MorserEntity gun) {
-                    gun.toggleEmplace(player);
+                    gun.toggleDeploy(player);
                 }
             });
         });
@@ -211,9 +207,7 @@ public class ArmoredCarMod implements ModInitializer {
             player.getServer().execute(() -> {
                 if (player.getVehicle() instanceof ArmoredCarEntity car) {
                     car.startReload(player);
-                } else if (player.getVehicle() instanceof com.exodusvehicles.entity.MorserEntity gun) {
-                    gun.startLoading(player);
-                }
+
             });
         });
 
@@ -222,9 +216,7 @@ public class ArmoredCarMod implements ModInitializer {
             player.getServer().execute(() -> {
                 if (player.getVehicle() instanceof ArmoredCarEntity car) {
                     car.switchSeat(player);
-                } else if (player.getVehicle() instanceof com.exodusvehicles.entity.MorserEntity gun) {
-                    gun.switchSeat(player);
-                }
+
             });
         });
         ServerPlayNetworking.registerGlobalReceiver(FireGunPayload.TYPE, (payload, context) -> {

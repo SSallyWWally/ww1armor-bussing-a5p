@@ -18,7 +18,7 @@ import java.util.List;
 public class ModConfig {
     /** Bumped when a default changes in a way old config files must pick up. Don't edit. */
     public int configVersion = 0;
-    private static final int CURRENT_VERSION = 5;
+    private static final int CURRENT_VERSION = 6;
 
     // ---- armor / damage
     public float maxHealth = 300.0F;
@@ -53,24 +53,29 @@ public class ModConfig {
     public float truckMaxSteerAngle = 26.0F;     // 4.4 m wheelbase: ~9 block turning radius
     public float truckMaxHealth = 150.0F;        // unarmoured: every hit counts
 
-    // ---- 21 cm Mörser 16 heavy howitzer. Ranges in blocks (the real gun reached ~10 km; scaled to what a server keeps loaded).
+    // ---- 21 cm Mörser 16 artillery (Battlefield-style). Distances in blocks, times in ticks (20 = 1 s).
     public float morserMaxHealth = 200.0F;
-    /** Charge 2 maximum range; charge 1 covers the shorter half. Elevation 45-75 degrees gives ~200 to this. */
-    public float morserMaxRange = 800.0F;
-    public float morserTraverse = 10.0F;          // degrees either side; beyond that pack up and turn the gun
-    public int morserReloadTicks = 240;           // 12 s with one man
-    public int morserReloadTicksTwoCrew = 160;    // 8 s with a loader
-    public int morserEmplaceTicks = 600;          // 30 s to dig in
-    public int morserPackTicks = 200;             // 10 s to pack up
-    /** Scatter (1 sigma) as a fraction of range: long/short and left/right. */
-    public double morserRangeSpread = 0.012;
-    public double morserLateralSpread = 0.006;
-    public float shellPower = 6.0F;               // explosion power (TNT = 4)
+    public double artilleryMinRange = 60.0;
+    public double artilleryMaxRange = 400.0;
+    public float artilleryTraverse = 30.0F;         // degrees either side of where the gun was deployed
+    public int artilleryReloadTicks = 200;          // 10 s, automatic
+    public int artilleryDeployTicks = 80;           // 4 s to deploy or pack up
+    /** Scatter radius around the aim point: at minimum range ... at maximum range. */
+    public double artilleryDispersionMin = 8.0;
+    public double artilleryDispersionMax = 14.0;
+    /** Each shot uses a 21 cm Shell from the operator's inventory (creative: free). */
+    public boolean artilleryRequiresShells = true;
+    public float shellDamage = 60.0F;               // at the point of impact, falling to 0 at the blast radius
+    public float shellBlastRadius = 8.0F;
+    public double shellKnockback = 1.6;
+    public float shellShockRadius = 10.0F;          // players this close are dazed (slowness / nausea)
+    public float shellVehicleDamage = 400.0F;       // extra damage to vehicles at the point of impact...
+    public double shellVehicleRadius = 5.0;         // ...falling to nothing at this distance
+    /** Craters. Off by default; when on, never inside spawn protection or where the firing player may not build. */
     public boolean shellBreaksBlocks = false;
-    public float shellVehicleDamage = 400.0F;     // extra damage to vehicles at the point of impact...
-    public double shellVehicleRadius = 5.0;       // ...falling to nothing at this distance
-    /** Spyglass target read-out rounds coordinates to this many blocks (the observer's error). */
-    public int observerRounding = 10;
+    public float shellBlockPower = 2.5F;
+    /** Client: follow the shell with the camera after firing (toggle in game with the shell-camera key). */
+    public boolean shellCamera = true;
 
     // ---- MG 08 (7.92 mm, 250-round fabric belt, ~450-500 rounds/min, water-cooled jacket)
     public float mgDamage = 5.0F;
@@ -101,6 +106,19 @@ public class ModConfig {
     public float repairPerIngot = 20.0F;
 
     private static ModConfig INSTANCE;
+    private static Path PATH;
+
+    /** Writes the current settings back (used for client-side toggles). */
+    public static void save() {
+        if (INSTANCE == null || PATH == null) {
+            return;
+        }
+        try (Writer w = Files.newBufferedWriter(PATH)) {
+            GSON.toJson(INSTANCE, w);
+        } catch (Exception e) {
+            ArmoredCarMod.LOGGER.warn("Could not write {}", PATH, e);
+        }
+    }
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 
     public static ModConfig get() {
@@ -143,16 +161,11 @@ public class ModConfig {
             cfg.mgHeatPerShot = d.mgHeatPerShot;
             cfg.mgCoolingPerTick = d.mgCoolingPerTick;
         }
-        if (cfg.configVersion < 5) {
-            // 1.7.1: faster howitzer loading
-            ModConfig d = new ModConfig();
-            cfg.morserReloadTicks = d.morserReloadTicks;
-            cfg.morserReloadTicksTwoCrew = d.morserReloadTicksTwoCrew;
-        }
         cfg.configVersion = CURRENT_VERSION;
         cfg.mgBeltSize = Math.max(1, cfg.mgBeltSize);
         cfg.mgSightZoom = Math.max(1.0F, Math.min(3.0F, cfg.mgSightZoom));
         cfg.turnSmoothing = Math.max(0.05F, Math.min(1.0F, cfg.turnSmoothing));
+        PATH = path;
         try (Writer w = Files.newBufferedWriter(path)) {
             GSON.toJson(cfg, w); // writes defaults for any new fields
         } catch (Exception e) {

@@ -19,7 +19,7 @@ public class GunCrankSound extends AbstractTickableSoundInstance {
         this.looping = true;
         this.delay = 0;
         this.volume = 0.0F;
-        this.lastElev = gun.getElevation();
+        this.lastElev = gun.elevVis;
         this.lastTrav = gun.getTraverse();
         this.x = gun.getX();
         this.y = gun.getY() + 1.2;
@@ -41,7 +41,7 @@ public class GunCrankSound extends AbstractTickableSoundInstance {
         this.x = at.x;
         this.y = at.y;
         this.z = at.z;
-        float e = this.gun.getElevation(), t = this.gun.getTraverse();
+        float e = this.gun.elevVis, t = this.gun.getTraverse();
         boolean turning = Math.abs(e - this.lastElev) > 1.0E-3F || Math.abs(t - this.lastTrav) > 1.0E-3F;
         this.lastElev = e;
         this.lastTrav = t;

@@ -221,13 +221,13 @@ public class MorserModel {
     }
 
 
-    public void setupAnim(MorserEntity gun, float partialTick) {
+    public void setupAnim(MorserEntity gun, float partialTick, float traverse, float elevation) {
         float wheel = Mth.lerp(partialTick, gun.wheelRotO, gun.wheelRot);
         for (ModelPart w : this.wheels) {
             w.xRot = wheel;
         }
-        this.mount.yRot = Mth.DEG_TO_RAD * gun.getTraverse();
-        this.cradle.xRot = -Mth.DEG_TO_RAD * gun.getElevation();
+        this.mount.yRot = Mth.DEG_TO_RAD * traverse;
+        this.cradle.xRot = -Mth.DEG_TO_RAD * elevation;
         this.barrel.z = 9.0F * Mth.lerp(partialTick, gun.recoilO, gun.recoil);     // runs back along the cradle
     }
 
