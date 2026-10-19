@@ -85,5 +85,8 @@
   "msg.exodus_vehicles.morser_deployed": "Deployed: right-click the gun to man it",
   "msg.exodus_vehicles.morser_packed": "Packed up",
   "msg.exodus_vehicles.morser_unhitch_first": "Unhitch the gun first (lead)",
-  "subtitles.exodus_vehicles.shell_shock": "Ears ringing"
+  "subtitles.exodus_vehicles.shell_shock": "Ears ringing",
+  "hud.exodus_vehicles.hit": "Successful hit",
+  "hud.exodus_vehicles.hit_kill": "Successful hit - kill",
+  "subtitles.exodus_vehicles.shell_flight": "Shell flies overhead"
 }

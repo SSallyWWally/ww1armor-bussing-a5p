@@ -171,5 +171,14 @@
         "name": "exodus_vehicles:shell_shock"
       }
     ]
+  },
+  "shell_flight": {
+    "subtitle": "subtitles.exodus_vehicles.shell_flight",
+    "sounds": [
+      {
+        "name": "exodus_vehicles:shell_flight",
+        "attenuation_distance": 40
+      }
+    ]
   }
 }

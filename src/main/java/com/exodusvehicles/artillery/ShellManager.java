@@ -219,6 +219,7 @@ public final class ShellManager {
 
         // ---- damage and knockback, falling off with distance and blocked by cover
         float radius = cfg.shellBlastRadius;
+        boolean hit = false, kill = false;
         for (Entity e : level.getEntities((Entity) null, new AABB(c, c).inflate(radius + 2.0), e -> !e.isSpectator())) {
             if (e instanceof ArmoredCarEntity || e instanceof MorserEntity) {
                 continue;      // vehicles below
@@ -231,8 +232,9 @@ public final class ShellManager {
             double f = 1.0 - d / radius;
             double seen = Explosion.getSeenPercent(c, e);
             float dmg = (float) (cfg.shellDamage * f * (0.25 + 0.75 * seen));
-            if (dmg > 0.5F) {
-                e.hurt(src, dmg);
+            if (dmg > 0.5F && e.hurt(src, dmg) && e instanceof ServerPlayer && e != owner) {
+                hit = true;
+                kill |= ((ServerPlayer) e).isDeadOrDying();
             }
             double kb = cfg.shellKnockback * f * (0.3 + 0.7 * seen);
             if (e instanceof LivingEntity living) {
@@ -257,9 +259,14 @@ public final class ShellManager {
         double vr = cfg.shellVehicleRadius;
         for (Entity e : level.getEntities((Entity) null, new AABB(c, c).inflate(vr + 4.0), e -> e instanceof ArmoredCarEntity || e instanceof MorserEntity)) {
             double d = Math.sqrt(e.getBoundingBox().distanceToSqr(c));
-            if (d < vr) {
-                e.hurt(src, (float) (cfg.shellVehicleDamage * (1.0 - d / vr)));
+            if (d < vr && e.hurt(src, (float) (cfg.shellVehicleDamage * (1.0 - d / vr)))) {
+                hit = true;
+                kill |= e.isRemoved() || (e instanceof ArmoredCarEntity car && car.isWrecked());
             }
+        }
+
+        if (hit && owner != null) {
+            ServerPlayNetworking.send(owner, new com.exodusvehicles.network.HitMarkerPayload(kill));
         }
 
         // ---- terrain (off by default); never inside spawn protection or where the firing player may not build

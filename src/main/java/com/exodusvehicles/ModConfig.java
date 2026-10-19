@@ -18,7 +18,7 @@ import java.util.List;
 public class ModConfig {
     /** Bumped when a default changes in a way old config files must pick up. Don't edit. */
     public int configVersion = 0;
-    private static final int CURRENT_VERSION = 6;
+    private static final int CURRENT_VERSION = 7;
 
     // ---- armor / damage
     public float maxHealth = 300.0F;
@@ -56,7 +56,9 @@ public class ModConfig {
     // ---- 21 cm Mörser 16 artillery (Battlefield-style). Distances in blocks, times in ticks (20 = 1 s).
     public float morserMaxHealth = 200.0F;
     public double artilleryMinRange = 60.0;
-    public double artilleryMaxRange = 400.0;
+    public double artilleryMaxRange = 550.0;
+    /** Shells are fired on arcs that stay below this height (clouds are at 192), flattening out if needed. */
+    public double artilleryShellCeiling = 180.0;
     public float artilleryTraverse = 30.0F;         // degrees either side of where the gun was deployed
     public int artilleryReloadTicks = 200;          // 10 s, automatic
     public int artilleryDeployTicks = 80;           // 4 s to deploy or pack up
@@ -162,6 +164,9 @@ public class ModConfig {
             cfg.mgRoundsPerMinute = d.mgRoundsPerMinute;
             cfg.mgHeatPerShot = d.mgHeatPerShot;
             cfg.mgCoolingPerTick = d.mgCoolingPerTick;
+        }
+        if (cfg.configVersion == 6 && cfg.artilleryMaxRange == 400.0) {
+            cfg.artilleryMaxRange = new ModConfig().artilleryMaxRange;     // 1.8.2: a bit more range
         }
         cfg.configVersion = CURRENT_VERSION;
         cfg.mgBeltSize = Math.max(1, cfg.mgBeltSize);

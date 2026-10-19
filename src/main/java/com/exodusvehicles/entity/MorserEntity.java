@@ -65,6 +65,7 @@ public class MorserEntity extends Entity {
     private static final EntityDataAccessor<Integer> DATA_RELOAD_TOTAL = def(EntityDataSerializers.INT);
     private static final EntityDataAccessor<Float> DATA_DISP_MIN = def(EntityDataSerializers.FLOAT);
     private static final EntityDataAccessor<Float> DATA_DISP_MAX = def(EntityDataSerializers.FLOAT);
+    private static final EntityDataAccessor<Float> DATA_CEILING = def(EntityDataSerializers.FLOAT);
 
     private static <T> EntityDataAccessor<T> def(net.minecraft.network.syncher.EntityDataSerializer<T> s) {
         return SynchedEntityData.defineId(MorserEntity.class, s);
@@ -105,6 +106,7 @@ public class MorserEntity extends Entity {
         b.define(DATA_RELOAD_TOTAL, cfg.artilleryReloadTicks);
         b.define(DATA_DISP_MIN, (float) cfg.artilleryDispersionMin);
         b.define(DATA_DISP_MAX, (float) cfg.artilleryDispersionMax);
+        b.define(DATA_CEILING, (float) cfg.artilleryShellCeiling);
     }
 
     // ------------------------------------------------------------------ state
@@ -160,10 +162,33 @@ public class MorserEntity extends Entity {
         return Math.toDegrees(Math.atan((v * v + Math.sqrt(disc)) / (g * d)));
     }
 
-    /** Barrel elevation shown for a range on level ground. */
+    /**
+     * Barrel elevation for a range: lobbed at 45 degrees close in, flatter (32) at full range, and never so steep that
+     * the shell climbs above the ceiling (the clouds), where it would be lost from view. The propellant charge (muzzle
+     * speed) is then chosen to reach the target at that elevation.
+     */
+    public static double arcElevation(double range, double min, double max, double gunY, double ceilingY) {
+        double t = Mth.clamp((range - min) / Math.max(1.0, max - min), 0.0, 1.0);
+        double a = Mth.lerp(t, 45.0, 32.0);
+        double room = Math.max(8.0, ceilingY - gunY);
+        double aMax = Math.toDegrees(Math.atan(4.0 * room / Math.max(1.0, range)));    // apex ~ range * tan(a) / 4
+        return Math.max(10.0, Math.min(a, aMax));
+    }
+
+    /** Muzzle speed that puts a shell fired at elevation a (degrees) onto a point d away and dy higher; NaN if none. */
+    public static double speedFor(double a, double d, double dy) {
+        double ar = Math.toRadians(a), c = Math.cos(ar);
+        double denom = 2.0 * c * c * (d * Math.tan(ar) - dy);
+        return denom <= 1.0E-6 ? Double.NaN : Math.sqrt(ShellManager.GRAVITY * d * d / denom);
+    }
+
+    public float ceiling() {
+        return this.entityData.get(DATA_CEILING);
+    }
+
+    /** Barrel elevation shown for a range. */
     public float elevationForRange(float range) {
-        double e = highAngle(muzzleSpeed(maxRange()), range, 0.0);
-        return Double.isNaN(e) ? 45.0F : (float) e;
+        return (float) arcElevation(range, minRange(), maxRange(), this.getY() + TRUNNION_UP, ceiling());
     }
 
     public Vec3 localToWorld(double right, double up, double forward) {
@@ -412,10 +437,16 @@ public class MorserEntity extends Entity {
         Vec3 g = trunnions();
         double dx = target.x - g.x, dz = target.z - g.z;
         double d = Math.sqrt(dx * dx + dz * dz);
-        double v = muzzleSpeed(maxRange());
-        double elev = highAngle(v, d, target.y - g.y);
-        if (Double.isNaN(elev)) {
-            elev = 45.0;            // uphill beyond reach: the best the gun can do
+        double dy = target.y - g.y;
+        double elev = arcElevation(d, minRange(), maxRange(), g.y, ceiling());
+        double v = speedFor(elev, d, dy);
+        while (Double.isNaN(v) && elev < 70.0) {
+            elev += 5.0;            // steeply uphill: lob it higher
+            v = speedFor(elev, d, dy);
+        }
+        if (Double.isNaN(v)) {
+            v = speedFor(45.0, d, 0.0);
+            elev = 45.0;
         }
         double e = Math.toRadians(elev);
         Vec3 vel = new Vec3(dx / d * Math.cos(e) * v, Math.sin(e) * v, dz / d * Math.cos(e) * v);
@@ -533,6 +564,7 @@ public class MorserEntity extends Entity {
             this.entityData.set(DATA_TRAV_LIMIT, cfg.artilleryTraverse);
             this.entityData.set(DATA_DISP_MIN, (float) cfg.artilleryDispersionMin);
             this.entityData.set(DATA_DISP_MAX, (float) cfg.artilleryDispersionMax);
+            this.entityData.set(DATA_CEILING, (float) cfg.artilleryShellCeiling);
         }
 
         // deploying / packing up

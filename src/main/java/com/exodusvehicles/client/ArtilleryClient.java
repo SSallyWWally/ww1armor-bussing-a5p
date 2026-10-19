@@ -61,10 +61,17 @@ public final class ArtilleryClient {
     private static boolean triggerWas, useWas;
 
     public static void init() {
+        ClientPlayNetworking.registerGlobalReceiver(com.exodusvehicles.network.HitMarkerPayload.TYPE, (p, ctx) -> {
+            hitTicks = 50;
+            hitKill = hitKill && hitTicks > 0 || p.kill();
+            ctx.client().getSoundManager().play(SimpleSoundInstance.forUI(net.minecraft.sounds.SoundEvents.EXPERIENCE_ORB_PICKUP, 0.6F, 0.4F));
+        });
         ClientPlayNetworking.registerGlobalReceiver(ShellFiredPayload.TYPE, (p, ctx) -> {
             ClientShell s = new ClientShell(p.shellId(), p.gunId(), new Vec3(p.x(), p.y(), p.z()), new Vec3(p.vx(), p.vy(), p.vz()));
             SHELLS.add(s);
             Minecraft mc = ctx.client();
+            // rushing air travelling with the shell (heard by the shell camera, and by anyone it passes over)
+            mc.getSoundManager().play(new ShellFlightSound(ArmoredCarMod.SHELL_FLIGHT, () -> s.alive && SHELLS.contains(s) ? s.pos : null));
             if (mc.player != null && mc.player.getVehicle() != null && mc.player.getVehicle().getId() == p.gunId()) {
                 addShake(1.6F);          // the whole gun jumps
                 if (ModConfig.get().shellCamera) {
@@ -168,6 +175,9 @@ public final class ArtilleryClient {
         }
     }
 
+    private static int hitTicks;
+    private static boolean hitKill;
+
     private static void addShake(float amp) {
         shakeAmp = Math.min(8.0F, Math.max(shakeAmp, amp));
         shakeSeed++;
@@ -270,6 +280,9 @@ public final class ArtilleryClient {
     }
 
     public static void endTick(Minecraft mc) {
+        if (hitTicks > 0 && --hitTicks == 0) {
+            hitKill = false;
+        }
         shakeAmpO = shakeAmp;
         shakeAmp *= 0.86F;
         if (shakeAmp < 0.02F) {
@@ -480,6 +493,18 @@ public final class ArtilleryClient {
         }
         if (mc.options.hideGui || mc.player == null) {
             return;
+        }
+        if (hitTicks > 0) {
+            // "Successful hit" in red, low on the screen, fading out
+            float a = Math.min(1.0F, (hitTicks - pt) / 15.0F);
+            int alpha = Math.max(8, (int) (a * 255)) << 24;
+            Component msg = Component.translatable(hitKill ? "hud.exodus_vehicles.hit_kill" : "hud.exodus_vehicles.hit");
+            int tw = mc.font.width(msg);
+            g.pose().pushPose();
+            g.pose().translate(w / 2.0F, h - 78, 0);
+            g.pose().scale(1.5F, 1.5F, 1.0F);
+            g.drawString(mc.font, msg, -tw / 2, 0, alpha | 0xE02A2A, true);
+            g.pose().popPose();
         }
         if (mc.player.getVehicle() instanceof MorserEntity gun && !gun.isDeployed()) {
             int work = gun.getWork();

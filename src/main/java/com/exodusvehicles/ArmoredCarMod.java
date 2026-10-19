@@ -60,6 +60,7 @@ public class ArmoredCarMod implements ModInitializer {
     public static SoundEvent SHELL_IMPACT_CLOSE;
     public static SoundEvent SHELL_IMPACT_FAR;
     public static SoundEvent SHELL_SHOCK;
+    public static SoundEvent SHELL_FLIGHT;
     public static SoundEvent MG_FIRE;
     public static SoundEvent RICOCHET;
     public static SoundEvent ENGINE;
@@ -143,10 +144,13 @@ public class ArmoredCarMod implements ModInitializer {
         SHELL_IMPACT_CLOSE = registerSound("shell_impact_close");
         SHELL_IMPACT_FAR = registerSound("shell_impact_far");
         SHELL_SHOCK = registerSound("shell_shock");
+        SHELL_FLIGHT = registerSound("shell_flight");
         net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents.END_WORLD_TICK.register(
                 com.exodusvehicles.artillery.ShellManager::tick);
         PayloadTypeRegistry.playS2C().register(com.exodusvehicles.network.ShellFiredPayload.TYPE,
                 com.exodusvehicles.network.ShellFiredPayload.CODEC);
+        PayloadTypeRegistry.playS2C().register(com.exodusvehicles.network.HitMarkerPayload.TYPE,
+                com.exodusvehicles.network.HitMarkerPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(com.exodusvehicles.network.ShellImpactPayload.TYPE,
                 com.exodusvehicles.network.ShellImpactPayload.CODEC);
 
