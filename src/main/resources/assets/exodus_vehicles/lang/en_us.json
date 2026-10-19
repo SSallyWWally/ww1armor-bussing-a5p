@@ -97,5 +97,7 @@
   "subtitles.exodus_vehicles.morser_distant": "Distant artillery",
   "subtitles.exodus_vehicles.morser_far": "Artillery rumbles in the distance",
   "subtitles.exodus_vehicles.morser_reload": "Howitzer being loaded",
-  "subtitles.exodus_vehicles.shell_whistle": "Shell incoming"
+  "subtitles.exodus_vehicles.shell_whistle": "Shell incoming",
+  "subtitles.exodus_vehicles.breech_open": "Breech opens",
+  "subtitles.exodus_vehicles.breech_close": "Breech closes"
 }

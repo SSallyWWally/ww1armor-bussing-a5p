@@ -143,5 +143,13 @@
         "attenuation_distance": 80
       }
     ]
+  },
+  "breech_open": {
+    "subtitle": "subtitles.exodus_vehicles.breech_open",
+    "sounds": []
+  },
+  "breech_close": {
+    "subtitle": "subtitles.exodus_vehicles.breech_close",
+    "sounds": []
   }
 }

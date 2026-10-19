@@ -461,8 +461,15 @@ public class MorserEntity extends Entity {
         }
         ModConfig cfg = ModConfig.get();
         this.entityData.set(DATA_LOADING, crewCount() >= 2 ? cfg.morserReloadTicksTwoCrew : cfg.morserReloadTicks);
-        Vec3 b = trunnions();
-        this.level().playSound(null, b.x, b.y, b.z, ArmoredCarMod.MORSER_RELOAD, SoundSource.PLAYERS, 1.0F, 0.9F);
+        breechSound(ArmoredCarMod.BREECH_OPEN);
+    }
+
+    /** Ticks before the round is home at which the breech-closing sound starts, so its clank lands on "loaded". */
+    private static final int CLOSE_LEAD = 36;
+
+    private void breechSound(net.minecraft.sounds.SoundEvent sound) {
+        Vec3 b = localToWorld(0.0, 1.2, -0.8);       // the breech, behind the trunnions
+        this.level().playSound(null, b.x, b.y, b.z, sound, SoundSource.PLAYERS, 1.0F, 1.0F);
     }
 
     // ------------------------------------------------------------------ fire control
@@ -734,9 +741,11 @@ public class MorserEntity extends Entity {
         int loading = getLoading();
         if (loading > 0) {
             this.entityData.set(DATA_LOADING, --loading);
+            if (loading == CLOSE_LEAD) {
+                breechSound(ArmoredCarMod.BREECH_CLOSE);
+            }
             if (loading == 0) {
                 this.entityData.set(DATA_LOADED, true);
-                this.playSound(SoundEvents.IRON_DOOR_CLOSE, 0.8F, 0.6F);
             }
         }
         // solution follows the gun (moving it or the target re-entered)

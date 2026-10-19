@@ -18,7 +18,7 @@ import java.util.List;
 public class ModConfig {
     /** Bumped when a default changes in a way old config files must pick up. Don't edit. */
     public int configVersion = 0;
-    private static final int CURRENT_VERSION = 4;
+    private static final int CURRENT_VERSION = 5;
 
     // ---- armor / damage
     public float maxHealth = 300.0F;
@@ -58,8 +58,8 @@ public class ModConfig {
     /** Charge 2 maximum range; charge 1 covers the shorter half. Elevation 45-75 degrees gives ~200 to this. */
     public float morserMaxRange = 800.0F;
     public float morserTraverse = 10.0F;          // degrees either side; beyond that pack up and turn the gun
-    public int morserReloadTicks = 600;           // 30 s with one man
-    public int morserReloadTicksTwoCrew = 360;    // 18 s with a loader
+    public int morserReloadTicks = 240;           // 12 s with one man
+    public int morserReloadTicksTwoCrew = 160;    // 8 s with a loader
     public int morserEmplaceTicks = 600;          // 30 s to dig in
     public int morserPackTicks = 200;             // 10 s to pack up
     /** Scatter (1 sigma) as a fraction of range: long/short and left/right. */
@@ -142,6 +142,12 @@ public class ModConfig {
             cfg.mgRoundsPerMinute = d.mgRoundsPerMinute;
             cfg.mgHeatPerShot = d.mgHeatPerShot;
             cfg.mgCoolingPerTick = d.mgCoolingPerTick;
+        }
+        if (cfg.configVersion < 5) {
+            // 1.7.1: faster howitzer loading
+            ModConfig d = new ModConfig();
+            cfg.morserReloadTicks = d.morserReloadTicks;
+            cfg.morserReloadTicksTwoCrew = d.morserReloadTicksTwoCrew;
         }
         cfg.configVersion = CURRENT_VERSION;
         cfg.mgBeltSize = Math.max(1, cfg.mgBeltSize);
