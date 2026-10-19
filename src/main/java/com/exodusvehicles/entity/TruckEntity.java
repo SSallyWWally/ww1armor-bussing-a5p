@@ -55,7 +55,25 @@ public class TruckEntity extends ArmoredCarEntity {
             return !TruckEntity.this.isRemoved() && !TruckEntity.this.isWrecked()
                     && player.distanceToSqr(TruckEntity.this) < 8.0 * 8.0;
         }
+
+        @Override
+        public void startOpen(Player player) {
+            TruckEntity.this.crateSound(SoundEvents.BARREL_OPEN);
+        }
+
+        @Override
+        public void stopOpen(Player player) {
+            TruckEntity.this.crateSound(SoundEvents.BARREL_CLOSE);
+        }
     };
+
+    private void crateSound(net.minecraft.sounds.SoundEvent sound) {
+        if (!this.level().isClientSide) {
+            net.minecraft.world.phys.Vec3 at = localToWorld(0.0, 1.6, -1.5);    // the load bed
+            this.level().playSound(null, at.x, at.y, at.z, sound, net.minecraft.sounds.SoundSource.BLOCKS,
+                    0.8F, 0.85F + this.random.nextFloat() * 0.1F);
+        }
+    }
 
     public TruckEntity(EntityType<? extends TruckEntity> type, Level level) {
         super(type, level);
@@ -100,9 +118,11 @@ public class TruckEntity extends ArmoredCarEntity {
         boolean client = this.level().isClientSide;
         if (stack.is(Items.CHEST) && getCrates() < MAX_CRATES) {
             if (!client) {
-                this.entityData.set(DATA_CRATES, getCrates() + 1);
+                // the whole stack in hand goes on at once, as many as the bed takes
+                int load = Math.min(MAX_CRATES - getCrates(), player.getAbilities().instabuild ? MAX_CRATES : stack.getCount());
+                this.entityData.set(DATA_CRATES, getCrates() + load);
                 if (!player.getAbilities().instabuild) {
-                    stack.shrink(1);
+                    stack.shrink(load);
                 }
                 this.playSound(SoundEvents.WOOD_PLACE, 1.0F, 0.8F);
                 player.displayClientMessage(Component.translatable("msg.exodus_vehicles.crate_loaded",
@@ -112,7 +132,7 @@ public class TruckEntity extends ArmoredCarEntity {
         }
         if (getCrates() > 0) {
             if (!client) {
-                openCargo(player);
+                openCargo(player);     // one inventory across every crate on the bed
             }
             return InteractionResult.sidedSuccess(client);
         }
@@ -131,7 +151,6 @@ public class TruckEntity extends ArmoredCarEntity {
         };
         player.openMenu(new SimpleMenuProvider((id, inventory, p) -> new ChestMenu(type, id, inventory, this.cargo, rows),
                 Component.translatable("container.exodus_vehicles.truck_cargo")));
-        this.playSound(SoundEvents.CHEST_OPEN, 0.6F, 0.9F);
     }
 
     @Override
