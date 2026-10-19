@@ -56,6 +56,7 @@ public class ArmoredCarMod implements ModInitializer {
     public static SoundEvent SHELL_WHISTLE;
     public static SoundEvent BREECH_OPEN;
     public static SoundEvent BREECH_CLOSE;
+    public static SoundEvent GUN_TRAVERSE;
     public static SoundEvent MG_FIRE;
     public static SoundEvent RICOCHET;
     public static SoundEvent ENGINE;
@@ -135,6 +136,7 @@ public class ArmoredCarMod implements ModInitializer {
         SHELL_WHISTLE = registerSound("shell_whistle");
         BREECH_OPEN = registerSound("breech_open");
         BREECH_CLOSE = registerSound("breech_close");
+        GUN_TRAVERSE = registerSound("gun_traverse");
         net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents.END_WORLD_TICK.register(
                 com.exodusvehicles.artillery.ShellManager::tick);
         PayloadTypeRegistry.playC2S().register(com.exodusvehicles.network.SetTargetPayload.TYPE,
