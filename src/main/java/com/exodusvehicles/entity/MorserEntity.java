@@ -289,9 +289,21 @@ public class MorserEntity extends Entity {
         if (!this.hasPassenger(passenger)) {
             return;
         }
-        // deployed: the layer's seat on the left of the breech; packed: behind the trail, pushing
-        Vec3 p = isDeployed() ? localToWorld(-0.61, 0.2, -0.19) : localToWorld(0.0, 0.0, -TRAIL - 0.6);
+        // deployed: standing behind the left wheel with a hand on the breech; packed: behind the trail, pushing
+        Vec3 p = isDeployed() ? localToWorld(GUNNER_RIGHT, 0.0, GUNNER_FWD) : localToWorld(0.0, 0.0, -TRAIL - 0.6);
         move.accept(passenger, p.x, p.y, p.z);
+        if (passenger instanceof LivingEntity living) {
+            living.setYBodyRot(this.getYRot());     // facing the way the gun points
+        }
+    }
+
+    /** Where the gunner stands (blocks): left of the trail, just behind the wheel. */
+    public static final double GUNNER_RIGHT = -11.0 / 16.0, GUNNER_FWD = -17.0 / 16.0;
+
+    /** The crew stand at the gun rather than sit on it. */
+    @Override
+    public boolean shouldRiderSit() {
+        return false;
     }
 
     @Override

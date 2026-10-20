@@ -286,6 +286,56 @@ public final class ArtilleryClient {
         return Mth.clamp(Mth.wrapDegrees(p.getViewYRot(partialTick) - gun.getYRot()), -lim, lim);
     }
 
+    /** World position of the left rear corner of the breech this frame (where the gunner's hand rests). */
+    public static Vec3 breechPoint(MorserEntity gun, float pt) {
+        Minecraft mc = Minecraft.getInstance();
+        float trav = gun.getTraverse();
+        float elev = Mth.lerp(pt, gun.elevVisO, gun.elevVis);
+        if (mc.player != null && gun.isOperatedBy(mc.player)) {
+            trav = localTraverse(gun, mc.player, pt);
+            elev = gun.elevationForRange(localRange(gun, mc.player, pt));
+        }
+        float gunYaw = Mth.rotLerp(pt, gun.yRotO, gun.getYRot());
+        double gy = Math.toRadians(gunYaw);
+        Vec3 base = new Vec3(Mth.lerp(pt, gun.xo, gun.getX()), Mth.lerp(pt, gun.yo, gun.getY()), Mth.lerp(pt, gun.zo, gun.getZ()));
+        Vec3 trunnion = base.add(-Math.sin(gy) * MorserEntity.TRUNNION_FWD, MorserEntity.TRUNNION_UP, Math.cos(gy) * MorserEntity.TRUNNION_FWD);
+        double yaw = Math.toRadians(gunYaw + trav), e = Math.toRadians(elev);
+        Vec3 bore = new Vec3(-Math.sin(yaw) * Math.cos(e), Math.sin(e), Math.cos(yaw) * Math.cos(e));
+        Vec3 left = new Vec3(Math.cos(yaw), 0, Math.sin(yaw));
+        Vec3 up = new Vec3(Math.sin(yaw) * Math.sin(e), Math.cos(e), -Math.cos(yaw) * Math.sin(e));
+        return trunnion.add(bore.scale(-14.0 / 16.0)).add(up.scale(1.2 / 16.0)).add(left.scale(4.6 / 16.0));
+    }
+
+    /**
+     * Arm pose for a player standing at a deployed howitzer: right hand on the breech (following it as the barrel
+     * rises and falls), left arm loose. Angles in the player model's own space. Null when not at a gun.
+     */
+    public static float[] gunnerArmPose(net.minecraft.world.entity.LivingEntity entity) {
+        if (!(entity.getVehicle() instanceof MorserEntity gun) || !gun.isDeployed() || gun.getWork() != 0) {
+            return null;
+        }
+        Minecraft mc = Minecraft.getInstance();
+        float pt = mc.getTimer().getGameTimeDeltaPartialTick(true);
+        double by = Math.toRadians(Mth.rotLerp(pt, entity.yBodyRotO, entity.yBodyRot));
+        Vec3 fwd = new Vec3(-Math.sin(by), 0, Math.cos(by));
+        Vec3 right = new Vec3(-Math.cos(by), 0, -Math.sin(by));
+        Vec3 pos = entity.getPosition(pt);
+        Vec3 shoulder = pos.add(right.scale(5.0 / 16.0 * 0.9375)).add(0, 22.0 / 16.0 * 0.9375, 0);
+        Vec3 d = breechPoint(gun, pt).subtract(shoulder);
+        // player model space: x = left, y = down, z = backward
+        double mx = -d.dot(right), my = -d.y, mz = -d.dot(fwd);
+        double len = Math.sqrt(mx * mx + my * my + mz * mz);
+        if (len < 1.0E-4) {
+            return null;
+        }
+        mx /= len;
+        my /= len;
+        mz /= len;
+        float xRot = (float) -Math.acos(Mth.clamp(my, -1.0, 1.0));
+        float yRot = (float) Math.atan2(-mx, -mz);
+        return new float[]{xRot, yRot, -0.35F, 0.08F};
+    }
+
     public static float localRange(MorserEntity gun, Player p, float partialTick) {
         return MorserEntity.rangeForPitch(p.getViewXRot(partialTick), gun.minRange(), gun.maxRange());
     }

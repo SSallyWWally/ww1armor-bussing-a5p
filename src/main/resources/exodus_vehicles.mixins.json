@@ -8,7 +8,8 @@
     "client.GuiMixin",
     "client.ItemInHandRendererMixin",
     "client.MouseHandlerMixin",
-    "client.CameraMixin"
+    "client.CameraMixin",
+    "client.HumanoidModelMixin"
   ],
   "injectors": {
     "defaultRequire": 0
