@@ -528,7 +528,7 @@ public class MorserEntity extends Entity implements Repairable {
             }
             dealt = amount * cfg.explosionDamageMultiplier;
         } else {
-            dealt = amount >= cfg.penetrationThreshold ? amount : 0.0F;     // the shield stops rifle fire
+            dealt = amount >= cfg.penetrationThreshold ? amount : 0.0F;     // rifle fire just rings off the steel
             Vec3 at = this.position().add(0, 1.4, 0);
             this.level().playSound(null, at.x, at.y, at.z, ArmoredCarMod.ARMOR_HIT, SoundSource.PLAYERS, 0.7F,
                     0.9F + this.random.nextFloat() * 0.2F);
