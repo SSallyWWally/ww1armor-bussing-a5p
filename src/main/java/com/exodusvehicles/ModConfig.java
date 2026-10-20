@@ -18,7 +18,7 @@ import java.util.List;
 public class ModConfig {
     /** Bumped when a default changes in a way old config files must pick up. Don't edit. */
     public int configVersion = 0;
-    private static final int CURRENT_VERSION = 10;
+    private static final int CURRENT_VERSION = 11;
 
     // ---- armor / damage
     public float maxHealth = 300.0F;
@@ -112,8 +112,10 @@ public class ModConfig {
 
     // ---- repair (wrench, hold on the vehicle) and fuel (jerry can, hold on the vehicle)
     public float repairPerIngot = 20.0F;           // (unused since the wrench)
-    public float repairPerSecond = 1.0F;           // health per second of wrench work
-    public float refuelLitresPerSecond = 1.0F;     // a 20 litre can takes 20 s
+    public float repairPerSecond = 1.5F;           // health per second of wrench work
+    public float refuelLitresPerSecond = 1.25F;    // a 20 litre can takes 16 s
+    public float repairStationPerSecond = 15.0F;   // parked on a repair station
+    public float fuelStationLitresPerSecond = 5.0F; // parked on a fuel station
     public float fuelCapacity = 100.0F;            // Eisenwolf tank, litres
     public float fuelPerMinuteDriving = 1.6F;      // ~1 hour flat out on a full tank
     public float fuelIdlePerMinute = 0.25F;        // engine running, standing still
@@ -193,6 +195,15 @@ public class ModConfig {
         }
         if (cfg.configVersion < 10 && cfg.artilleryMaxRange == 750.0) {
             cfg.artilleryMaxRange = 1000.0;      // 1.9.9: 1 km
+        }
+        if (cfg.configVersion < 11) {
+            // 2.0.0: quicker wrench and jerry can
+            if (cfg.repairPerSecond == 1.0F) {
+                cfg.repairPerSecond = 1.5F;
+            }
+            if (cfg.refuelLitresPerSecond == 1.0F) {
+                cfg.refuelLitresPerSecond = 1.25F;
+            }
         }
         cfg.configVersion = CURRENT_VERSION;
         cfg.mgBeltSize = Math.max(1, cfg.mgBeltSize);

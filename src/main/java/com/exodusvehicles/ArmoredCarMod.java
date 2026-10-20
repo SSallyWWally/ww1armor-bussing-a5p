@@ -72,6 +72,7 @@ public class ArmoredCarMod implements ModInitializer {
     public static Item MG_BELT_ITEM;
     public static net.minecraft.world.level.block.Block SHELL_PILE;
     public static Item SHELL_PILE_ITEM;
+    public static net.minecraft.world.level.block.Block REPAIR_STATION, FUEL_STATION;
     public static SoundEvent MG_FIRE;
     public static SoundEvent RICOCHET;
     public static SoundEvent ENGINE;
@@ -144,40 +145,7 @@ public class ArmoredCarMod implements ModInitializer {
         MORSER_ITEM = Registry.register(BuiltInRegistries.ITEM, id("morser16"),
                 new ArmoredCarItem(new Item.Properties().stacksTo(1), () -> MORSER));
         SHELL_ITEM = Registry.register(BuiltInRegistries.ITEM, id("shell_21cm"), new Item(new Item.Properties().stacksTo(1)));
-        // a 21 cm shell weighs over 100 kg: one at a time. Extras are put down at the carrier's feet.
-        net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents.END_SERVER_TICK.register(server -> {
-            if (server.getTickCount() % 10 != 0) {
-                return;
-            }
-            for (ServerPlayer p : server.getPlayerList().getPlayers()) {
-                if (p.getAbilities().instabuild || p.isSpectator() || carriedShells(p) <= 1) {
-                    continue;
-                }
-                boolean kept = false;
-                var inv = p.getInventory();
-                for (int i = 0; i < inv.getContainerSize(); i++) {
-                    net.minecraft.world.item.ItemStack s = inv.getItem(i);
-                    if (!s.is(SHELL_ITEM)) {
-                        continue;
-                    }
-                    if (!kept) {
-                        kept = true;
-                        if (s.getCount() > 1) {
-                            p.drop(s.split(s.getCount() - 1), false);
-                        }
-                        continue;
-                    }
-                    p.drop(inv.removeItemNoUpdate(i), false);
-                }
-                net.minecraft.world.item.ItemStack cursor = p.containerMenu.getCarried();
-                if (cursor.is(SHELL_ITEM) && kept) {
-                    p.drop(cursor.copy(), false);
-                    p.containerMenu.setCarried(net.minecraft.world.item.ItemStack.EMPTY);
-                }
-                inv.setChanged();
-                p.displayClientMessage(net.minecraft.network.chat.Component.translatable("msg.exodus_vehicles.one_shell"), true);
-            }
-        });
+        // shells don't stack (one per slot), but a player may carry as many as they have room for
         MORSER_CLOSE = registerSound("morser_close");
         MORSER_DISTANT = registerSound("morser_distant");
         MORSER_MID = registerSound("morser_mid");
@@ -209,6 +177,15 @@ public class ArmoredCarMod implements ModInitializer {
         SHELL_PILE_ITEM = Registry.register(BuiltInRegistries.ITEM, id("shell_pile"),
                 new net.minecraft.world.item.BlockItem(SHELL_PILE, new Item.Properties()));
 
+        REPAIR_STATION = Registry.register(BuiltInRegistries.BLOCK, id("repair_station"),
+                new com.exodusvehicles.block.StationBlock(net.minecraft.world.level.block.state.BlockBehaviour.Properties.of()
+                        .strength(3.0F, 6.0F).sound(net.minecraft.world.level.block.SoundType.METAL), com.exodusvehicles.block.StationBlock.REPAIR));
+        FUEL_STATION = Registry.register(BuiltInRegistries.BLOCK, id("fuel_station"),
+                new com.exodusvehicles.block.StationBlock(net.minecraft.world.level.block.state.BlockBehaviour.Properties.of()
+                        .strength(3.0F, 6.0F).sound(net.minecraft.world.level.block.SoundType.METAL), com.exodusvehicles.block.StationBlock.FUEL));
+        Registry.register(BuiltInRegistries.ITEM, id("repair_station"), new net.minecraft.world.item.BlockItem(REPAIR_STATION, new Item.Properties()));
+        Registry.register(BuiltInRegistries.ITEM, id("fuel_station"), new net.minecraft.world.item.BlockItem(FUEL_STATION, new Item.Properties()));
+
         // everything in one creative tab
         Registry.register(BuiltInRegistries.CREATIVE_MODE_TAB, id("main"),
                 net.fabricmc.fabric.api.itemgroup.v1.FabricItemGroup.builder()
@@ -225,6 +202,8 @@ public class ArmoredCarMod implements ModInitializer {
                             out.accept(JERRY_CAN);
                             out.accept(JERRY_CAN_EMPTY);
                             out.accept(WRENCH);
+                            out.accept(REPAIR_STATION);
+                            out.accept(FUEL_STATION);
                         })
                         .build());
         net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents.END_WORLD_TICK.register(

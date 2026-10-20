@@ -1101,6 +1101,33 @@ public class ArmoredCarEntity extends Entity implements Repairable {
         if (this.rampCooldown > 0) {
             this.rampCooldown--;
         }
+        // parked on a repair / fuel station
+        if (this.tickCount % 5 == 0 && moved < 0.05) {
+            int st = com.exodusvehicles.block.StationBlock.under(this);
+            ModConfig sc = ModConfig.get();
+            boolean working = false;
+            if ((st & com.exodusvehicles.block.StationBlock.REPAIR) != 0 && repairBy(sc.repairStationPerSecond / 4.0F)) {
+                working = true;
+                if (this.tickCount % 20 == 0) {
+                    this.playSound(ArmoredCarMod.REPAIR, 0.8F, 1.0F);
+                }
+            }
+            if ((st & com.exodusvehicles.block.StationBlock.FUEL) != 0 && getFuel() < fuelCapacity()) {
+                addFuel(sc.fuelStationLitresPerSecond / 4.0F);
+                working = true;
+                if (this.tickCount % 30 == 0) {
+                    this.playSound(ArmoredCarMod.REFUEL, 0.9F, 1.0F);
+                }
+            }
+            if (working && this.tickCount % 20 == 0) {
+                for (Entity p : this.getPassengers()) {
+                    if (p instanceof Player pl) {
+                        pl.displayClientMessage(Component.translatable("msg.exodus_vehicles.station",
+                                (int) Math.floor(getHealth()), (int) getMaxHealth(), Math.round(getFuel()), Math.round(fuelCapacity())), true);
+                    }
+                }
+            }
+        }
         // fuel: a trickle while idling, more the faster it goes
         if (isEngineOn()) {
             ModConfig fc = ModConfig.get();

@@ -109,6 +109,8 @@
   "msg.exodus_vehicles.can_empty": "Jerry can empty",
   "subtitles.exodus_vehicles.refuel": "Fuel pouring",
   "subtitles.exodus_vehicles.repair": "Wrench turning",
-  "msg.exodus_vehicles.one_shell": "Too heavy - you can only carry one shell",
-  "hud.exodus_vehicles.artillery_reload": "Reload"
+  "hud.exodus_vehicles.artillery_reload": "Reload",
+  "block.exodus_vehicles.repair_station": "Repair Station",
+  "block.exodus_vehicles.fuel_station": "Fuel Station",
+  "msg.exodus_vehicles.station": "Station: hull %s / %s  ·  fuel %s / %s L"
 }

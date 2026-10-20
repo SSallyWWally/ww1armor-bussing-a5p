@@ -85,10 +85,6 @@ public class ShellPileBlock extends Block {
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
         if (!level.isClientSide) {
             int n = state.getValue(SHELLS);
-            if (!player.getAbilities().instabuild && ArmoredCarMod.carriedShells(player) >= 1) {
-                player.displayClientMessage(net.minecraft.network.chat.Component.translatable("msg.exodus_vehicles.one_shell"), true);
-                return InteractionResult.CONSUME;
-            }
             ItemStack shell = new ItemStack(ArmoredCarMod.SHELL_ITEM);
             if (!player.getInventory().add(shell)) {
                 player.drop(shell, false);

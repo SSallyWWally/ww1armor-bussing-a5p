@@ -1,0 +1,68 @@
+{
+ "parent": "block/block",
+ "textures": {
+  "top": "exodus_vehicles:block/repair_station_top",
+  "side": "exodus_vehicles:block/repair_station_side",
+  "bottom": "minecraft:block/iron_block",
+  "particle": "exodus_vehicles:block/repair_station_top"
+ },
+ "elements": [
+  {
+   "from": [
+    0,
+    0,
+    0
+   ],
+   "to": [
+    16,
+    2,
+    16
+   ],
+   "faces": {
+    "up": {
+     "texture": "#top"
+    },
+    "down": {
+     "texture": "#bottom",
+     "cullface": "down"
+    },
+    "north": {
+     "texture": "#side",
+     "uv": [
+      0,
+      14,
+      16,
+      16
+     ]
+    },
+    "south": {
+     "texture": "#side",
+     "uv": [
+      0,
+      14,
+      16,
+      16
+     ]
+    },
+    "east": {
+     "texture": "#side",
+     "uv": [
+      0,
+      14,
+      16,
+      16
+     ]
+    },
+    "west": {
+     "texture": "#side",
+     "uv": [
+      0,
+      14,
+      16,
+      16
+     ]
+    }
+   }
+  }
+ ]
+}
