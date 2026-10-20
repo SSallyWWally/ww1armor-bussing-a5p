@@ -76,6 +76,10 @@ public class ModConfig {
     /** Craters. Off by default; when on, never inside spawn protection or where the firing player may not build. */
     public boolean shellBreaksBlocks = false;
     public float shellBlockPower = 2.5F;
+    /** Danny's AoT: shell headshot strength (their field cannon is 25), limb-severing reach, and how close to the nape kills. */
+    public float aotShellStrength = 40.0F;
+    public double aotLimbReach = 3.0;
+    public double aotNapeKillRadius = 4.0;
     /** Client: size of the shell burst effects (1 = full, lower for weaker PCs). */
     public float shellEffectScale = 1.0F;
     /** Client: follow the shell with the camera after firing (toggle in game with the shell-camera key). */

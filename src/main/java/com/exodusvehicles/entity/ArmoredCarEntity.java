@@ -917,13 +917,29 @@ public class ArmoredCarEntity extends Entity implements Repairable {
                 e -> e != this && !this.hasPassenger(e) && !(e instanceof HullSegmentEntity s && s.belongsTo(this))
                         && e.isPickable() && e.isAlive() && !e.isSpectator(), 0.3F);
 
+        // Danny's AoT: a titan's eye on the line of fire is hit in preference to the head around it
+        if (com.exodusvehicles.compat.AotCompat.active()) {
+            double firstD = entityHit != null ? entityHit.getLocation().distanceTo(rayStart) : Double.MAX_VALUE;
+            java.util.Optional<Entity> eye = com.exodusvehicles.compat.AotCompat.eyeAlong(server, rayStart, end,
+                    entityHit != null ? entityHit.getEntity() : null, firstD);
+            if (eye.isPresent()) {
+                Entity e = eye.get();
+                Vec3 at = e.getBoundingBox().inflate(0.35).clip(rayStart, end).orElse(e.getBoundingBox().getCenter());
+                entityHit = new EntityHitResult(e, at);
+            }
+        }
         if (entityHit != null) {
             Entity target = entityHit.getEntity();
             end = entityHit.getLocation();
+            if (com.exodusvehicles.compat.AotCompat.isEye(target)) {
+                // a 7.92 mm round is plenty to put out an eye (the AoT mod wants 6+ damage from a projectile)
+                target.hurt(this.damageSources().mobProjectile(this, shooter), Math.max(cfg.mgDamage, 6.0F));
+            } else {
             if (target instanceof LivingEntity living) {
                 living.invulnerableTime = 0;
             }
             target.hurt(this.damageSources().mobProjectile(this, shooter), cfg.mgDamage);
+            }
         } else if (blockHit.getType() == HitResult.Type.BLOCK) {
             // a small kick of whatever the round hit (dirt from dirt, chips from stone), thrown upward
             BlockParticleOption chunk = new BlockParticleOption(ParticleTypes.BLOCK, this.level().getBlockState(blockHit.getBlockPos()));

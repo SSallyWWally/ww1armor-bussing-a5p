@@ -170,6 +170,7 @@ public final class ShellManager {
             Vec3 next = step(s.pos, s.vel);
             if (level.hasChunkAt(BlockPos.containing(next)) && level.hasChunkAt(BlockPos.containing(s.pos))) {
                 Vec3 hit = null;
+                Entity struck = null;
                 BlockHitResult bh = level.clip(new ClipContext(s.pos, next, ClipContext.Block.COLLIDER, ClipContext.Fluid.ANY,
                         CollisionContext.empty()));
                 if (bh.getType() != HitResult.Type.MISS) {
@@ -181,10 +182,17 @@ public final class ShellManager {
                     Optional<Vec3> eh = e.getBoundingBox().inflate(0.3).clip(s.pos, end);
                     if (eh.isPresent() && (hit == null || eh.get().distanceToSqr(s.pos) < hit.distanceToSqr(s.pos))) {
                         hit = eh.get();
+                        struck = e;
                     }
                 }
                 if (hit != null) {
                     impact(level, hit, s.owner, s.id);
+                    if (com.exodusvehicles.compat.AotCompat.active()) {
+                        ModConfig c = ModConfig.get();
+                        Entity ownerE = s.owner == null ? null : level.getPlayerByUUID(s.owner);
+                        com.exodusvehicles.compat.AotCompat.shellImpact(level, ownerE, struck, hit, s.vel.normalize(),
+                                level.damageSources().explosion(null, ownerE), c.aotShellStrength, c.aotLimbReach, c.aotNapeKillRadius);
+                    }
                     it.remove();
                     continue;
                 }
