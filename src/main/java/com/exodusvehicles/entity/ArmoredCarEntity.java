@@ -49,7 +49,7 @@ import java.util.Set;
  * Driving is simulated on the driver's client (like vanilla boats) and sent to the server with the
  * vanilla vehicle-move packet; everything else (damage, seats, MG, wreck) is server-authoritative.
  */
-public class ArmoredCarEntity extends Entity {
+public class ArmoredCarEntity extends Entity implements Repairable {
     /** Number of seats (Eisenwolf: 4). */
     public int seatCount() {
         return 4;
@@ -108,6 +108,8 @@ public class ArmoredCarEntity extends Entity {
             SynchedEntityData.defineId(ArmoredCarEntity.class, EntityDataSerializers.BOOLEAN);
     private static final EntityDataAccessor<Boolean> DATA_ENGINE =
             SynchedEntityData.defineId(ArmoredCarEntity.class, EntityDataSerializers.BOOLEAN);
+    private static final EntityDataAccessor<Float> DATA_FUEL =
+            SynchedEntityData.defineId(ArmoredCarEntity.class, EntityDataSerializers.FLOAT);
     private static final EntityDataAccessor<Boolean> DATA_BRAKE =
             SynchedEntityData.defineId(ArmoredCarEntity.class, EntityDataSerializers.BOOLEAN);
 
@@ -221,6 +223,35 @@ public class ArmoredCarEntity extends Entity {
         return ArmoredCarMod.EISENWOLF_ITEM;
     }
 
+    // ------------------------------------------------------------------ fuel
+
+    /** Tank size in litres. */
+    public float fuelCapacity() {
+        return ModConfig.get().fuelCapacity;
+    }
+
+    /** Litres per minute at full speed (idling uses fuelIdlePerMinute). */
+    protected float fuelPerMinuteDriving() {
+        return ModConfig.get().fuelPerMinuteDriving;
+    }
+
+    public float getFuel() {
+        return this.entityData.get(DATA_FUEL);
+    }
+
+    public void addFuel(float litres) {
+        this.entityData.set(DATA_FUEL, Mth.clamp(getFuel() + litres, 0.0F, fuelCapacity()));
+    }
+
+    @Override
+    public boolean repairBy(float amount) {
+        if (isWrecked() || getHealth() >= getMaxHealth()) {
+            return false;
+        }
+        setHealth(getHealth() + amount);
+        return true;
+    }
+
     /** Name of a seat, for the HUD and seat messages. */
     public Component seatName(int seat) {
         return Component.translatable("seat.exodus_vehicles." + seat);
@@ -258,6 +289,7 @@ public class ArmoredCarEntity extends Entity {
         builder.define(DATA_OVERHEATED, false);
         builder.define(DATA_ENGINE, false);
         builder.define(DATA_BRAKE, false);
+        builder.define(DATA_FUEL, fuelCapacity());
     }
 
     public int getBelt() {
@@ -300,6 +332,11 @@ public class ArmoredCarEntity extends Entity {
             return;
         }
         boolean on = !this.entityData.get(DATA_ENGINE);
+        if (on && getFuel() <= 0.0F) {
+            player.displayClientMessage(Component.translatable("msg.exodus_vehicles.no_fuel"), true);
+            this.playSound(SoundEvents.DISPENSER_FAIL, 0.6F, 0.6F);
+            return;
+        }
         this.entityData.set(DATA_ENGINE, on);
         this.noDriverTicks = 0;
         engineSound(on ? ArmoredCarMod.ENGINE_START : ArmoredCarMod.ENGINE_STOP);
@@ -339,6 +376,7 @@ public class ArmoredCarEntity extends Entity {
         this.entityData.set(DATA_OVERHEATED, tag.getBoolean("Overheated"));
         this.entityData.set(DATA_ENGINE, tag.getBoolean("Engine"));
         this.entityData.set(DATA_BRAKE, tag.getBoolean("ParkingBrake"));
+        this.entityData.set(DATA_FUEL, tag.contains("Fuel") ? Mth.clamp(tag.getFloat("Fuel"), 0.0F, fuelCapacity()) : fuelCapacity());
         // a reload interrupted by a save just completes on load
         int pending = tag.getInt("PendingRounds");
         if (pending > 0) {
@@ -356,6 +394,7 @@ public class ArmoredCarEntity extends Entity {
         tag.putBoolean("Overheated", isOverheated());
         tag.putBoolean("Engine", this.entityData.get(DATA_ENGINE));
         tag.putBoolean("ParkingBrake", isParkingBrakeOn());
+        tag.putFloat("Fuel", getFuel());
         tag.putInt("PendingRounds", getReloadTicks() > 0 ? this.pendingRounds : 0);
     }
 
@@ -634,16 +673,8 @@ public class ArmoredCarEntity extends Entity {
             return InteractionResult.PASS;
         }
         ItemStack stack = player.getItemInHand(hand);
-
-        if (stack.is(Items.IRON_INGOT) && getHealth() < getMaxHealth()) {
-            if (!this.level().isClientSide) {
-                setHealth(getHealth() + ModConfig.get().repairPerIngot);
-                if (!player.getAbilities().instabuild) {
-                    stack.shrink(1);
-                }
-                this.playSound(SoundEvents.ANVIL_USE, 0.6F, 1.3F);
-            }
-            return InteractionResult.sidedSuccess(this.level().isClientSide);
+        if (stack.getItem() instanceof com.exodusvehicles.item.VehicleToolItem) {
+            return InteractionResult.PASS;      // wrench / jerry can: held on the vehicle, see the item
         }
 
         // No picking the car back up as an item: once placed it stays until destroyed
@@ -1053,6 +1084,21 @@ public class ArmoredCarEntity extends Entity {
         this.lastServerPos = pos;
         if (this.rampCooldown > 0) {
             this.rampCooldown--;
+        }
+        // fuel: a trickle while idling, more the faster it goes
+        if (isEngineOn()) {
+            ModConfig fc = ModConfig.get();
+            float load = (float) Mth.clamp(moved / Math.max(0.05, maxSpeed()), 0.0, 1.0);
+            float perMinute = Mth.lerp(load, fc.fuelIdlePerMinute, fuelPerMinuteDriving());
+            float fuel = Math.max(0.0F, getFuel() - perMinute / 1200.0F);
+            this.entityData.set(DATA_FUEL, fuel);
+            if (fuel <= 0.0F) {
+                this.entityData.set(DATA_ENGINE, false);
+                engineSound(ArmoredCarMod.ENGINE_STOP);
+                if (getControllingPassenger() instanceof Player d) {
+                    d.displayClientMessage(Component.translatable("msg.exodus_vehicles.out_of_fuel"), true);
+                }
+            }
         }
         if (hasDriver() && isEngineOn()) {
             if (moved < 0.02) {

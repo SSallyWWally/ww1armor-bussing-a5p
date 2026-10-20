@@ -62,6 +62,14 @@ public class ArmoredCarMod implements ModInitializer {
     public static SoundEvent SHELL_IMPACT_FAR;
     public static SoundEvent SHELL_SHOCK;
     public static SoundEvent SHELL_FLIGHT;
+    public static SoundEvent REPAIR;
+    public static SoundEvent REFUEL;
+    public static Item JERRY_CAN;
+    public static Item JERRY_CAN_EMPTY;
+    public static Item WRENCH;
+    public static Item MG_BELT_ITEM;
+    public static net.minecraft.world.level.block.Block SHELL_PILE;
+    public static Item SHELL_PILE_ITEM;
     public static SoundEvent MG_FIRE;
     public static SoundEvent RICOCHET;
     public static SoundEvent ENGINE;
@@ -147,6 +155,40 @@ public class ArmoredCarMod implements ModInitializer {
         SHELL_IMPACT_FAR = registerSound("shell_impact_far");
         SHELL_SHOCK = registerSound("shell_shock");
         SHELL_FLIGHT = registerSound("shell_flight");
+        REPAIR = registerSound("repair");
+        REFUEL = registerSound("refuel");
+
+        // supplies: fuel, repair, ammunition
+        JERRY_CAN = Registry.register(BuiltInRegistries.ITEM, id("jerry_can"),
+                new com.exodusvehicles.item.JerryCanItem(new Item.Properties().durability(com.exodusvehicles.item.JerryCanItem.DECILITRES)));
+        JERRY_CAN_EMPTY = Registry.register(BuiltInRegistries.ITEM, id("jerry_can_empty"), new Item(new Item.Properties().stacksTo(16)));
+        WRENCH = Registry.register(BuiltInRegistries.ITEM, id("wrench"),
+                new com.exodusvehicles.item.WrenchItem(new Item.Properties().durability(1200)));
+        MG_BELT_ITEM = Registry.register(BuiltInRegistries.ITEM, id("mg_belt"), new Item(new Item.Properties().stacksTo(8)));
+        SHELL_PILE = Registry.register(BuiltInRegistries.BLOCK, id("shell_pile"),
+                new com.exodusvehicles.block.ShellPileBlock(net.minecraft.world.level.block.state.BlockBehaviour.Properties.of()
+                        .strength(1.5F).sound(net.minecraft.world.level.block.SoundType.METAL).noOcclusion()));
+        SHELL_PILE_ITEM = Registry.register(BuiltInRegistries.ITEM, id("shell_pile"),
+                new net.minecraft.world.item.BlockItem(SHELL_PILE, new Item.Properties()));
+
+        // everything in one creative tab
+        Registry.register(BuiltInRegistries.CREATIVE_MODE_TAB, id("main"),
+                net.fabricmc.fabric.api.itemgroup.v1.FabricItemGroup.builder()
+                        .icon(() -> new net.minecraft.world.item.ItemStack(EISENWOLF_ITEM))
+                        .title(net.minecraft.network.chat.Component.translatable("itemGroup.exodus_vehicles"))
+                        .displayItems((params, out) -> {
+                            out.accept(EISENWOLF_ITEM);
+                            out.accept(DAIMLER_DR_ITEM);
+                            out.accept(DAIMLER_DR_OPEN_ITEM);
+                            out.accept(MORSER_ITEM);
+                            out.accept(SHELL_ITEM);
+                            out.accept(SHELL_PILE_ITEM);
+                            out.accept(MG_BELT_ITEM);
+                            out.accept(JERRY_CAN);
+                            out.accept(JERRY_CAN_EMPTY);
+                            out.accept(WRENCH);
+                        })
+                        .build());
         net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents.END_WORLD_TICK.register(
                 com.exodusvehicles.artillery.ShellManager::tick);
         PayloadTypeRegistry.playS2C().register(com.exodusvehicles.network.ShellFiredPayload.TYPE,
@@ -176,13 +218,7 @@ public class ArmoredCarMod implements ModInitializer {
         IMPACT_GROUND = registerSound("impact_ground");
         BULLET_FLYBY = registerSound("bullet_flyby");
 
-        ItemGroupEvents.modifyEntriesEvent(CreativeModeTabs.COMBAT).register(entries -> {
-            entries.accept(EISENWOLF_ITEM);
-            entries.accept(DAIMLER_DR_ITEM);
-            entries.accept(DAIMLER_DR_OPEN_ITEM);
-            entries.accept(MORSER_ITEM);
-            entries.accept(SHELL_ITEM);
-        });
+
 
         PayloadTypeRegistry.playC2S().register(SwitchSeatPayload.TYPE, SwitchSeatPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(FireGunPayload.TYPE, FireGunPayload.CODEC);

@@ -91,5 +91,22 @@
   "seat.exodus_vehicles.truck.bench": "%s bench, place %s",
   "seat.exodus_vehicles.truck.left": "Left",
   "seat.exodus_vehicles.truck.right": "Right",
-  "hud.exodus_vehicles.artillery_target": "X %s  Z %s  ·  ±%s"
+  "hud.exodus_vehicles.artillery_target": "X %s  Z %s  ·  ±%s",
+  "itemGroup.exodus_vehicles": "Exodus Vehicles",
+  "item.exodus_vehicles.jerry_can": "Jerry Can",
+  "item.exodus_vehicles.jerry_can_empty": "Empty Jerry Can",
+  "item.exodus_vehicles.jerry_can.litres": "%s / 20 litres of petrol",
+  "item.exodus_vehicles.jerry_can.hint": "Hold right-click on a vehicle to refuel it",
+  "item.exodus_vehicles.wrench": "Repair Wrench",
+  "item.exodus_vehicles.mg_belt": "MG 08 Ammunition Belt (250)",
+  "block.exodus_vehicles.shell_pile": "Artillery Shell Pile",
+  "item.exodus_vehicles.shell_pile": "Artillery Shell Pile",
+  "hud.exodus_vehicles.fuel": "Fuel %s / %s L",
+  "msg.exodus_vehicles.no_fuel": "No fuel - refuel with a jerry can",
+  "msg.exodus_vehicles.out_of_fuel": "Out of fuel!",
+  "msg.exodus_vehicles.refuelling": "Refuelling... %s / %s L",
+  "msg.exodus_vehicles.repairing": "Repairing... %s / %s",
+  "msg.exodus_vehicles.can_empty": "Jerry can empty",
+  "subtitles.exodus_vehicles.refuel": "Fuel pouring",
+  "subtitles.exodus_vehicles.repair": "Wrench turning"
 }

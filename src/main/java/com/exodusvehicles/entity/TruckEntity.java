@@ -312,6 +312,16 @@ public class TruckEntity extends ArmoredCarEntity {
     }
 
     @Override
+    public float fuelCapacity() {
+        return ModConfig.get().truckFuelCapacity;
+    }
+
+    @Override
+    protected float fuelPerMinuteDriving() {
+        return ModConfig.get().truckFuelPerMinuteDriving;
+    }
+
+    @Override
     protected double[] exhaustOffset() {
         return new double[]{0.6, 0.6, -1.35};
     }

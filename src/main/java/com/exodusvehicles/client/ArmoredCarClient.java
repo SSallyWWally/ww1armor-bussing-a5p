@@ -235,6 +235,15 @@ public class ArmoredCarClient implements ClientModInitializer {
         g.fill(x, y + 23, x + barW, y + 27, 0x80000000);
         g.fill(x, y + 23, x + filled, y + 27, color);
 
+        // fuel
+        float fuel = car.getFuel(), cap = car.fuelCapacity();
+        int fy = y + 32;
+        g.drawString(mc.font, Component.translatable("hud.exodus_vehicles.fuel", String.valueOf(Math.round(fuel)),
+                String.valueOf(Math.round(cap))), x, fy, fuel < cap * 0.1F ? 0xFFE0603A : 0xFFE8E4D0, true);
+        g.fill(x, fy + 11, x + barW, fy + 15, 0x80000000);
+        g.fill(x, fy + 11, x + (int) (barW * Math.max(0.0F, Math.min(1.0F, fuel / cap))), fy + 15, 0xFFC9A04A);
+        y += 22;
+
         if (seat == ArmoredCarEntity.GUNNER && car.hasGun()) {
             int gy = y + 34;
             String reserve = ammoCache < 0 ? "\u221e" : String.valueOf(ammoCache);

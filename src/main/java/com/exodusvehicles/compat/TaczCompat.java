@@ -45,6 +45,10 @@ public final class TaczCompat {
         }
         int total = 0;
         for (ItemStack stack : player.getInventory().items) {
+            if (stack.is(com.exodusvehicles.ArmoredCarMod.MG_BELT_ITEM)) {
+                total += stack.getCount() * com.exodusvehicles.ModConfig.get().mgBeltSize;
+                continue;
+            }
             int n = roundsIn(stack);
             if (n < 0) {
                 return -1;
@@ -65,6 +69,14 @@ public final class TaczCompat {
         for (ItemStack stack : stacks) {
             if (roundsIn(stack) < 0) {
                 return wanted;     // creative / infinite ammo box: never runs dry
+            }
+        }
+        // a belt from the mod's own ammunition comes first: one belt fills the gun
+        for (ItemStack stack : stacks) {
+            if (stack.is(com.exodusvehicles.ArmoredCarMod.MG_BELT_ITEM)) {
+                stack.shrink(1);
+                player.getInventory().setChanged();
+                return wanted;
             }
         }
         int taken = 0;

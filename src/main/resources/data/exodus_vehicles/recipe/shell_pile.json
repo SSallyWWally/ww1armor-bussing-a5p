@@ -1,0 +1,37 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "exodus_vehicles:shell_21cm"
+    },
+    {
+      "item": "exodus_vehicles:shell_21cm"
+    },
+    {
+      "item": "exodus_vehicles:shell_21cm"
+    },
+    {
+      "item": "exodus_vehicles:shell_21cm"
+    },
+    {
+      "item": "exodus_vehicles:shell_21cm"
+    },
+    {
+      "item": "exodus_vehicles:shell_21cm"
+    },
+    {
+      "item": "exodus_vehicles:shell_21cm"
+    },
+    {
+      "item": "exodus_vehicles:shell_21cm"
+    },
+    {
+      "item": "exodus_vehicles:shell_21cm"
+    }
+  ],
+  "result": {
+    "id": "exodus_vehicles:shell_pile",
+    "count": 1
+  }
+}

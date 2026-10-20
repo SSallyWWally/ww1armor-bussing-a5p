@@ -39,7 +39,7 @@ import org.jetbrains.annotations.Nullable;
  * Everything that matters (aim used for the shot, ammunition, reload, the shell's flight and damage) is decided here
  * on the server; the client only draws.
  */
-public class MorserEntity extends Entity {
+public class MorserEntity extends Entity implements Repairable {
     public static final double TRUNNION_UP = 27.0 / 16.0, TRUNNION_FWD = 2.0 / 16.0, BARREL = 40.0 / 16.0;
     public static final double WHEEL_RADIUS = 12.0 / 16.0;
     /** Distance from the axle to the trail eye (hitch). */
@@ -113,6 +113,15 @@ public class MorserEntity extends Entity {
 
     public float getHealth() { return this.entityData.get(DATA_HEALTH); }
     public float getMaxHealth() { return ModConfig.get().morserMaxHealth; }
+
+    @Override
+    public boolean repairBy(float amount) {
+        if (getHealth() >= getMaxHealth()) {
+            return false;
+        }
+        this.entityData.set(DATA_HEALTH, Math.min(getMaxHealth(), getHealth() + amount));
+        return true;
+    }
     public boolean isDeployed() { return this.entityData.get(DATA_DEPLOYED); }
     public int getWork() { return this.entityData.get(DATA_WORK); }
     public int getReload() { return this.entityData.get(DATA_RELOAD); }
@@ -321,21 +330,14 @@ public class MorserEntity extends Entity {
 
     /**
      * Right-click: get on (deployed: aim and fire; packed: push it around).
-     * Sneak + right-click: deploy / pack up. Lead: hitch to / unhitch from a lorry. Iron ingot: repair.
+     * Sneak + right-click: deploy / pack up. Lead: hitch to / unhitch from a lorry. Repair: the wrench.
      */
     @Override
     public InteractionResult interact(Player player, InteractionHand hand) {
         ItemStack stack = player.getItemInHand(hand);
         boolean client = this.level().isClientSide;
-        if (stack.is(Items.IRON_INGOT) && getHealth() < getMaxHealth()) {
-            if (!client) {
-                this.entityData.set(DATA_HEALTH, Math.min(getMaxHealth(), getHealth() + ModConfig.get().repairPerIngot));
-                if (!player.getAbilities().instabuild) {
-                    stack.shrink(1);
-                }
-                this.playSound(SoundEvents.ANVIL_USE, 0.6F, 1.3F);
-            }
-            return InteractionResult.sidedSuccess(client);
+        if (stack.getItem() instanceof com.exodusvehicles.item.VehicleToolItem) {
+            return InteractionResult.PASS;      // repair wrench: held on the gun, see the item
         }
         if (stack.is(Items.LEAD)) {
             if (!client) {

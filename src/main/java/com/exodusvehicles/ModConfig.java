@@ -106,8 +106,15 @@ public class ModConfig {
     /** Zoom while holding use in the gun sight (1 = none, max 3). */
     public float mgSightZoom = 3.0F;
 
-    // ---- repair
-    public float repairPerIngot = 20.0F;
+    // ---- repair (wrench, hold on the vehicle) and fuel (jerry can, hold on the vehicle)
+    public float repairPerIngot = 20.0F;           // (unused since the wrench)
+    public float repairPerSecond = 1.0F;           // health per second of wrench work
+    public float refuelLitresPerSecond = 1.0F;     // a 20 litre can takes 20 s
+    public float fuelCapacity = 100.0F;            // Eisenwolf tank, litres
+    public float fuelPerMinuteDriving = 1.6F;      // ~1 hour flat out on a full tank
+    public float fuelIdlePerMinute = 0.25F;        // engine running, standing still
+    public float truckFuelCapacity = 80.0F;
+    public float truckFuelPerMinuteDriving = 1.2F;
 
     private static ModConfig INSTANCE;
     private static Path PATH;
