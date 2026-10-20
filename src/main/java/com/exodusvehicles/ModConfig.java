@@ -115,7 +115,8 @@ public class ModConfig {
     public float repairPerSecond = 1.5F;           // health per second of wrench work
     public float refuelLitresPerSecond = 1.25F;    // a 20 litre can takes 16 s
     public float repairStationPerSecond = 15.0F;   // parked on a repair station
-    public float fuelStationLitresPerSecond = 5.0F; // parked on a fuel station
+    public float fuelStationLitresPerSecond = 5.0F; // parked at a service station
+    public double serviceStationRange = 7.0;        // blocks from the station a stopped vehicle is serviced
     public float fuelCapacity = 100.0F;            // Eisenwolf tank, litres
     public float fuelPerMinuteDriving = 1.6F;      // ~1 hour flat out on a full tank
     public float fuelIdlePerMinute = 0.25F;        // engine running, standing still

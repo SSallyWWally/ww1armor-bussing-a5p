@@ -110,7 +110,7 @@
   "subtitles.exodus_vehicles.refuel": "Fuel pouring",
   "subtitles.exodus_vehicles.repair": "Wrench turning",
   "hud.exodus_vehicles.artillery_reload": "Reload",
-  "block.exodus_vehicles.repair_station": "Repair Station",
-  "block.exodus_vehicles.fuel_station": "Fuel Station",
-  "msg.exodus_vehicles.station": "Station: hull %s / %s  ·  fuel %s / %s L"
+  "msg.exodus_vehicles.station": "Servicing: hull %s / %s  ·  fuel %s / %s L",
+  "block.exodus_vehicles.service_station": "Field Service Depot",
+  "msg.exodus_vehicles.station_gun": "Servicing: %s / %s"
 }

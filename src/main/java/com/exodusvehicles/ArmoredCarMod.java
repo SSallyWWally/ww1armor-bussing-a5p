@@ -72,7 +72,8 @@ public class ArmoredCarMod implements ModInitializer {
     public static Item MG_BELT_ITEM;
     public static net.minecraft.world.level.block.Block SHELL_PILE;
     public static Item SHELL_PILE_ITEM;
-    public static net.minecraft.world.level.block.Block REPAIR_STATION, FUEL_STATION;
+    public static net.minecraft.world.level.block.Block SERVICE_STATION;
+    public static net.minecraft.world.level.block.entity.BlockEntityType<com.exodusvehicles.block.ServiceStationBlockEntity> SERVICE_STATION_BE;
     public static SoundEvent MG_FIRE;
     public static SoundEvent RICOCHET;
     public static SoundEvent ENGINE;
@@ -177,14 +178,13 @@ public class ArmoredCarMod implements ModInitializer {
         SHELL_PILE_ITEM = Registry.register(BuiltInRegistries.ITEM, id("shell_pile"),
                 new net.minecraft.world.item.BlockItem(SHELL_PILE, new Item.Properties()));
 
-        REPAIR_STATION = Registry.register(BuiltInRegistries.BLOCK, id("repair_station"),
-                new com.exodusvehicles.block.StationBlock(net.minecraft.world.level.block.state.BlockBehaviour.Properties.of()
-                        .strength(3.0F, 6.0F).sound(net.minecraft.world.level.block.SoundType.METAL), com.exodusvehicles.block.StationBlock.REPAIR));
-        FUEL_STATION = Registry.register(BuiltInRegistries.BLOCK, id("fuel_station"),
-                new com.exodusvehicles.block.StationBlock(net.minecraft.world.level.block.state.BlockBehaviour.Properties.of()
-                        .strength(3.0F, 6.0F).sound(net.minecraft.world.level.block.SoundType.METAL), com.exodusvehicles.block.StationBlock.FUEL));
-        Registry.register(BuiltInRegistries.ITEM, id("repair_station"), new net.minecraft.world.item.BlockItem(REPAIR_STATION, new Item.Properties()));
-        Registry.register(BuiltInRegistries.ITEM, id("fuel_station"), new net.minecraft.world.item.BlockItem(FUEL_STATION, new Item.Properties()));
+        SERVICE_STATION = Registry.register(BuiltInRegistries.BLOCK, id("service_station"),
+                new com.exodusvehicles.block.ServiceStationBlock(net.minecraft.world.level.block.state.BlockBehaviour.Properties.of()
+                        .strength(3.0F, 6.0F).sound(net.minecraft.world.level.block.SoundType.METAL).noOcclusion()));
+        Registry.register(BuiltInRegistries.ITEM, id("service_station"), new net.minecraft.world.item.BlockItem(SERVICE_STATION, new Item.Properties()));
+        SERVICE_STATION_BE = Registry.register(BuiltInRegistries.BLOCK_ENTITY_TYPE, id("service_station"),
+                net.minecraft.world.level.block.entity.BlockEntityType.Builder.of(com.exodusvehicles.block.ServiceStationBlockEntity::new,
+                        SERVICE_STATION).build(null));
 
         // everything in one creative tab
         Registry.register(BuiltInRegistries.CREATIVE_MODE_TAB, id("main"),
@@ -202,8 +202,7 @@ public class ArmoredCarMod implements ModInitializer {
                             out.accept(JERRY_CAN);
                             out.accept(JERRY_CAN_EMPTY);
                             out.accept(WRENCH);
-                            out.accept(REPAIR_STATION);
-                            out.accept(FUEL_STATION);
+                            out.accept(SERVICE_STATION);
                         })
                         .build());
         net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents.END_WORLD_TICK.register(

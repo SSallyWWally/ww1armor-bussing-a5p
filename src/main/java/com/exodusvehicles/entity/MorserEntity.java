@@ -636,13 +636,6 @@ public class MorserEntity extends Entity implements Repairable {
             this.entityData.set(DATA_TRAV, t + Mth.clamp(-t, -TRAVERSE_RATE, TRAVERSE_RATE));
         }
 
-        // standing on a repair station
-        if (this.tickCount % 5 == 0 && !isTowed()
-                && (com.exodusvehicles.block.StationBlock.under(this) & com.exodusvehicles.block.StationBlock.REPAIR) != 0
-                && repairBy(cfg.repairStationPerSecond / 4.0F) && this.tickCount % 20 == 0) {
-            this.playSound(ArmoredCarMod.REPAIR, 0.8F, 1.0F);
-        }
-
         // movement: towed, pushed by its rider, or nothing (deployed)
         if (isTowed()) {
             tickTow();
