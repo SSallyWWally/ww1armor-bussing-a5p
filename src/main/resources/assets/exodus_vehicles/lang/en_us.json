@@ -75,7 +75,7 @@
   "key.exodus_vehicles.shell_cam": "Artillery: Shell Camera On/Off",
   "msg.exodus_vehicles.shell_cam_on": "Shell camera on",
   "msg.exodus_vehicles.shell_cam_off": "Shell camera off",
-  "hud.exodus_vehicles.artillery_ready": "READY",
+  "hud.exodus_vehicles.artillery_ready": "Reload - ready",
   "hud.exodus_vehicles.artillery_help": "Mouse: aim · Left click: fire · Right click: skip shell cam · %s: shell cam (%s) · Sneak: leave",
   "hud.exodus_vehicles.artillery_shells": "Shells: %s",
   "hud.exodus_vehicles.morser_deploying": "Deploying... %s%%",
@@ -109,5 +109,6 @@
   "msg.exodus_vehicles.can_empty": "Jerry can empty",
   "subtitles.exodus_vehicles.refuel": "Fuel pouring",
   "subtitles.exodus_vehicles.repair": "Wrench turning",
-  "msg.exodus_vehicles.one_shell": "Too heavy - you can only carry one shell"
+  "msg.exodus_vehicles.one_shell": "Too heavy - you can only carry one shell",
+  "hud.exodus_vehicles.artillery_reload": "Reload"
 }

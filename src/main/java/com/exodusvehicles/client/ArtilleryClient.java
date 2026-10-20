@@ -701,8 +701,14 @@ public final class ArtilleryClient {
         g.fill(cx, cy - 7, cx + 1, cy - 2, white);
         g.fill(cx, cy + 2, cx + 1, cy + 7, white);
         float range = localRange(gun, mc.player, pt);
+        // left side: range, and the reload bar with its label under it
+        int lx = 12, ly = cy - 20;
         String rs = Math.round(range) + " m";
-        g.drawString(mc.font, rs, cx - mc.font.width(rs) / 2, cy + 11, white, true);
+        g.pose().pushPose();
+        g.pose().translate(lx, ly, 0);
+        g.pose().scale(1.5F, 1.5F, 1.0F);
+        g.drawString(mc.font, rs, 0, 0, white, true);
+        g.pose().popPose();
         float trav = localTraverse(gun, mc.player, pt);
         if (Math.abs(trav) >= gun.traverseLimit() - 0.05F) {
             // traverse stop reached on this side
@@ -710,15 +716,12 @@ public final class ArtilleryClient {
             g.fill(sx, cy - 6, sx + 2, cy + 7, 0xFFE0603A);
         }
         int reload = gun.getReload();
-        int bw = 40, by = cy + 23;
-        if (reload > 0) {
-            float done = 1.0F - reload / (float) gun.getReloadTotal();
-            g.fill(cx - bw / 2, by, cx + bw / 2, by + 2, 0x80000000);
-            g.fill(cx - bw / 2, by, cx - bw / 2 + (int) (bw * done), by + 2, 0xFFD9A441);
-        } else {
-            Component ready = Component.translatable("hud.exodus_vehicles.artillery_ready");
-            g.drawString(mc.font, ready, cx - mc.font.width(ready) / 2, by - 2, 0xFF9FD08A, true);
-        }
+        int bw = 60, by = ly + 18;
+        float done = reload > 0 ? 1.0F - reload / (float) gun.getReloadTotal() : 1.0F;
+        g.fill(lx, by, lx + bw, by + 4, 0x80000000);
+        g.fill(lx, by, lx + (int) (bw * done), by + 4, reload > 0 ? 0xFFD9A441 : 0xFF9FD08A);
+        Component label = Component.translatable(reload > 0 ? "hud.exodus_vehicles.artillery_reload" : "hud.exodus_vehicles.artillery_ready");
+        g.drawString(mc.font, label, lx, by + 7, reload > 0 ? 0xFFB9B6A3 : 0xFF9FD08A, true);
         // where the shells will fall, top centre (the centre of the scatter circle)
         Vec3 aim = gun.aimPoint(trav, range);
         Component where = Component.translatable("hud.exodus_vehicles.artillery_target",
