@@ -18,7 +18,7 @@ import java.util.List;
 public class ModConfig {
     /** Bumped when a default changes in a way old config files must pick up. Don't edit. */
     public int configVersion = 0;
-    private static final int CURRENT_VERSION = 9;
+    private static final int CURRENT_VERSION = 10;
 
     // ---- armor / damage
     public float maxHealth = 300.0F;
@@ -56,7 +56,7 @@ public class ModConfig {
     // ---- 21 cm Mörser 16 artillery (Battlefield-style). Distances in blocks, times in ticks (20 = 1 s).
     public float morserMaxHealth = 200.0F;
     public double artilleryMinRange = 95.0;
-    public double artilleryMaxRange = 750.0;
+    public double artilleryMaxRange = 1000.0;
     /** Shells are fired on arcs that stay below this height (clouds are at 192), flattening out if needed. */
     public double artilleryShellCeiling = 180.0;
     public float artilleryTraverse = 30.0F;         // degrees either side of where the gun was deployed
@@ -190,6 +190,9 @@ public class ModConfig {
         }
         if (cfg.configVersion < 9 && cfg.artilleryDispersionMax == 14.0) {
             cfg.artilleryDispersionMax = 22.0;     // 1.9.0: scatter widens more with range
+        }
+        if (cfg.configVersion < 10 && cfg.artilleryMaxRange == 750.0) {
+            cfg.artilleryMaxRange = 1000.0;      // 1.9.9: 1 km
         }
         cfg.configVersion = CURRENT_VERSION;
         cfg.mgBeltSize = Math.max(1, cfg.mgBeltSize);
