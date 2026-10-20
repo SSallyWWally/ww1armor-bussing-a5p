@@ -197,5 +197,13 @@
   "repair": {
     "subtitle": "subtitles.exodus_vehicles.repair",
     "sounds": []
+  },
+  "morser_mid": {
+    "subtitle": "subtitles.exodus_vehicles.morser_distant",
+    "sounds": []
+  },
+  "shell_impact_mid": {
+    "subtitle": "subtitles.exodus_vehicles.shell_impact_far",
+    "sounds": []
   }
 }

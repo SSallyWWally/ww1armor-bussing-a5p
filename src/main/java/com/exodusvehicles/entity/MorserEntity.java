@@ -474,15 +474,16 @@ public class MorserEntity extends Entity implements Repairable {
                 server.sendParticles(p, ParticleTypes.CAMPFIRE_SIGNAL_SMOKE, true, muzzle.x, muzzle.y, muzzle.z, 3, 0.6, 0.4, 0.6, 0.02);
                 server.sendParticles(p, ParticleTypes.LARGE_SMOKE, true, muzzle.x, muzzle.y, muzzle.z, 10, 0.8, 0.5, 0.8, 0.05);
             }
-            if (this.hasPassenger(p) || dist < 40) {
+            if (this.hasPassenger(p) || dist < 60) {
+                // crisp report up close, handing over to the muffled versions from 30 blocks out
+                float closeVol = this.hasPassenger(p) ? 1.0F : 1.0F - Math.min(1.0F, Math.max(0.0F, (float) ((dist - 30) / 30.0)));
                 p.connection.send(new net.minecraft.network.protocol.game.ClientboundSoundPacket(
                         net.minecraft.core.registries.BuiltInRegistries.SOUND_EVENT.wrapAsHolder(ArmoredCarMod.MORSER_CLOSE),
-                        SoundSource.PLAYERS, muzzle.x, muzzle.y, muzzle.z, 1.0F, 0.95F + this.random.nextFloat() * 0.1F,
+                        SoundSource.PLAYERS, muzzle.x, muzzle.y, muzzle.z, closeVol, 0.95F + this.random.nextFloat() * 0.1F,
                         this.random.nextLong()));
-            } else if (dist < 180) {
-                ShellManager.soundTo(p, ArmoredCarMod.MORSER_DISTANT, muzzle, (float) (1.0 - (dist - 40) / 140 * 0.4), 1.0F, true);
-            } else if (dist < 1000) {
-                ShellManager.soundTo(p, ArmoredCarMod.MORSER_FAR, muzzle, (float) Math.max(0.2, 1.0 - (dist - 180) / 820), 1.0F, true);
+            }
+            if (!this.hasPassenger(p)) {
+                ShellManager.gunReport(p, muzzle, dist, 1.0F);
             }
         }
         server.broadcastEntityEvent(this, (byte) 62);

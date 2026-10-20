@@ -302,10 +302,49 @@ public final class ShellManager {
             if (d < IMPACT_RADIUS || p == owner) {
                 ServerPlayNetworking.send(p, burst);
             }
-            if (d > 56 && d < 1000) {
-                float vol = (float) Math.max(0.2, 1.0 - (d - 56) / 944.0);
-                soundTo(p, ArmoredCarMod.SHELL_IMPACT_FAR, c, vol, 0.95F + rnd.nextFloat() * 0.1F, true);
+            // the close blast (above) fades out by ~96 blocks; beyond it ever more muffled versions take over
+            float mid = band(d, 40, 90, 160, 240);
+            float far = band(d, 160, 240, 1e9, 1e9 + 1) * (float) Math.max(0.2, 1.0 - (d - 240) / 900.0);
+            float pitch = 0.95F + rnd.nextFloat() * 0.1F;
+            if (mid > 0.01F) {
+                soundTo(p, ArmoredCarMod.SHELL_IMPACT_MID, c, mid, pitch, true);
             }
+            if (far > 0.01F && d < 1100) {
+                soundTo(p, ArmoredCarMod.SHELL_IMPACT_FAR, c, far, pitch, true);
+            }
+        }
+    }
+
+    /** 0 below a, rising to 1 at b, 1 until c, falling to 0 at d. */
+    public static float band(double x, double a, double b, double c, double d) {
+        if (x <= a || x >= d) {
+            return 0.0F;
+        }
+        if (x < b) {
+            return (float) ((x - a) / (b - a));
+        }
+        if (x <= c) {
+            return 1.0F;
+        }
+        return (float) ((d - x) / (d - c));
+    }
+
+    /**
+     * Gun report for one listener: crisp up close, then ever more muffled versions crossfading as the distance grows
+     * (close -> mid -> distant -> far), each arriving at the speed of sound.
+     */
+    public static void gunReport(ServerPlayer p, Vec3 at, double d, float pitch) {
+        float mid = band(d, 30, 60, 110, 160);
+        float dist = band(d, 110, 160, 260, 360);
+        float far = band(d, 260, 360, 1e9, 1e9 + 1) * (float) Math.max(0.2, 1.0 - (d - 360) / 900.0);
+        if (mid > 0.01F) {
+            soundTo(p, ArmoredCarMod.MORSER_MID, at, mid, pitch, true);
+        }
+        if (dist > 0.01F) {
+            soundTo(p, ArmoredCarMod.MORSER_DISTANT, at, dist, pitch, true);
+        }
+        if (far > 0.01F && d < 1200) {
+            soundTo(p, ArmoredCarMod.MORSER_FAR, at, far, pitch, true);
         }
     }
 

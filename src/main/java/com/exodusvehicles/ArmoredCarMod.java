@@ -51,6 +51,8 @@ public class ArmoredCarMod implements ModInitializer {
     public static Item SHELL_ITEM;
     public static SoundEvent MORSER_CLOSE;
     public static SoundEvent MORSER_DISTANT;
+    public static SoundEvent MORSER_MID;
+    public static SoundEvent SHELL_IMPACT_MID;
     public static SoundEvent MORSER_FAR;
     public static SoundEvent MORSER_RELOAD;
     public static SoundEvent SHELL_WHISTLE;
@@ -178,6 +180,8 @@ public class ArmoredCarMod implements ModInitializer {
         });
         MORSER_CLOSE = registerSound("morser_close");
         MORSER_DISTANT = registerSound("morser_distant");
+        MORSER_MID = registerSound("morser_mid");
+        SHELL_IMPACT_MID = registerSound("shell_impact_mid");
         MORSER_FAR = registerSound("morser_far");
         MORSER_RELOAD = registerSound("morser_reload");
         SHELL_WHISTLE = registerSound("shell_whistle");
