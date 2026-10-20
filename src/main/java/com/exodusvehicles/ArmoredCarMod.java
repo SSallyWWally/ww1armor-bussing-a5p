@@ -141,7 +141,41 @@ public class ArmoredCarMod implements ModInitializer {
                         .build("morser16"));
         MORSER_ITEM = Registry.register(BuiltInRegistries.ITEM, id("morser16"),
                 new ArmoredCarItem(new Item.Properties().stacksTo(1), () -> MORSER));
-        SHELL_ITEM = Registry.register(BuiltInRegistries.ITEM, id("shell_21cm"), new Item(new Item.Properties().stacksTo(4)));
+        SHELL_ITEM = Registry.register(BuiltInRegistries.ITEM, id("shell_21cm"), new Item(new Item.Properties().stacksTo(1)));
+        // a 21 cm shell weighs over 100 kg: one at a time. Extras are put down at the carrier's feet.
+        net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents.END_SERVER_TICK.register(server -> {
+            if (server.getTickCount() % 10 != 0) {
+                return;
+            }
+            for (ServerPlayer p : server.getPlayerList().getPlayers()) {
+                if (p.getAbilities().instabuild || p.isSpectator() || carriedShells(p) <= 1) {
+                    continue;
+                }
+                boolean kept = false;
+                var inv = p.getInventory();
+                for (int i = 0; i < inv.getContainerSize(); i++) {
+                    net.minecraft.world.item.ItemStack s = inv.getItem(i);
+                    if (!s.is(SHELL_ITEM)) {
+                        continue;
+                    }
+                    if (!kept) {
+                        kept = true;
+                        if (s.getCount() > 1) {
+                            p.drop(s.split(s.getCount() - 1), false);
+                        }
+                        continue;
+                    }
+                    p.drop(inv.removeItemNoUpdate(i), false);
+                }
+                net.minecraft.world.item.ItemStack cursor = p.containerMenu.getCarried();
+                if (cursor.is(SHELL_ITEM) && kept) {
+                    p.drop(cursor.copy(), false);
+                    p.containerMenu.setCarried(net.minecraft.world.item.ItemStack.EMPTY);
+                }
+                inv.setChanged();
+                p.displayClientMessage(net.minecraft.network.chat.Component.translatable("msg.exodus_vehicles.one_shell"), true);
+            }
+        });
         MORSER_CLOSE = registerSound("morser_close");
         MORSER_DISTANT = registerSound("morser_distant");
         MORSER_FAR = registerSound("morser_far");
@@ -288,6 +322,20 @@ public class ArmoredCarMod implements ModInitializer {
         });
 
         LOGGER.info("Exodus Vehicles loaded");
+    }
+
+    /** 21 cm shells a player has on them (inventory and the item held on the cursor). */
+    public static int carriedShells(net.minecraft.world.entity.player.Player p) {
+        int n = 0;
+        for (int i = 0; i < p.getInventory().getContainerSize(); i++) {
+            if (p.getInventory().getItem(i).is(SHELL_ITEM)) {
+                n += p.getInventory().getItem(i).getCount();
+            }
+        }
+        if (p.containerMenu.getCarried().is(SHELL_ITEM)) {
+            n += p.containerMenu.getCarried().getCount();
+        }
+        return n;
     }
 
     private static SoundEvent registerSound(String name) {

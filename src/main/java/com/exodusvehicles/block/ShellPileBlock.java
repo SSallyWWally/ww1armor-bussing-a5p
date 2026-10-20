@@ -24,16 +24,26 @@ import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
 /**
- * A stack of 21 cm shells (up to 9: rows of 4, 3 and 2). Right-click takes one off the top, right-click with a shell
+ * A big stack of 21 cm shells (up to 21: rows of 6, 5, 4, 3, 2, 1; it spills a little past its block). Right-click takes one off the top, right-click with a shell
  * puts one back; the last one taken clears the pile. Broken, it drops the shells it still holds.
  */
 public class ShellPileBlock extends Block {
-    public static final int MAX = 9;
+    public static final int MAX = 21;
     public static final IntegerProperty SHELLS = IntegerProperty.create("shells", 1, MAX);
     public static final DirectionProperty FACING = BlockStateProperties.HORIZONTAL_FACING;
-    private static final VoxelShape LOW = Block.box(0, 0, 0, 16, 4, 16);
-    private static final VoxelShape MID = Block.box(0, 0, 0, 16, 7, 16);
-    private static final VoxelShape HIGH = Block.box(0, 0, 0, 16, 10, 16);
+    private static final VoxelShape[] SHAPES = new VoxelShape[MAX + 1];
+    static {
+        // height of the top row present for each count (rows of 6, 5, 4, 3, 2, 1)
+        int[] rowEnds = {6, 11, 15, 18, 20, 21};
+        for (int n = 1; n <= MAX; n++) {
+            int rows = 0;
+            while (rows < rowEnds.length && rowEnds[rows] < n) {
+                rows++;
+            }
+            double top = Math.min(16.0, rows * 3.81 + 4.2);
+            SHAPES[n] = Block.box(0, 0, 0, 16, top, 16);
+        }
+    }
 
     public ShellPileBlock(Properties properties) {
         super(properties);
@@ -52,8 +62,7 @@ public class ShellPileBlock extends Block {
 
     @Override
     protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext ctx) {
-        int n = state.getValue(SHELLS);
-        return n <= 4 ? LOW : n <= 7 ? MID : HIGH;
+        return SHAPES[state.getValue(SHELLS)];
     }
 
     @Override
@@ -76,6 +85,10 @@ public class ShellPileBlock extends Block {
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
         if (!level.isClientSide) {
             int n = state.getValue(SHELLS);
+            if (!player.getAbilities().instabuild && ArmoredCarMod.carriedShells(player) >= 1) {
+                player.displayClientMessage(net.minecraft.network.chat.Component.translatable("msg.exodus_vehicles.one_shell"), true);
+                return InteractionResult.CONSUME;
+            }
             ItemStack shell = new ItemStack(ArmoredCarMod.SHELL_ITEM);
             if (!player.getInventory().add(shell)) {
                 player.drop(shell, false);
@@ -93,7 +106,9 @@ public class ShellPileBlock extends Block {
     @Override
     public BlockState playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
         if (!level.isClientSide && !player.getAbilities().instabuild) {
-            Block.popResource(level, pos, new ItemStack(ArmoredCarMod.SHELL_ITEM, state.getValue(SHELLS)));
+            for (int i = 0; i < state.getValue(SHELLS); i++) {
+                Block.popResource(level, pos, new ItemStack(ArmoredCarMod.SHELL_ITEM));
+            }
         }
         return super.playerWillDestroy(level, pos, state, player);
     }

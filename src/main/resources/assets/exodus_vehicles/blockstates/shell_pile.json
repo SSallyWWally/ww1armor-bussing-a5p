@@ -27,6 +27,42 @@
   "facing=north,shells=9": {
    "model": "exodus_vehicles:block/shell_pile_9"
   },
+  "facing=north,shells=10": {
+   "model": "exodus_vehicles:block/shell_pile_10"
+  },
+  "facing=north,shells=11": {
+   "model": "exodus_vehicles:block/shell_pile_11"
+  },
+  "facing=north,shells=12": {
+   "model": "exodus_vehicles:block/shell_pile_12"
+  },
+  "facing=north,shells=13": {
+   "model": "exodus_vehicles:block/shell_pile_13"
+  },
+  "facing=north,shells=14": {
+   "model": "exodus_vehicles:block/shell_pile_14"
+  },
+  "facing=north,shells=15": {
+   "model": "exodus_vehicles:block/shell_pile_15"
+  },
+  "facing=north,shells=16": {
+   "model": "exodus_vehicles:block/shell_pile_16"
+  },
+  "facing=north,shells=17": {
+   "model": "exodus_vehicles:block/shell_pile_17"
+  },
+  "facing=north,shells=18": {
+   "model": "exodus_vehicles:block/shell_pile_18"
+  },
+  "facing=north,shells=19": {
+   "model": "exodus_vehicles:block/shell_pile_19"
+  },
+  "facing=north,shells=20": {
+   "model": "exodus_vehicles:block/shell_pile_20"
+  },
+  "facing=north,shells=21": {
+   "model": "exodus_vehicles:block/shell_pile_21"
+  },
   "facing=east,shells=1": {
    "model": "exodus_vehicles:block/shell_pile_1",
    "y": 90
@@ -61,6 +97,54 @@
   },
   "facing=east,shells=9": {
    "model": "exodus_vehicles:block/shell_pile_9",
+   "y": 90
+  },
+  "facing=east,shells=10": {
+   "model": "exodus_vehicles:block/shell_pile_10",
+   "y": 90
+  },
+  "facing=east,shells=11": {
+   "model": "exodus_vehicles:block/shell_pile_11",
+   "y": 90
+  },
+  "facing=east,shells=12": {
+   "model": "exodus_vehicles:block/shell_pile_12",
+   "y": 90
+  },
+  "facing=east,shells=13": {
+   "model": "exodus_vehicles:block/shell_pile_13",
+   "y": 90
+  },
+  "facing=east,shells=14": {
+   "model": "exodus_vehicles:block/shell_pile_14",
+   "y": 90
+  },
+  "facing=east,shells=15": {
+   "model": "exodus_vehicles:block/shell_pile_15",
+   "y": 90
+  },
+  "facing=east,shells=16": {
+   "model": "exodus_vehicles:block/shell_pile_16",
+   "y": 90
+  },
+  "facing=east,shells=17": {
+   "model": "exodus_vehicles:block/shell_pile_17",
+   "y": 90
+  },
+  "facing=east,shells=18": {
+   "model": "exodus_vehicles:block/shell_pile_18",
+   "y": 90
+  },
+  "facing=east,shells=19": {
+   "model": "exodus_vehicles:block/shell_pile_19",
+   "y": 90
+  },
+  "facing=east,shells=20": {
+   "model": "exodus_vehicles:block/shell_pile_20",
+   "y": 90
+  },
+  "facing=east,shells=21": {
+   "model": "exodus_vehicles:block/shell_pile_21",
    "y": 90
   },
   "facing=south,shells=1": {
@@ -99,6 +183,54 @@
    "model": "exodus_vehicles:block/shell_pile_9",
    "y": 180
   },
+  "facing=south,shells=10": {
+   "model": "exodus_vehicles:block/shell_pile_10",
+   "y": 180
+  },
+  "facing=south,shells=11": {
+   "model": "exodus_vehicles:block/shell_pile_11",
+   "y": 180
+  },
+  "facing=south,shells=12": {
+   "model": "exodus_vehicles:block/shell_pile_12",
+   "y": 180
+  },
+  "facing=south,shells=13": {
+   "model": "exodus_vehicles:block/shell_pile_13",
+   "y": 180
+  },
+  "facing=south,shells=14": {
+   "model": "exodus_vehicles:block/shell_pile_14",
+   "y": 180
+  },
+  "facing=south,shells=15": {
+   "model": "exodus_vehicles:block/shell_pile_15",
+   "y": 180
+  },
+  "facing=south,shells=16": {
+   "model": "exodus_vehicles:block/shell_pile_16",
+   "y": 180
+  },
+  "facing=south,shells=17": {
+   "model": "exodus_vehicles:block/shell_pile_17",
+   "y": 180
+  },
+  "facing=south,shells=18": {
+   "model": "exodus_vehicles:block/shell_pile_18",
+   "y": 180
+  },
+  "facing=south,shells=19": {
+   "model": "exodus_vehicles:block/shell_pile_19",
+   "y": 180
+  },
+  "facing=south,shells=20": {
+   "model": "exodus_vehicles:block/shell_pile_20",
+   "y": 180
+  },
+  "facing=south,shells=21": {
+   "model": "exodus_vehicles:block/shell_pile_21",
+   "y": 180
+  },
   "facing=west,shells=1": {
    "model": "exodus_vehicles:block/shell_pile_1",
    "y": 270
@@ -133,6 +265,54 @@
   },
   "facing=west,shells=9": {
    "model": "exodus_vehicles:block/shell_pile_9",
+   "y": 270
+  },
+  "facing=west,shells=10": {
+   "model": "exodus_vehicles:block/shell_pile_10",
+   "y": 270
+  },
+  "facing=west,shells=11": {
+   "model": "exodus_vehicles:block/shell_pile_11",
+   "y": 270
+  },
+  "facing=west,shells=12": {
+   "model": "exodus_vehicles:block/shell_pile_12",
+   "y": 270
+  },
+  "facing=west,shells=13": {
+   "model": "exodus_vehicles:block/shell_pile_13",
+   "y": 270
+  },
+  "facing=west,shells=14": {
+   "model": "exodus_vehicles:block/shell_pile_14",
+   "y": 270
+  },
+  "facing=west,shells=15": {
+   "model": "exodus_vehicles:block/shell_pile_15",
+   "y": 270
+  },
+  "facing=west,shells=16": {
+   "model": "exodus_vehicles:block/shell_pile_16",
+   "y": 270
+  },
+  "facing=west,shells=17": {
+   "model": "exodus_vehicles:block/shell_pile_17",
+   "y": 270
+  },
+  "facing=west,shells=18": {
+   "model": "exodus_vehicles:block/shell_pile_18",
+   "y": 270
+  },
+  "facing=west,shells=19": {
+   "model": "exodus_vehicles:block/shell_pile_19",
+   "y": 270
+  },
+  "facing=west,shells=20": {
+   "model": "exodus_vehicles:block/shell_pile_20",
+   "y": 270
+  },
+  "facing=west,shells=21": {
+   "model": "exodus_vehicles:block/shell_pile_21",
    "y": 270
   }
  }
