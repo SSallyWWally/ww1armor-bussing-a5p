@@ -10,6 +10,15 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(HumanoidModel.class)
 public abstract class HumanoidModelMixin {
+    /** Crew at a howitzer stand rather than sit (vanilla poses every passenger seated). */
+    @Inject(method = "setupAnim(Lnet/minecraft/world/entity/LivingEntity;FFFFF)V", at = @At("HEAD"))
+    private void exodus_vehicles$standAtGun(LivingEntity entity, float limbSwing, float limbSwingAmount, float age,
+                                            float headYaw, float headPitch, CallbackInfo ci) {
+        if (entity.getVehicle() instanceof com.exodusvehicles.entity.MorserEntity) {
+            ((HumanoidModel<?>) (Object) this).riding = false;
+        }
+    }
+
     /** Gunner at a howitzer: standing, right hand on the breech, left arm loose. */
     @Inject(method = "setupAnim(Lnet/minecraft/world/entity/LivingEntity;FFFFF)V", at = @At("TAIL"))
     private void exodus_vehicles$gunnerPose(LivingEntity entity, float limbSwing, float limbSwingAmount, float age,

@@ -300,11 +300,6 @@ public class MorserEntity extends Entity {
     /** Where the gunner stands (blocks): left of the trail, just behind the wheel. */
     public static final double GUNNER_RIGHT = -11.0 / 16.0, GUNNER_FWD = -17.0 / 16.0;
 
-    /** The crew stand at the gun rather than sit on it. */
-    @Override
-    public boolean shouldRiderSit() {
-        return false;
-    }
 
     @Override
     public Vec3 getDismountLocationForPassenger(LivingEntity passenger) {
