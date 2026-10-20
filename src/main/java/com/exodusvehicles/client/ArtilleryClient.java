@@ -683,10 +683,10 @@ public final class ArtilleryClient {
         }
         if (mc.player.getVehicle() instanceof MorserEntity gun && !gun.isDeployed()) {
             int work = gun.getWork();
-            Component line = work != 0
-                    ? Component.translatable("hud.exodus_vehicles.morser_deploying", Math.abs(work) * 100 / gun.deployTicks())
-                    : Component.translatable("hud.exodus_vehicles.morser_packed_help", ArmoredCarClient.ENGINE.getTranslatedKeyMessage());
-            g.drawString(mc.font, line, 8, 8, 0xFFE8E4D0, true);
+            if (work != 0) {
+                Component line = Component.translatable("hud.exodus_vehicles.morser_deploying", Math.abs(work) * 100 / gun.deployTicks());
+                g.drawString(mc.font, line, 8, 8, 0xFFE8E4D0, true);
+            }
             return;
         }
         MorserEntity gun = operatedGun();
@@ -719,11 +719,11 @@ public final class ArtilleryClient {
             Component ready = Component.translatable("hud.exodus_vehicles.artillery_ready");
             g.drawString(mc.font, ready, cx - mc.font.width(ready) / 2, by - 2, 0xFF9FD08A, true);
         }
-        // a quiet help line, ammo and the gun's condition
-        Component help = Component.translatable("hud.exodus_vehicles.artillery_help",
-                ArmoredCarClient.SHELL_CAM.getTranslatedKeyMessage(),
-                Component.translatable(ModConfig.get().shellCamera ? "options.on" : "options.off"));
-        g.drawString(mc.font, help, 8, 8, 0xFFB9B6A3, true);
+        // where the shells will fall, top centre (the centre of the scatter circle)
+        Vec3 aim = gun.aimPoint(trav, range);
+        Component where = Component.translatable("hud.exodus_vehicles.artillery_target",
+                Mth.floor(aim.x), Mth.floor(aim.z), Math.round(gun.dispersionAt(range)));
+        g.drawString(mc.font, where, cx - mc.font.width(where) / 2, 8, 0xFFF0ECDC, true);
         if (ModConfig.get().artilleryRequiresShells && !mc.player.getAbilities().instabuild) {
             int shells = 0;
             for (int i = 0; i < mc.player.getInventory().getContainerSize(); i++) {
@@ -731,11 +731,11 @@ public final class ArtilleryClient {
                     shells += mc.player.getInventory().getItem(i).getCount();
                 }
             }
-            g.drawString(mc.font, Component.translatable("hud.exodus_vehicles.artillery_shells", shells), 8, 20,
+            g.drawString(mc.font, Component.translatable("hud.exodus_vehicles.artillery_shells", shells), 8, 8,
                     shells > 0 ? 0xFFE8E4D0 : 0xFFE0603A, true);
         }
         float hp = gun.getHealth() / gun.getMaxHealth();
-        g.fill(8, 32, 68, 34, 0x80000000);
-        g.fill(8, 32, 8 + (int) (60 * Math.max(0, Math.min(1, hp))), 34, hp > 0.5F ? 0xFF8D977A : hp > 0.25F ? 0xFFD9A441 : 0xFFC4553A);
+        g.fill(8, 20, 68, 22, 0x80000000);
+        g.fill(8, 20, 8 + (int) (60 * Math.max(0, Math.min(1, hp))), 22, hp > 0.5F ? 0xFF8D977A : hp > 0.25F ? 0xFFD9A441 : 0xFFC4553A);
     }
 }

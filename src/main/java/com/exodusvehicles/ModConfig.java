@@ -18,7 +18,7 @@ import java.util.List;
 public class ModConfig {
     /** Bumped when a default changes in a way old config files must pick up. Don't edit. */
     public int configVersion = 0;
-    private static final int CURRENT_VERSION = 8;
+    private static final int CURRENT_VERSION = 9;
 
     // ---- armor / damage
     public float maxHealth = 300.0F;
@@ -64,7 +64,7 @@ public class ModConfig {
     public int artilleryDeployTicks = 80;           // 4 s to deploy or pack up
     /** Scatter radius around the aim point: at minimum range ... at maximum range. */
     public double artilleryDispersionMin = 8.0;
-    public double artilleryDispersionMax = 14.0;
+    public double artilleryDispersionMax = 22.0;
     /** Each shot uses a 21 cm Shell from the operator's inventory (creative: free). */
     public boolean artilleryRequiresShells = true;
     public float shellDamage = 60.0F;               // at the point of impact, falling to 0 at the blast radius
@@ -176,6 +176,9 @@ public class ModConfig {
             if (cfg.artilleryMaxRange == 400.0 || cfg.artilleryMaxRange == 550.0) {
                 cfg.artilleryMaxRange = 750.0;
             }
+        }
+        if (cfg.configVersion < 9 && cfg.artilleryDispersionMax == 14.0) {
+            cfg.artilleryDispersionMax = 22.0;     // 1.9.0: scatter widens more with range
         }
         cfg.configVersion = CURRENT_VERSION;
         cfg.mgBeltSize = Math.max(1, cfg.mgBeltSize);
