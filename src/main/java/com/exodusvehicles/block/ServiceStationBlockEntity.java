@@ -39,7 +39,8 @@ public class ServiceStationBlockEntity extends BlockEntity {
                     continue;      // pull up and stop
                 }
                 repaired = car.repairBy(cfg.repairStationPerSecond / 4.0F);
-                if (car.getFuel() < car.fuelCapacity()) {
+                // top up only when it's actually down (an idling engine sips a little; no endless pumping)
+                if (car.getFuel() < car.fuelCapacity() - 0.5F) {
                     car.addFuel(cfg.fuelStationLitresPerSecond / 4.0F);
                     fuelled = true;
                 }

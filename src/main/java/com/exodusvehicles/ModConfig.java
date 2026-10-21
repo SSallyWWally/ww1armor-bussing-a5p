@@ -18,7 +18,7 @@ import java.util.List;
 public class ModConfig {
     /** Bumped when a default changes in a way old config files must pick up. Don't edit. */
     public int configVersion = 0;
-    private static final int CURRENT_VERSION = 11;
+    private static final int CURRENT_VERSION = 12;
 
     // ---- armor / damage
     public float maxHealth = 300.0F;
@@ -112,10 +112,10 @@ public class ModConfig {
 
     // ---- repair (wrench, hold on the vehicle) and fuel (jerry can, hold on the vehicle)
     public float repairPerIngot = 20.0F;           // (unused since the wrench)
-    public float repairPerSecond = 1.5F;           // health per second of wrench work
-    public float refuelLitresPerSecond = 1.25F;    // a 20 litre can takes 16 s
-    public float repairStationPerSecond = 15.0F;   // parked on a repair station
-    public float fuelStationLitresPerSecond = 5.0F; // parked at a service station
+    public float repairPerSecond = 2.0F;           // health per second of wrench work
+    public float refuelLitresPerSecond = 1.6F;     // a 20 litre can takes ~12 s
+    public float repairStationPerSecond = 20.0F;   // stopped at a service station
+    public float fuelStationLitresPerSecond = 6.5F; // stopped at a service station
     public double serviceStationRange = 7.0;        // blocks from the station a stopped vehicle is serviced
     public float fuelCapacity = 100.0F;            // Eisenwolf tank, litres
     public float fuelPerMinuteDriving = 1.6F;      // ~1 hour flat out on a full tank
@@ -204,6 +204,21 @@ public class ModConfig {
             }
             if (cfg.refuelLitresPerSecond == 1.0F) {
                 cfg.refuelLitresPerSecond = 1.25F;
+            }
+        }
+        if (cfg.configVersion < 12) {
+            // 2.0.2: quicker repairs and refuelling everywhere
+            if (cfg.repairPerSecond == 1.5F) {
+                cfg.repairPerSecond = 2.0F;
+            }
+            if (cfg.refuelLitresPerSecond == 1.25F) {
+                cfg.refuelLitresPerSecond = 1.6F;
+            }
+            if (cfg.repairStationPerSecond == 15.0F) {
+                cfg.repairStationPerSecond = 20.0F;
+            }
+            if (cfg.fuelStationLitresPerSecond == 5.0F) {
+                cfg.fuelStationLitresPerSecond = 6.5F;
             }
         }
         cfg.configVersion = CURRENT_VERSION;
