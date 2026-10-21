@@ -59,7 +59,7 @@ public class GunLoopSound extends AbstractTickableSoundInstance {
             Minecraft mc = Minecraft.getInstance();
             if (mc.player != null && this.gun.isOperatedBy(mc.player)) {
                 t = ArtilleryClient.localTraverse(this.gun, mc.player, 1.0F);      // the operator hears their own aim at once
-                r = this.gun.elevationForRange(ArtilleryClient.localRange(this.gun, mc.player, 1.0F));
+                r = this.gun.shownElevation(ArtilleryClient.localRange(this.gun, mc.player, 1.0F));
             } else {
                 t = this.gun.getTraverse();
                 r = this.gun.elevVis;

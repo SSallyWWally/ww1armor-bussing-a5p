@@ -132,5 +132,6 @@
   "commands.exodus_vehicles.crater.is_on": "Artillery craters are ON (/exodusartillerycrater false to turn off)",
   "commands.exodus_vehicles.crater.is_off": "Artillery craters are OFF (/exodusartillerycrater true to turn on)",
   "gamerule.exodusArtilleryCrater": "Artillery craters",
-  "gamerule.exodusArtilleryCrater.description": "Shells from the Mörser 16 and the field gun dig craters"
+  "gamerule.exodusArtilleryCrater.description": "Shells from the Mörser 16 and the field gun dig craters",
+  "subtitles.exodus_vehicles.fk_move": "Field gun being moved"
 }

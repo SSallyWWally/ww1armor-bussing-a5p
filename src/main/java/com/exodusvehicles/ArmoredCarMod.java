@@ -54,7 +54,7 @@ public class ArmoredCarMod implements ModInitializer {
     public static Item FIELD_SHELL_ITEM;
     public static net.minecraft.world.level.block.Block FIELD_SHELL_PILE;
     public static Item FIELD_SHELL_PILE_ITEM;
-    public static SoundEvent FK_CREW, FK_CLOSE, FK_MID, FK_DISTANT, FK_FAR, FK_RELOAD;
+    public static SoundEvent FK_CREW, FK_CLOSE, FK_MID, FK_DISTANT, FK_FAR, FK_RELOAD, FK_MOVE;
     public static SoundEvent MORSER_CLOSE;
     public static SoundEvent MORSER_DISTANT;
     public static SoundEvent MORSER_MID;
@@ -169,6 +169,7 @@ public class ArmoredCarMod implements ModInitializer {
         FK_DISTANT = registerSound("fk_distant");
         FK_FAR = registerSound("fk_far");
         FK_RELOAD = registerSound("fk_reload");
+        FK_MOVE = registerSound("fk_move");
         com.exodusvehicles.artillery.ArtilleryRules.register();
         MORSER_CLOSE = registerSound("morser_close");
         MORSER_DISTANT = registerSound("morser_distant");

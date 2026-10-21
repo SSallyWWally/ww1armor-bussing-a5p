@@ -136,8 +136,7 @@ public final class ArtilleryClient {
         org.joml.Matrix4f m = ps.last().pose();
         com.mojang.blaze3d.vertex.VertexConsumer vc = ctx.consumers().getBuffer(net.minecraft.client.renderer.RenderType.lightning());
         int n = pts.size();
-        boolean sight = sightView();
-        for (int i = sight ? 2 : 0; i < n - 1; i++) {
+        for (int i = 0; i < n - 1; i++) {
             Vec3 a = pts.get(i), b = pts.get(i + 1);
             float fa = arcAlpha(i, n), fb = arcAlpha(i + 1, n);
             ribbon(vc, m, cam, a, b, fa, fb);
@@ -570,7 +569,9 @@ public final class ArtilleryClient {
                     if (s[i] != null) {
                         mc.getSoundManager().stop(s[i]);
                     }
-                    s[i] = new GunLoopSound(gun, i == 0 ? ArmoredCarMod.GUN_TRAVERSE : ArmoredCarMod.GUN_PUSH, kinds[i]);
+                    net.minecraft.sounds.SoundEvent ev = gun instanceof FieldGunEntity ? ArmoredCarMod.FK_MOVE
+                            : i == 0 ? ArmoredCarMod.GUN_TRAVERSE : ArmoredCarMod.GUN_PUSH;
+                    s[i] = new GunLoopSound(gun, ev, kinds[i]);
                     mc.getSoundManager().play(s[i]);
                 }
             }
@@ -616,7 +617,7 @@ public final class ArtilleryClient {
 
     public static void endTick(Minecraft mc) {
         sightZoomO = sightZoom;
-        float zt = zoomHeld && sightView() ? 2.6F : 1.0F;
+        float zt = zoomHeld && sightView() ? 2.0F : 1.0F;      // x2 scope
         sightZoom += (zt - sightZoom) * 0.4F;
         if (Math.abs(zt - sightZoom) < 0.01F) {
             sightZoom = zt;
@@ -777,14 +778,14 @@ public final class ArtilleryClient {
         if (gun instanceof FieldGunEntity fg) {
             float elev = localRange(fg, p, pt);
             if (mc.options.getCameraType().isFirstPerson()) {
-                // eye at the sight on the left of the breech, looking straight along the barrel
+                // eye at the panoramic sight's eyepiece, up over the shield on the left, looking along the barrel
                 double e = Math.toRadians(elev);
                 Vec3 bore = fg.boreDir(gunYaw, trav, elev);
                 Vec3 left = new Vec3(Math.cos(yaw), 0, Math.sin(yaw));
                 Vec3 up = new Vec3(Math.sin(yaw) * Math.sin(e), Math.cos(e), -Math.cos(yaw) * Math.sin(e));
                 double gy = Math.toRadians(gunYaw);
                 Vec3 trunnion = base.add(-Math.sin(gy) * fg.trunnionFwd(), fg.trunnionUp(), Math.cos(gy) * fg.trunnionFwd());
-                Vec3 eye = trunnion.add(bore.scale(-9.0 / 16.0)).add(up.scale(3.2 / 16.0)).add(left.scale(2.6 / 16.0));
+                Vec3 eye = trunnion.add(bore.scale(-8.0 / 16.0)).add(up.scale(13.4 / 16.0)).add(left.scale(2.6 / 16.0));
                 return new double[]{eye.x, eye.y, eye.z, gunYaw + trav, -elev};
             }
             Vec3 cam = base.add(Math.sin(yaw) * 4.6, fg.trunnionUp() + 1.9, -Math.cos(yaw) * 4.6);
@@ -830,19 +831,49 @@ public final class ArtilleryClient {
 
     // ------------------------------------------------------------------ HUD
 
+    private static final net.minecraft.resources.ResourceLocation FK_SCOPE = ArmoredCarMod.id("textures/gui/fk_scope.png");
+
+    /** Looking into the x2 panoramic sight: round eyepiece, black around it, a German-style chevron reticle. */
+    private static void drawScope(GuiGraphics g, int w, int h, float t) {
+        int cx = w / 2, cy = h / 2;
+        com.mojang.blaze3d.systems.RenderSystem.enableBlend();
+        com.mojang.blaze3d.systems.RenderSystem.defaultBlendFunc();
+        int size = (int) (h * Mth.lerp(t, 1.8F, 1.02F));        // the eyepiece closes in as you put your eye to it
+        int x0 = (w - size) / 2, y0 = (h - size) / 2;
+        g.setColor(1.0F, 1.0F, 1.0F, t);
+        g.blit(FK_SCOPE, x0, y0, size, size, 0.0F, 0.0F, 512, 512, 512, 512);
+        int black = ((int) (t * 255) << 24);
+        g.fill(0, 0, Math.max(0, x0), h, black);
+        g.fill(x0 + size, 0, w, h, black);
+        g.fill(Math.max(0, x0), 0, Math.min(w, x0 + size), Math.max(0, y0), black);
+        g.fill(Math.max(0, x0), y0 + size, Math.min(w, x0 + size), h, black);
+        g.setColor(1.0F, 1.0F, 1.0F, 1.0F);
+        int ink = ((int) (t * 235) << 24) | 0x101010;
+        int r = (int) (size * 0.43F);
+        // horizontal hairline broken at the centre, with range marks
+        g.fill(cx - r, cy, cx - 14, cy + 1, ink);
+        g.fill(cx + 14, cy, cx + r, cy + 1, ink);
+        for (int i = 1; i * 12 < r - 14; i++) {
+            int len = i % 5 == 0 ? 5 : 2;
+            g.fill(cx - 14 - i * 12, cy - len, cx - 13 - i * 12, cy + 1 + len, ink);
+            g.fill(cx + 13 + i * 12, cy - len, cx + 14 + i * 12, cy + 1 + len, ink);
+        }
+        // inverted V (the aiming chevron), its point on the line of the bore
+        for (int i = 0; i < 9; i++) {
+            g.fill(cx - i - 1, cy + i, cx - i + 1, cy + i + 1, ink);
+            g.fill(cx + i, cy + i, cx + i + 2, cy + i + 1, ink);
+        }
+        // a post from below up to the chevron
+        g.fill(cx, cy + 16, cx + 1, cy + r, ink);
+        com.mojang.blaze3d.systems.RenderSystem.disableBlend();
+    }
+
     private static void drawFieldGunHud(GuiGraphics g, Minecraft mc, FieldGunEntity gun, float pt, int w, int h) {
         int cx = w / 2, cy = h / 2;
         int white = 0xFFF0ECDC;
-        if (sightView()) {
-            // gun sight: a post with mil marks along a horizontal bar
-            g.fill(cx - 40, cy, cx - 4, cy + 1, white);
-            g.fill(cx + 4, cy, cx + 40, cy + 1, white);
-            for (int i = 1; i <= 4; i++) {
-                g.fill(cx - 4 - i * 9, cy - 2, cx - 3 - i * 9, cy + 3, white);
-                g.fill(cx + 3 + i * 9, cy - 2, cx + 4 + i * 9, cy + 3, white);
-            }
-            g.fill(cx, cy + 3, cx + 1, cy + 22, white);
-            g.fill(cx - 2, cy + 1, cx + 3, cy + 3, white);
+        float scoped = sightView() ? Mth.clamp((Mth.lerp(pt, sightZoomO, sightZoom) - 1.0F) / 1.0F, 0.0F, 1.0F) : 0.0F;
+        if (scoped > 0.02F) {
+            drawScope(g, w, h, scoped);
         } else {
             g.fill(cx - 7, cy, cx - 2, cy + 1, white);
             g.fill(cx + 2, cy, cx + 7, cy + 1, white);

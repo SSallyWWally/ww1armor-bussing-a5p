@@ -229,5 +229,9 @@
   "fk_reload": {
     "subtitle": "subtitles.exodus_vehicles.fk_reload",
     "sounds": []
+  },
+  "fk_move": {
+    "subtitle": "subtitles.exodus_vehicles.fk_move",
+    "sounds": []
   }
 }
