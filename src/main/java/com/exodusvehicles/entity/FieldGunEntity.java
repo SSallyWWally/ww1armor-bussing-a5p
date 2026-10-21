@@ -39,6 +39,7 @@ public class FieldGunEntity extends MorserEntity {
 
     /** Where it was deployed: it can be shuffled about this far from here before it has to be packed up again. */
     private Vec3 anchor;
+    private float anchorYaw;
     private int limitMsg;
 
     public FieldGunEntity(EntityType<? extends FieldGunEntity> type, Level level) {
@@ -94,35 +95,54 @@ public class FieldGunEntity extends MorserEntity {
     @Override
     protected void onDeployChanged(boolean deployed) {
         this.anchor = deployed ? this.position() : null;
+        this.anchorYaw = this.getYRot();
     }
 
+    private void limitMessage(Player op) {
+        if (this.limitMsg-- <= 0) {
+            op.displayClientMessage(net.minecraft.network.chat.Component.translatable("msg.exodus_vehicles.field_shift_limit"), true);
+            this.limitMsg = 30;
+        }
+    }
+
+    /**
+     * Deployed and manned: A / D swing the whole gun round on its wheels (trail across), W / S roll it back and forth.
+     * Both only so far from how it was dug in; past that it has to be packed up and deployed again.
+     */
     @Override
     protected double[] deployedShift(Player op) {
         ModConfig cfg = ModConfig.get();
-        double speed = cfg.fieldGunShiftSpeed;
-        double fwd = Math.signum(op.zza) * speed, right = -Math.signum(op.xxa) * speed;
-        if (fwd == 0 && right == 0) {
-            return new double[]{0, 0};
-        }
         if (this.anchor == null) {
             this.anchor = this.position();
+            this.anchorYaw = this.getYRot();
+        }
+        // swing (tilt the trail across)
+        if (op.xxa != 0) {
+            float step = (float) (-Math.signum(op.xxa) * cfg.fieldGunPivotSpeed);
+            float off = Mth.wrapDegrees(this.getYRot() + step - this.anchorYaw);
+            if (Math.abs(off) <= cfg.fieldGunPivotLimit) {
+                this.setYRot(this.getYRot() + step);
+            } else {
+                limitMessage(op);
+            }
+        }
+        // back and forth
+        double fwd = Math.signum(op.zza) * cfg.fieldGunShiftSpeed;
+        if (fwd == 0) {
+            return new double[]{0, 0};
         }
         double yaw = Math.toRadians(this.getYRot());
-        double mx = -Math.sin(yaw) * fwd - Math.cos(yaw) * right, mz = Math.cos(yaw) * fwd - Math.sin(yaw) * right;
+        double mx = -Math.sin(yaw) * fwd, mz = Math.cos(yaw) * fwd;
         double nx = this.getX() + mx - this.anchor.x, nz = this.getZ() + mz - this.anchor.z;
         double r = cfg.fieldGunShiftRadius;
         if (nx * nx + nz * nz > r * r) {
-            // as far as it goes dug in: pack up to move it further
-            if (this.limitMsg-- <= 0) {
-                op.displayClientMessage(net.minecraft.network.chat.Component.translatable("msg.exodus_vehicles.field_shift_limit"), true);
-                this.limitMsg = 30;
-            }
+            limitMessage(op);
             double cx = this.getX() - this.anchor.x, cz = this.getZ() - this.anchor.z;
             if (cx * mx + cz * mz > 0) {
-                return new double[]{0, 0};     // only moves back toward where it was dug in
+                return new double[]{0, 0};     // only back toward where it was dug in
             }
         }
-        return new double[]{fwd, right};
+        return new double[]{fwd, 0};
     }
 
     @Override
@@ -130,6 +150,7 @@ public class FieldGunEntity extends MorserEntity {
         super.readAdditionalSaveData(tag);
         if (tag.contains("AnchorX")) {
             this.anchor = new Vec3(tag.getDouble("AnchorX"), tag.getDouble("AnchorY"), tag.getDouble("AnchorZ"));
+            this.anchorYaw = tag.getFloat("AnchorYaw");
         }
     }
 
@@ -140,6 +161,7 @@ public class FieldGunEntity extends MorserEntity {
             tag.putDouble("AnchorX", this.anchor.x);
             tag.putDouble("AnchorY", this.anchor.y);
             tag.putDouble("AnchorZ", this.anchor.z);
+            tag.putFloat("AnchorYaw", this.anchorYaw);
         }
     }
 

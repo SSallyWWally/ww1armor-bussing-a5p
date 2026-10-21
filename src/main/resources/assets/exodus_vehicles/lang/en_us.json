@@ -137,5 +137,5 @@
   "hud.exodus_vehicles.field_kill_0": "They're down",
   "hud.exodus_vehicles.field_kill_1": "Successful hit",
   "hud.exodus_vehicles.field_kill_2": "That's another",
-  "msg.exodus_vehicles.field_shift_limit": "That's as far as it goes deployed - pack up (sneak + right-click / P) to move it further"
+  "msg.exodus_vehicles.field_shift_limit": "That's as far as it goes dug in - pack up (sneak + right-click / P) to move it further"
 }
