@@ -358,7 +358,7 @@ public final class ShellManager {
             double d = Math.sqrt(p.distanceToSqr(c));
             if (d >= IMPACT_RADIUS && d < 384) {
                 level.sendParticles(p, ParticleTypes.CAMPFIRE_SIGNAL_SMOKE, true, c.x, c.y + 1.0, c.z, 6, 1.5, 1.0, 1.5, 0.03);
-                level.sendParticles(p, ParticleTypes.EXPLOSION_EMITTER, true, c.x, c.y + 0.5, c.z, 1, 0.0, 0.0, 0.0, 0.0);
+                level.sendParticles(p, field ? ParticleTypes.EXPLOSION : ParticleTypes.EXPLOSION_EMITTER, true, c.x, c.y + 0.5, c.z, 1, 0.0, 0.0, 0.0, 0.0);
             }
             if (d < IMPACT_RADIUS || p == owner) {
                 ServerPlayNetworking.send(p, burst);

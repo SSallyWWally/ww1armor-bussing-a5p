@@ -89,9 +89,9 @@ public class FieldGunModel {
                 .texOffs(160, 0).addBox(-1.8F, 1.4F, -16F, 3.6F, 3.2F, 25F)
                 .texOffs(194, 68).addBox(2F, -2F, -1F, 1.2F, 1.4F, 7F)
                 .texOffs(230, 90).addBox(2.2F, -0.6F, 3F, 0.8F, 1.6F, 1F)
-                .texOffs(166, 68).addBox(2.2F, -12.4F, 3F, 0.8F, 10.4F, 1F)
                 , PartPose.offsetAndRotation(0F, -3F, 0F, 0F, 0F, 0F));
         p5.addOrReplaceChild("scope", CubeListBuilder.create()
+                .texOffs(166, 68).addBox(2.2F, -12.4F, 3F, 0.8F, 10.4F, 1F)
                 .texOffs(194, 68).addBox(1.8F, -14.4F, -0.5F, 1.6F, 2F, 6.5F)
                 .texOffs(104, 90).addBox(2F, -15.6F, -0.5F, 1.2F, 1.2F, 2.5F)
                 .texOffs(234, 90).addBox(2.1F, -14.2F, 6F, 1F, 1.6F, 1F)

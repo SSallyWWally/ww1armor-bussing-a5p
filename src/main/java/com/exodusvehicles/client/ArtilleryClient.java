@@ -327,11 +327,10 @@ public final class ArtilleryClient {
         float k = Math.max(0.25F, ModConfig.get().shellEffectScale);
         java.util.Random r = new java.util.Random();
         lvl.addAlwaysVisibleParticle(ParticleTypes.FLASH, true, c.x, c.y + 0.6, c.z, 0, 0, 0);
-        lvl.addAlwaysVisibleParticle(ParticleTypes.EXPLOSION_EMITTER, true, c.x, c.y + 0.4, c.z, 0, 0, 0);
-        int n = (int) (8 * k);
+        int n = Math.max(2, (int) (4 * k));
         for (int i = 0; i < n; i++) {
-            lvl.addAlwaysVisibleParticle(ParticleTypes.EXPLOSION, true, c.x + (r.nextDouble() - 0.5) * 2.5 * k,
-                    c.y + r.nextDouble() * 1.8 * k, c.z + (r.nextDouble() - 0.5) * 2.5 * k, 0, 0, 0);
+            lvl.addAlwaysVisibleParticle(ParticleTypes.EXPLOSION, true, c.x + (r.nextDouble() - 0.5) * 1.2,
+                    c.y + 0.3 + r.nextDouble() * 0.9, c.z + (r.nextDouble() - 0.5) * 1.2, 0, 0, 0);
         }
         net.minecraft.world.level.block.state.BlockState ground = lvl.getBlockState(BlockPos.containing(c.x, c.y - 1.0, c.z));
         if (ground.isAir()) {
@@ -346,10 +345,10 @@ public final class ArtilleryClient {
             lvl.addAlwaysVisibleParticle(dirt, true, c.x + (r.nextDouble() - 0.5), c.y + r.nextDouble() * 0.5, c.z + (r.nextDouble() - 0.5),
                     Math.cos(a) * sp * 0.5 * k, (0.5 + r.nextDouble() * 0.8) * k, Math.sin(a) * sp * 0.5 * k);
         }
-        n = (int) (16 * k);
+        n = (int) (10 * k);
         for (int i = 0; i < n; i++) {
-            lvl.addAlwaysVisibleParticle(ParticleTypes.LARGE_SMOKE, true, c.x + (r.nextDouble() - 0.5) * 3 * k,
-                    c.y + 0.3 + r.nextDouble() * 2 * k, c.z + (r.nextDouble() - 0.5) * 3 * k,
+            lvl.addAlwaysVisibleParticle(ParticleTypes.LARGE_SMOKE, true, c.x + (r.nextDouble() - 0.5) * 1.8,
+                    c.y + 0.3 + r.nextDouble() * 1.2, c.z + (r.nextDouble() - 0.5) * 1.8,
                     (r.nextDouble() - 0.5) * 0.05, 0.03 + r.nextDouble() * 0.05, (r.nextDouble() - 0.5) * 0.05);
         }
         for (int i = 0; i < Math.max(2, (int) (4 * k)); i++) {
@@ -839,7 +838,7 @@ public final class ArtilleryClient {
         int cx = w / 2, cy = h / 2;
         com.mojang.blaze3d.systems.RenderSystem.enableBlend();
         com.mojang.blaze3d.systems.RenderSystem.defaultBlendFunc();
-        int size = (int) (h * Mth.lerp(t, 1.8F, 1.02F));        // the eyepiece closes in as you put your eye to it
+        int size = (int) (h * Mth.lerp(t, 1.6F, 0.78F));        // the eyepiece closes in as you put your eye to it
         int x0 = (w - size) / 2, y0 = (h - size) / 2;
         g.setColor(1.0F, 1.0F, 1.0F, t);
         g.blit(FK_SCOPE, x0, y0, size, size, 0.0F, 0.0F, 512, 512, 512, 512);
