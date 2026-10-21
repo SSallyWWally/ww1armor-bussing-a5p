@@ -197,6 +197,7 @@ public final class ArtilleryClient {
         ClientPlayNetworking.registerGlobalReceiver(com.exodusvehicles.network.HitMarkerPayload.TYPE, (p, ctx) -> {
             hitTicks = 50;
             hitKill = hitKill && hitTicks > 0 || p.kill();
+            hitLine = p.line();
             ctx.client().getSoundManager().play(SimpleSoundInstance.forUI(net.minecraft.sounds.SoundEvents.EXPERIENCE_ORB_PICKUP, 0.6F, 0.4F));
         });
         ClientPlayNetworking.registerGlobalReceiver(ShellFiredPayload.TYPE, (p, ctx) -> {
@@ -357,7 +358,7 @@ public final class ArtilleryClient {
         }
     }
 
-    private static int hitTicks;
+    private static int hitTicks, hitLine = -1;
     private static boolean hitKill;
 
     // dirt thrown onto the screen by a close hit
@@ -958,7 +959,8 @@ public final class ArtilleryClient {
             // "Successful hit" in red, low on the screen, fading out
             float a = Math.min(1.0F, (hitTicks - pt) / 15.0F);
             int alpha = Math.max(8, (int) (a * 255)) << 24;
-            Component msg = Component.translatable(hitKill ? "hud.exodus_vehicles.hit_kill" : "hud.exodus_vehicles.hit");
+            Component msg = Component.translatable(hitLine >= 0 ? "hud.exodus_vehicles.field_kill_" + hitLine
+                    : hitKill ? "hud.exodus_vehicles.hit_kill" : "hud.exodus_vehicles.hit");
             int tw = mc.font.width(msg);
             g.pose().pushPose();
             g.pose().translate(w / 2.0F, h - 78, 0);

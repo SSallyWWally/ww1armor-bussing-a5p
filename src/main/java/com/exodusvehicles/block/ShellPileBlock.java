@@ -30,39 +30,44 @@ import org.jetbrains.annotations.Nullable;
 import java.util.function.Supplier;
 
 /**
- * A stack of shells (up to 21: rows of 6, 5, 4, 3, 2, 1). Right-click takes one off the top, right-click with a shell
- * puts one back; the last one taken clears the pile. Broken, it drops the shells it still holds.
+ * A stack of shells lying with their noses towards whoever placed it. Right-click takes one off the top, right-click
+ * with a shell puts one back; the last one taken clears the pile. Broken, it drops the shells it still holds.
  * <p>
- * The 21 cm pile is long and takes a 2x2 footprint: the head block holds the count and draws the pile, the other
- * three are solid placeholders so piles butt up against each other evenly instead of overlapping. Clicking or breaking
- * any of the four acts on the whole pile. The 7.7 cm pile fits in one block.
+ * The 21 cm pile is two blocks wide (28 shells: rows of 7 down to 1): the head block holds the count and draws the
+ * pile, the block to its right is a solid placeholder so piles sit side by side evenly instead of overlapping.
+ * Clicking or breaking either acts on the whole pile. The 7.7 cm pile fits in one block (21: rows of 6 down to 1).
  */
 public class ShellPileBlock extends Block {
-    public static final int MAX = 21;
+    public static final int MAX = 28;
     public static final IntegerProperty SHELLS = IntegerProperty.create("shells", 1, MAX);
     public static final DirectionProperty FACING = BlockStateProperties.HORIZONTAL_FACING;
-    /** 0 = head (holds the count, draws the pile), 1 = right, 2 = forward, 3 = right + forward. */
-    public static final IntegerProperty PART = IntegerProperty.create("part", 0, 3);
-    private static final int[] ROW_ENDS = {6, 11, 15, 18, 20, 21};
+    /** 0 = head (holds the count, draws the pile), 1 = the block to its right. */
+    public static final IntegerProperty PART = IntegerProperty.create("part", 0, 1);
+    private static final int[] BIG_ROWS = {7, 13, 18, 22, 25, 27, 28};
+    private static final int[] SMALL_ROWS = {6, 11, 15, 18, 20, 21};
 
     private final boolean big;
     private final Supplier<Item> shell;
     private final VoxelShape[] shapes = new VoxelShape[MAX + 1];
+    /** Shells this pile holds when full. */
+    private final int capacity;
 
     public ShellPileBlock(Properties properties, boolean big, Supplier<Item> shell) {
         super(properties);
         this.big = big;
         this.shell = shell;
-        double d = big ? 4.6 : 2.3;
+        double d = big ? 4.2 : 2.3;
+        int[] rowEnds = big ? BIG_ROWS : SMALL_ROWS;
+        this.capacity = rowEnds[rowEnds.length - 1];
         for (int n = 1; n <= MAX; n++) {
             int rows = 0;
-            while (rows < ROW_ENDS.length && ROW_ENDS[rows] < n) {
+            while (rows < rowEnds.length - 1 && rowEnds[rows] < n) {
                 rows++;
             }
             double top = Math.min(24.0, d + rows * d * 0.866);
             this.shapes[n] = big ? Block.box(0, 0, 0, 16, top, 16) : Block.box(1, 0, 1, 15, top, 15);
         }
-        BlockState def = this.stateDefinition.any().setValue(SHELLS, MAX).setValue(FACING, Direction.NORTH);
+        BlockState def = this.stateDefinition.any().setValue(SHELLS, this.capacity).setValue(FACING, Direction.NORTH);
         if (big) {
             def = def.setValue(PART, 0);
         }
@@ -79,14 +84,7 @@ public class ShellPileBlock extends Block {
     // ------------------------------------------------------------------ multiblock layout
 
     private static BlockPos offset(BlockPos head, Direction facing, int part) {
-        BlockPos p = head;
-        if ((part & 1) != 0) {
-            p = p.relative(facing.getClockWise());
-        }
-        if ((part & 2) != 0) {
-            p = p.relative(facing);
-        }
-        return p;
+        return part == 1 ? head.relative(facing.getClockWise()) : head;
     }
 
     private BlockPos headOf(BlockPos pos, BlockState state) {
@@ -95,14 +93,7 @@ public class ShellPileBlock extends Block {
         }
         Direction f = state.getValue(FACING);
         int part = state.getValue(PART);
-        BlockPos p = pos;
-        if ((part & 1) != 0) {
-            p = p.relative(f.getCounterClockWise());
-        }
-        if ((part & 2) != 0) {
-            p = p.relative(f.getOpposite());
-        }
-        return p;
+        return part == 1 ? pos.relative(f.getCounterClockWise()) : pos;
     }
 
     @Nullable
@@ -112,7 +103,7 @@ public class ShellPileBlock extends Block {
         BlockState s = this.defaultBlockState().setValue(FACING, f);
         if (this.big) {
             Level level = ctx.getLevel();
-            for (int part = 1; part < 4; part++) {
+            for (int part = 1; part < 2; part++) {
                 BlockPos p = offset(ctx.getClickedPos(), f, part);
                 if (!level.getBlockState(p).canBeReplaced(ctx) || !level.getWorldBorder().isWithinBounds(p)) {
                     return null;     // no room for the whole pile
@@ -126,7 +117,7 @@ public class ShellPileBlock extends Block {
     public void setPlacedBy(Level level, BlockPos pos, BlockState state, @Nullable LivingEntity placer, ItemStack stack) {
         super.setPlacedBy(level, pos, state, placer, stack);
         if (this.big && !level.isClientSide) {
-            for (int part = 1; part < 4; part++) {
+            for (int part = 1; part < 2; part++) {
                 level.setBlock(offset(pos, state.getValue(FACING), part), state.setValue(PART, part), 3);
             }
         }
@@ -166,7 +157,7 @@ public class ShellPileBlock extends Block {
             return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
         }
         BlockState hs = level.getBlockState(h);
-        if (hs.getValue(SHELLS) >= MAX) {
+        if (hs.getValue(SHELLS) >= this.capacity) {
             return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
         }
         if (!level.isClientSide) {
@@ -204,7 +195,7 @@ public class ShellPileBlock extends Block {
 
     private void removeAll(Level level, BlockPos head, BlockState hs) {
         if (this.big) {
-            for (int part = 1; part < 4; part++) {
+            for (int part = 1; part < 2; part++) {
                 BlockPos p = offset(head, hs.getValue(FACING), part);
                 BlockState ps = level.getBlockState(p);
                 if (ps.is(this) && ps.getValue(PART) == part) {
@@ -240,7 +231,7 @@ public class ShellPileBlock extends Block {
         }
         BlockPos head = headOf(pos, state);
         Direction f = state.getValue(FACING);
-        for (int part = 0; part < 4; part++) {
+        for (int part = 0; part < 2; part++) {
             BlockPos p = offset(head, f, part);
             if (p.equals(pos)) {
                 continue;

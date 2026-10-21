@@ -133,5 +133,8 @@
   "commands.exodus_vehicles.crater.is_off": "Artillery craters are OFF (/exodusartillerycrater true to turn on)",
   "gamerule.exodusArtilleryCrater": "Artillery craters",
   "gamerule.exodusArtilleryCrater.description": "Shells from the Mörser 16 and the field gun dig craters",
-  "subtitles.exodus_vehicles.fk_move": "Field gun being moved"
+  "subtitles.exodus_vehicles.fk_move": "Field gun being moved",
+  "hud.exodus_vehicles.field_kill_0": "They're down",
+  "hud.exodus_vehicles.field_kill_1": "Successful hit",
+  "hud.exodus_vehicles.field_kill_2": "That's another"
 }

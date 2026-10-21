@@ -263,9 +263,10 @@ public final class ShellManager {
                     living.invulnerableTime = 0;
                 }
             }
-            if (dmg > 0.5F && e.hurt(src, dmg) && e instanceof ServerPlayer && e != owner) {
+            if (dmg > 0.5F && e.hurt(src, dmg) && e != owner
+                    && (e instanceof ServerPlayer || (field && e instanceof LivingEntity))) {
                 hit = true;
-                kill |= ((ServerPlayer) e).isDeadOrDying();
+                kill |= ((LivingEntity) e).isDeadOrDying();
             }
             double kb = knock * f * (0.3 + 0.7 * seen);
             if (e instanceof LivingEntity living) {
@@ -332,7 +333,8 @@ public final class ShellManager {
         }
 
         if (hit && owner != null) {
-            ServerPlayNetworking.send(owner, new com.exodusvehicles.network.HitMarkerPayload(kill));
+            // field gun kills get a gun crew's call-out
+            ServerPlayNetworking.send(owner, new com.exodusvehicles.network.HitMarkerPayload(kill, field && kill ? rnd.nextInt(3) : -1));
         }
 
         // ---- craters (game rule exodusArtilleryCrater); never inside spawn protection or where the firing player may not build
