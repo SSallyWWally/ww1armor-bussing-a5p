@@ -661,6 +661,7 @@ public class MorserEntity extends Entity implements Repairable {
                 if (deploy) {
                     this.entityData.set(DATA_TRAV, 0.0F);
                 }
+                onDeployChanged(deploy);
                 for (Entity p : this.getPassengers()) {
                     this.positionRider(p);
                 }
@@ -702,10 +703,14 @@ public class MorserEntity extends Entity implements Repairable {
         if (isTowed()) {
             tickTow();
         } else {
-            double fwd = 0, turn = 0;
+            double fwd = 0, turn = 0, right = 0;
             if (!isDeployed() && getWork() == 0 && op != null) {
                 fwd = op.zza * 0.05;            // manhandling: walking pace at best
                 turn = op.xxa * 1.2;
+            } else if (isDeployed() && getWork() == 0 && op != null) {
+                double[] shift = deployedShift(op);       // field gun: shuffled a little without packing up
+                fwd = shift[0];
+                right = shift[1];
             }
             if (turn != 0) {
                 this.setYRot(this.getYRot() - (float) turn);
@@ -713,9 +718,17 @@ public class MorserEntity extends Entity implements Repairable {
             double yaw = Math.toRadians(this.getYRot());
             Vec3 dm = this.getDeltaMovement();
             double vy = this.onGround() ? -0.04 : (dm.y - 0.08) * 0.98;
-            this.setDeltaMovement(-Math.sin(yaw) * fwd, vy, Math.cos(yaw) * fwd);
+            this.setDeltaMovement(-Math.sin(yaw) * fwd - Math.cos(yaw) * right, vy, Math.cos(yaw) * fwd - Math.sin(yaw) * right);
             this.move(MoverType.SELF, this.getDeltaMovement());
         }
+    }
+
+    /** Deployed and manned: {forward, right} movement this tick (the Mörser stays put). */
+    protected double[] deployedShift(Player op) {
+        return new double[]{0.0, 0.0};
+    }
+
+    protected void onDeployChanged(boolean deployed) {
     }
 
     /** Reload sounds through the reload (called each tick with ticks left). */

@@ -37,6 +37,10 @@ public class FieldGunEntity extends MorserEntity {
     /** Bore axis sits a little above the trunnions. */
     public static final double BORE_UP = 0.6 / 16.0;
 
+    /** Where it was deployed: it can be shuffled about this far from here before it has to be packed up again. */
+    private Vec3 anchor;
+    private int limitMsg;
+
     public FieldGunEntity(EntityType<? extends FieldGunEntity> type, Level level) {
         super(type, level);
         this.elevVis = this.elevVisO = 0.0F;
@@ -83,6 +87,60 @@ public class FieldGunEntity extends MorserEntity {
     @Override
     protected void updateAim(Player op) {
         setAim(elevationForPitch(op.getXRot()));
+    }
+
+    // ------------------------------------------------------------------ shuffling it about while deployed
+
+    @Override
+    protected void onDeployChanged(boolean deployed) {
+        this.anchor = deployed ? this.position() : null;
+    }
+
+    @Override
+    protected double[] deployedShift(Player op) {
+        ModConfig cfg = ModConfig.get();
+        double speed = cfg.fieldGunShiftSpeed;
+        double fwd = Math.signum(op.zza) * speed, right = -Math.signum(op.xxa) * speed;
+        if (fwd == 0 && right == 0) {
+            return new double[]{0, 0};
+        }
+        if (this.anchor == null) {
+            this.anchor = this.position();
+        }
+        double yaw = Math.toRadians(this.getYRot());
+        double mx = -Math.sin(yaw) * fwd - Math.cos(yaw) * right, mz = Math.cos(yaw) * fwd - Math.sin(yaw) * right;
+        double nx = this.getX() + mx - this.anchor.x, nz = this.getZ() + mz - this.anchor.z;
+        double r = cfg.fieldGunShiftRadius;
+        if (nx * nx + nz * nz > r * r) {
+            // as far as it goes dug in: pack up to move it further
+            if (this.limitMsg-- <= 0) {
+                op.displayClientMessage(net.minecraft.network.chat.Component.translatable("msg.exodus_vehicles.field_shift_limit"), true);
+                this.limitMsg = 30;
+            }
+            double cx = this.getX() - this.anchor.x, cz = this.getZ() - this.anchor.z;
+            if (cx * mx + cz * mz > 0) {
+                return new double[]{0, 0};     // only moves back toward where it was dug in
+            }
+        }
+        return new double[]{fwd, right};
+    }
+
+    @Override
+    protected void readAdditionalSaveData(net.minecraft.nbt.CompoundTag tag) {
+        super.readAdditionalSaveData(tag);
+        if (tag.contains("AnchorX")) {
+            this.anchor = new Vec3(tag.getDouble("AnchorX"), tag.getDouble("AnchorY"), tag.getDouble("AnchorZ"));
+        }
+    }
+
+    @Override
+    protected void addAdditionalSaveData(net.minecraft.nbt.CompoundTag tag) {
+        super.addAdditionalSaveData(tag);
+        if (this.anchor != null && isDeployed()) {
+            tag.putDouble("AnchorX", this.anchor.x);
+            tag.putDouble("AnchorY", this.anchor.y);
+            tag.putDouble("AnchorZ", this.anchor.z);
+        }
     }
 
     // ------------------------------------------------------------------ ballistics (shared by client and server)

@@ -94,6 +94,9 @@ public class ModConfig {
     public float fieldGunSpread = 0.35F;
     public int fieldGunReloadTicks = 110;           // 5.5 s
     public int fieldGunDeployTicks = 50;            // 2.5 s
+    /** Deployed, the gunner can shuffle it (WASD) this far from where it was dug in before it must be packed up. */
+    public double fieldGunShiftRadius = 4.0;
+    public double fieldGunShiftSpeed = 0.035;
     public float fieldShellDamage = 34.0F;          // near miss, at the burst, falling to 0 at the radius
     public float fieldShellBlastRadius = 4.5F;
     public double fieldShellKnockback = 1.1;

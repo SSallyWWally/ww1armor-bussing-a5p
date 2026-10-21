@@ -70,7 +70,7 @@ public class GunLoopSound extends AbstractTickableSoundInstance {
         } else {
             double dx = this.gun.getX() - this.px, dz = this.gun.getZ() - this.pz;
             float dyaw = Math.abs(this.gun.getYRot() - this.pyaw);
-            busy = !this.gun.isDeployed() && !this.gun.isTowed() && this.gun.tickCount > 2
+            busy = !this.gun.isTowed() && this.gun.tickCount > 2
                     && (dx * dx + dz * dz > 1.0E-4 || dyaw > 0.05F);
             this.px = this.gun.getX();
             this.pz = this.gun.getZ();
