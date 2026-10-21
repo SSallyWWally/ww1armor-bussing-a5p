@@ -778,14 +778,14 @@ public final class ArtilleryClient {
         if (gun instanceof FieldGunEntity fg) {
             float elev = localRange(fg, p, pt);
             if (mc.options.getCameraType().isFirstPerson()) {
-                // eye at the panoramic sight's eyepiece, up over the shield on the left, looking along the barrel
+                // eye at the panoramic sight's eyepiece, low on the left behind the shield's sighting window
                 double e = Math.toRadians(elev);
                 Vec3 bore = fg.boreDir(gunYaw, trav, elev);
                 Vec3 left = new Vec3(Math.cos(yaw), 0, Math.sin(yaw));
                 Vec3 up = new Vec3(Math.sin(yaw) * Math.sin(e), Math.cos(e), -Math.cos(yaw) * Math.sin(e));
                 double gy = Math.toRadians(gunYaw);
                 Vec3 trunnion = base.add(-Math.sin(gy) * fg.trunnionFwd(), fg.trunnionUp(), Math.cos(gy) * fg.trunnionFwd());
-                Vec3 eye = trunnion.add(bore.scale(-8.0 / 16.0)).add(up.scale(13.4 / 16.0)).add(left.scale(2.6 / 16.0));
+                Vec3 eye = trunnion.add(bore.scale(-4.0 / 16.0)).add(up.scale(4.5 / 16.0)).add(left.scale(5.5 / 16.0));
                 return new double[]{eye.x, eye.y, eye.z, gunYaw + trav, -elev};
             }
             Vec3 cam = base.add(Math.sin(yaw) * 4.6, fg.trunnionUp() + 1.9, -Math.cos(yaw) * 4.6);
