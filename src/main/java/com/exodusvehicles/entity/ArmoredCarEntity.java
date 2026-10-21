@@ -360,6 +360,20 @@ public class ArmoredCarEntity extends Entity implements Repairable {
         return ModConfig.get().maxHealth;
     }
 
+    /** A shell hit straight on the health (no armour filter). Returns true if it wrecked the vehicle. */
+    public boolean shellHit(float amount) {
+        if (this.level().isClientSide || isWrecked() || this.isRemoved() || amount <= 0.0F) {
+            return false;
+        }
+        setHealth(getHealth() - amount);
+        this.markHurt();
+        if (getHealth() <= 0.0F) {
+            destroy();
+            return true;
+        }
+        return false;
+    }
+
     public boolean isWrecked() {
         return this.entityData.get(DATA_WRECKED);
     }

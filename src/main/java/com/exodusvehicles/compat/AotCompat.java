@@ -112,6 +112,47 @@ public final class AotCompat {
         return Optional.ofNullable(best);
     }
 
+    /** Distance from point p to the segment a-b. */
+    private static double segDist(Vec3 p, Vec3 a, Vec3 b) {
+        Vec3 ab = b.subtract(a);
+        double l2 = ab.lengthSqr();
+        double t = l2 < 1.0E-9 ? 0.0 : Math.max(0.0, Math.min(1.0, p.subtract(a).dot(ab) / l2));
+        return p.distanceTo(a.add(ab.scale(t)));
+    }
+
+    /**
+     * A field-gun round flying from..to this tick: any nape it passes within napeReach of is a kill, an eye on its path
+     * is put out, and limbs on its path are torn off. Cheap when no titan is about (one entity query).
+     */
+    public static void alongPath(ServerLevel level, @Nullable Entity owner, Entity gun, Vec3 from, Vec3 to, DamageSource src,
+                                 double napeReach, double limbReach) {
+        if (!init()) {
+            return;
+        }
+        try {
+            AABB box = new AABB(from, to).inflate(napeReach + 2.0);
+            java.util.List<Entity> napes = level.getEntities((Entity) null, box.inflate(14.0), AotCompat::isNape);
+            if (napes.isEmpty()) {
+                return;      // no titan anywhere near the round's path this tick
+            }
+            for (Entity e : napes) {
+                if (segDist(e.getBoundingBox().getCenter(), from, to) <= napeReach + e.getBbWidth() * 0.5) {
+                    call(hitLethal, e, src);
+                }
+            }
+            for (Entity e : level.getEntities((Entity) null, new AABB(from, to).inflate(1.5), AotCompat::isEye)) {
+                if (e.getBoundingBox().inflate(0.6).clip(from, to).isPresent()) {
+                    DamageSource eyeSrc = owner instanceof net.minecraft.world.entity.LivingEntity le
+                            ? level.damageSources().mobProjectile(gun, le) : src;
+                    e.hurt(eyeSrc, 20.0F);
+                }
+            }
+            call(limbsShot, level, from, to, limbReach);
+        } catch (Throwable t) {
+            // never let a foreign mod's hiccup take the server down
+        }
+    }
+
     /** A heavy shell striking at 'point' moving along 'dir' (unit). 'hit' = the entity it struck, if any. */
     public static void shellImpact(ServerLevel level, @Nullable Entity owner, @Nullable Entity hit, Vec3 point, Vec3 dir,
                                    DamageSource src, float strength, double limbReach, double napeKillRadius) {

@@ -83,7 +83,7 @@ public class MorserEntity extends Entity implements Repairable {
     // client visuals
     public float wheelRot, wheelRotO;
     public float recoil, recoilO;
-    public float elevVis = TRAVEL_ELEV, elevVisO = TRAVEL_ELEV;
+    public float elevVis = TRAVEL_ELEV, elevVisO = TRAVEL_ELEV;     // (field gun: settles to its own travel angle)
 
     public MorserEntity(EntityType<? extends MorserEntity> type, Level level) {
         super(type, level);
@@ -93,7 +93,7 @@ public class MorserEntity extends Entity implements Repairable {
     @Override
     protected void defineSynchedData(SynchedEntityData.Builder b) {
         ModConfig cfg = ModConfig.get();
-        b.define(DATA_HEALTH, cfg.morserMaxHealth);
+        b.define(DATA_HEALTH, getMaxHealth());
         b.define(DATA_DEPLOYED, false);
         b.define(DATA_WORK, 0);
         b.define(DATA_RELOAD, 0);
@@ -113,6 +113,32 @@ public class MorserEntity extends Entity implements Repairable {
 
     public float getHealth() { return this.entityData.get(DATA_HEALTH); }
     public float getMaxHealth() { return ModConfig.get().morserMaxHealth; }
+    protected final void setHealthRaw(float h) { this.entityData.set(DATA_HEALTH, h); }
+    protected final float dispMinRaw() { return this.entityData.get(DATA_DISP_MIN); }
+    protected final float dispMaxRaw() { return this.entityData.get(DATA_DISP_MAX); }
+
+    /** A shell hit straight on the health (no armour, no multipliers). Returns true if it broke the gun. */
+    public boolean shellHit(float amount) {
+        if (this.isRemoved() || amount <= 0.0F) {
+            return false;
+        }
+        this.entityData.set(DATA_HEALTH, getHealth() - amount);
+        this.markHurt();
+        if (getHealth() <= 0.0F) {
+            breakUp();
+            return true;
+        }
+        return false;
+    }
+
+    protected void breakUp() {
+        this.ejectPassengers();
+        if (this.level() instanceof ServerLevel server) {
+            server.explode(this, this.getX(), this.getY() + 1.2, this.getZ(), 2.5F, Level.ExplosionInteraction.NONE);
+            server.sendParticles(ParticleTypes.LARGE_SMOKE, this.getX(), this.getY() + 1.5, this.getZ(), 30, 1.5, 1.0, 1.5, 0.05);
+        }
+        this.discard();
+    }
 
     @Override
     public boolean repairBy(float amount) {
@@ -133,6 +159,7 @@ public class MorserEntity extends Entity implements Repairable {
     public float maxRange() { return this.entityData.get(DATA_MAX_RANGE); }
     public float traverseLimit() { return this.entityData.get(DATA_TRAV_LIMIT); }
     public int deployTicks() { return Math.max(1, ModConfig.get().artilleryDeployTicks); }
+    protected float travelElevation() { return TRAVEL_ELEV; }
 
     /** Scatter radius at a given range: grows from the minimum to the maximum across the gun's range band. */
     public float dispersionAt(float range) {
@@ -198,7 +225,51 @@ public class MorserEntity extends Entity implements Repairable {
 
     /** Barrel elevation shown for a range. */
     public float elevationForRange(float range) {
-        return (float) arcElevation(range, minRange(), maxRange(), this.getY() + TRUNNION_UP, ceiling());
+        return (float) arcElevation(range, minRange(), maxRange(), this.getY() + trunnionUp(), ceiling());
+    }
+
+    // ------------------------------------------------------------------ per-gun specification (overridden by the field gun)
+
+    public double trunnionUp() { return TRUNNION_UP; }
+    public double trunnionFwd() { return TRUNNION_FWD; }
+    public double barrelLength() { return BARREL; }
+    public double gunnerRight() { return GUNNER_RIGHT; }
+    public double gunnerFwd() { return GUNNER_FWD; }
+    public double trailLength() { return TRAIL; }
+    public double wheelRadius() { return WHEEL_RADIUS; }
+    /** Breech corner the gunner's hand rests on: {back from the trunnions, up from the bore, to the left} in blocks. */
+    public double[] breechOffset() { return new double[]{14.0 / 16.0, 1.2 / 16.0, 4.6 / 16.0}; }
+    /** Direct fire (field gun: aim the barrel itself) rather than lobbing onto a range set by the mouse. */
+    public boolean directFire() { return false; }
+    protected net.minecraft.world.item.Item gunItem() { return ArmoredCarMod.MORSER_ITEM; }
+    protected net.minecraft.world.item.Item shellItem() { return ArmoredCarMod.SHELL_ITEM; }
+    protected String noShellKey() { return directFire() ? "msg.exodus_vehicles.field_no_shell" : "msg.exodus_vehicles.morser_no_shell"; }
+    protected int reloadTicksCfg() { return ModConfig.get().artilleryReloadTicks; }
+    /** Barrel elevation to draw for the current aim value (range for the Mörser, elevation for direct fire). */
+    public float shownElevation(float aim) { return elevationForRange(aim); }
+
+    /** Settings the clients aim and draw with. */
+    protected void refreshSettings(ModConfig cfg) {
+        setAimSettings((float) cfg.artilleryMinRange, (float) Math.max(cfg.artilleryMinRange + 10, cfg.artilleryMaxRange),
+                cfg.artilleryTraverse, (float) cfg.artilleryDispersionMin, (float) cfg.artilleryDispersionMax, (float) cfg.artilleryShellCeiling);
+    }
+
+    protected final void setAimSettings(float min, float max, float traverse, float dispMin, float dispMax, float ceiling) {
+        this.entityData.set(DATA_MIN_RANGE, min);
+        this.entityData.set(DATA_MAX_RANGE, max);
+        this.entityData.set(DATA_TRAV_LIMIT, traverse);
+        this.entityData.set(DATA_DISP_MIN, dispMin);
+        this.entityData.set(DATA_DISP_MAX, dispMax);
+        this.entityData.set(DATA_CEILING, ceiling);
+    }
+
+    protected final void setAim(float value) {
+        this.entityData.set(DATA_RANGE, value);
+    }
+
+    /** Aim from the operator's view (traverse is handled for every gun; this sets range or elevation). */
+    protected void updateAim(Player op) {
+        setAim(rangeForPitch(op.getXRot(), minRange(), maxRange()));
     }
 
     public Vec3 localToWorld(double right, double up, double forward) {
@@ -209,7 +280,7 @@ public class MorserEntity extends Entity implements Repairable {
     }
 
     public Vec3 trunnions() {
-        return localToWorld(0.0, TRUNNION_UP, TRUNNION_FWD);
+        return localToWorld(0.0, trunnionUp(), trunnionFwd());
     }
 
     /** Where a shell set to this traverse and range comes down (ground height where known, otherwise the gun's). */
@@ -280,7 +351,7 @@ public class MorserEntity extends Entity implements Repairable {
 
     @Override
     public ItemStack getPickResult() {
-        return new ItemStack(ArmoredCarMod.MORSER_ITEM);
+        return new ItemStack(gunItem());
     }
 
     @Override
@@ -299,7 +370,7 @@ public class MorserEntity extends Entity implements Repairable {
             return;
         }
         // deployed: standing behind the left wheel with a hand on the breech; packed: behind the trail, pushing
-        Vec3 p = isDeployed() ? localToWorld(GUNNER_RIGHT, 0.0, GUNNER_FWD) : localToWorld(0.0, 0.0, -TRAIL - 0.6);
+        Vec3 p = isDeployed() ? localToWorld(gunnerRight(), 0.0, gunnerFwd()) : localToWorld(0.0, 0.0, -trailLength() - 0.6);
         move.accept(passenger, p.x, p.y, p.z);
         if (passenger instanceof LivingEntity living) {
             living.setYBodyRot(this.getYRot());     // facing the way the gun points
@@ -374,7 +445,7 @@ public class MorserEntity extends Entity implements Repairable {
         TruckEntity best = null;
         double bestD = 10.0 * 10.0;
         for (TruckEntity t : this.level().getEntitiesOfClass(TruckEntity.class, this.getBoundingBox().inflate(10.0))) {
-            double d = t.localToWorld(0.0, 0.0, -3.4).distanceToSqr(localToWorld(0.0, 0.0, -TRAIL));
+            double d = t.localToWorld(0.0, 0.0, -3.4).distanceToSqr(localToWorld(0.0, 0.0, -trailLength()));
             if (!t.isWrecked() && d < bestD) {
                 best = t;
                 bestD = d;
@@ -418,13 +489,13 @@ public class MorserEntity extends Entity implements Repairable {
         if (cfg.artilleryRequiresShells && !player.getAbilities().instabuild) {
             int slot = -1;
             for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
-                if (player.getInventory().getItem(i).is(ArmoredCarMod.SHELL_ITEM)) {
+                if (player.getInventory().getItem(i).is(shellItem())) {
                     slot = i;
                     break;
                 }
             }
             if (slot < 0) {
-                player.displayClientMessage(Component.translatable("msg.exodus_vehicles.morser_no_shell"), true);
+                player.displayClientMessage(Component.translatable(noShellKey()), true);
                 this.fireLock = 10;
                 return;
             }
@@ -432,8 +503,19 @@ public class MorserEntity extends Entity implements Repairable {
         }
         ServerLevel server = (ServerLevel) this.level();
         this.fireLock = 10;
-        this.entityData.set(DATA_RELOAD, Math.max(1, cfg.artilleryReloadTicks));
-        this.entityData.set(DATA_RELOAD_TOTAL, Math.max(1, cfg.artilleryReloadTicks));
+        this.entityData.set(DATA_RELOAD, Math.max(1, reloadTicksCfg()));
+        this.entityData.set(DATA_RELOAD_TOTAL, Math.max(1, reloadTicksCfg()));
+        shoot(server, player);
+        server.broadcastEntityEvent(this, (byte) 62);
+        onFired(player);
+    }
+
+    /** Hook after a shot (sounds at reload start etc.). */
+    protected void onFired(ServerPlayer player) {
+    }
+
+    /** The shot itself: Mörser lobs onto the set range with scatter. */
+    protected void shoot(ServerLevel server, ServerPlayer player) {
 
         // where the barrel is laid (server state), then scatter around it, then the exact shot to that point
         float range = getAimRange();
@@ -464,7 +546,7 @@ public class MorserEntity extends Entity implements Repairable {
 
         // muzzle: flash, a modest smoke cloud, the report (close / distant / far, arriving late with distance)
         Vec3 dir = vel.normalize();
-        Vec3 muzzle = g.add(dir.scale(BARREL));
+        Vec3 muzzle = g.add(dir.scale(barrelLength()));
         server.sendParticles(ParticleTypes.FLASH, muzzle.x, muzzle.y, muzzle.z, 1, 0, 0, 0, 0);
         server.sendParticles(ParticleTypes.EXPLOSION, muzzle.x, muzzle.y, muzzle.z, 1, 0.2, 0.2, 0.2, 0.0);
         server.sendParticles(ParticleTypes.FLAME, muzzle.x, muzzle.y, muzzle.z, 8, 0.2, 0.2, 0.2, 0.08);
@@ -486,7 +568,6 @@ public class MorserEntity extends Entity implements Repairable {
                 ShellManager.gunReport(p, muzzle, dist, 1.0F);
             }
         }
-        server.broadcastEntityEvent(this, (byte) 62);
     }
 
     @Override
@@ -540,12 +621,7 @@ public class MorserEntity extends Entity implements Repairable {
         this.entityData.set(DATA_HEALTH, getHealth() - dealt);
         this.markHurt();
         if (getHealth() <= 0.0F) {
-            this.ejectPassengers();
-            if (this.level() instanceof ServerLevel server) {
-                server.explode(this, this.getX(), this.getY() + 1.2, this.getZ(), 2.5F, Level.ExplosionInteraction.NONE);
-                server.sendParticles(ParticleTypes.LARGE_SMOKE, this.getX(), this.getY() + 1.5, this.getZ(), 30, 1.5, 1.0, 1.5, 0.05);
-            }
-            this.discard();
+            breakUp();
         }
         return true;
     }
@@ -568,14 +644,8 @@ public class MorserEntity extends Entity implements Repairable {
         if (this.fireLock > 0) {
             this.fireLock--;
         }
-        if (this.tickCount % 20 == 0) {
-            // settings the clients aim with (picks up config changes)
-            this.entityData.set(DATA_MIN_RANGE, (float) cfg.artilleryMinRange);
-            this.entityData.set(DATA_MAX_RANGE, (float) Math.max(cfg.artilleryMinRange + 10, cfg.artilleryMaxRange));
-            this.entityData.set(DATA_TRAV_LIMIT, cfg.artilleryTraverse);
-            this.entityData.set(DATA_DISP_MIN, (float) cfg.artilleryDispersionMin);
-            this.entityData.set(DATA_DISP_MAX, (float) cfg.artilleryDispersionMax);
-            this.entityData.set(DATA_CEILING, (float) cfg.artilleryShellCeiling);
+        if (this.tickCount % 20 == 1) {
+            refreshSettings(cfg);     // settings the clients aim with (picks up config changes)
         }
 
         // deploying / packing up
@@ -612,15 +682,7 @@ public class MorserEntity extends Entity implements Repairable {
         int reload = getReload();
         if (reload > 0) {
             this.entityData.set(DATA_RELOAD, --reload);
-            int total = getReloadTotal();
-            // the breech-open sound's clank (3.7 s in) lands as the breech swings open (37% through the reload)
-            int openAt = Math.max(1, Math.round(total * 0.365F) - 73);
-            if (total - reload == openAt) {
-                breechSound(ArmoredCarMod.BREECH_OPEN);
-            }
-            if (reload == 36) {
-                breechSound(ArmoredCarMod.BREECH_CLOSE);     // its clank lands as the round is ready
-            }
+            reloadSounds(reload, getReloadTotal());
         }
 
         // aim follows the operator's view: left/right = traverse (limited), up/down = range
@@ -630,7 +692,7 @@ public class MorserEntity extends Entity implements Repairable {
             float want = Mth.clamp(Mth.wrapDegrees(op.getYRot() - this.getYRot()), -lim, lim);
             float t = getTraverse();
             this.entityData.set(DATA_TRAV, t + Mth.clamp(want - t, -TRAVERSE_RATE, TRAVERSE_RATE));
-            this.entityData.set(DATA_RANGE, rangeForPitch(op.getXRot(), minRange(), maxRange()));
+            updateAim(op);
         } else if (!isDeployed() && getTraverse() != 0.0F) {
             float t = getTraverse();
             this.entityData.set(DATA_TRAV, t + Mth.clamp(-t, -TRAVERSE_RATE, TRAVERSE_RATE));
@@ -656,7 +718,19 @@ public class MorserEntity extends Entity implements Repairable {
         }
     }
 
-    private void breechSound(net.minecraft.sounds.SoundEvent sound) {
+    /** Reload sounds through the reload (called each tick with ticks left). */
+    protected void reloadSounds(int reload, int total) {
+        // the breech-open sound's clank (3.7 s in) lands as the breech swings open (37% through the reload)
+        int openAt = Math.max(1, Math.round(total * 0.365F) - 73);
+        if (total - reload == openAt) {
+            breechSound(ArmoredCarMod.BREECH_OPEN);
+        }
+        if (reload == 36) {
+            breechSound(ArmoredCarMod.BREECH_CLOSE);     // its clank lands as the round is ready
+        }
+    }
+
+    protected void breechSound(net.minecraft.sounds.SoundEvent sound) {
         Vec3 b = localToWorld(0.0, 1.2, -0.8);
         this.level().playSound(null, b.x, b.y, b.z, sound, SoundSource.PLAYERS, 1.0F, 1.0F);
     }
@@ -675,12 +749,12 @@ public class MorserEntity extends Entity implements Repairable {
             away = new Vec3(Math.sin(ty), 0, -Math.cos(ty));
         }
         away = away.normalize();
-        Vec3 want = hitch.add(away.scale(TRAIL));
+        Vec3 want = hitch.add(away.scale(trailLength()));
         Vec3 dm = this.getDeltaMovement();
         double vy = this.onGround() ? -0.04 : (dm.y - 0.08) * 0.98;
         this.move(MoverType.SELF, new Vec3(want.x - pos.x, vy, want.z - pos.z));
         this.setYRot((float) Math.toDegrees(Math.atan2(-away.x, away.z)));      // barrel away from the lorry
-        if (this.position().distanceTo(hitch) > TRAIL + 6.0) {
+        if (this.position().distanceTo(hitch) > trailLength() + 6.0) {
             this.entityData.set(DATA_TOWED_BY, -1);      // snagged: the tow comes loose
             this.playSound(SoundEvents.CHAIN_BREAK, 1.0F, 0.8F);
         }
@@ -691,11 +765,11 @@ public class MorserEntity extends Entity implements Repairable {
         double yaw = Math.toRadians(this.getYRot());
         double forward = dx * -Math.sin(yaw) + dz * Math.cos(yaw);
         this.wheelRotO = this.wheelRot;
-        this.wheelRot += (float) (forward / WHEEL_RADIUS);
+        this.wheelRot += (float) (forward / wheelRadius());
         this.recoilO = this.recoil;
         this.recoil *= 0.85F;
         this.elevVisO = this.elevVis;
-        float want = isDeployed() && getWork() == 0 ? elevationForRange(getAimRange()) : TRAVEL_ELEV;
+        float want = isDeployed() && getWork() == 0 ? shownElevation(getAimRange()) : travelElevation();
         this.elevVis += Mth.clamp(want - this.elevVis, -2.0F, 2.0F);
         if (getWork() != 0 && this.random.nextInt(4) == 0) {
             Vec3 p = localToWorld((this.random.nextDouble() - 0.5) * 2, 0.1, -3.5 + this.random.nextDouble());

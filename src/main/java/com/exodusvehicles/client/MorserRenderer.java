@@ -36,7 +36,7 @@ public class MorserRenderer extends EntityRenderer<MorserEntity> {
         net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
         if (mc.player != null && gun.isOperatedBy(mc.player)) {
             trav = ArtilleryClient.localTraverse(gun, mc.player, partialTick);
-            elev = gun.elevationForRange(ArtilleryClient.localRange(gun, mc.player, partialTick));
+            elev = gun.shownElevation(ArtilleryClient.localRange(gun, mc.player, partialTick));
         }
         this.model.setupAnim(gun, partialTick, trav, elev);
         this.model.render(poseStack, buffers.getBuffer(RenderType.entityCutoutNoCull(TEXTURE)), packedLight, OverlayTexture.NO_OVERLAY);

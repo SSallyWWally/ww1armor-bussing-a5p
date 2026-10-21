@@ -49,6 +49,12 @@ public class ArmoredCarMod implements ModInitializer {
     public static EntityType<com.exodusvehicles.entity.MorserEntity> MORSER;
     public static Item MORSER_ITEM;
     public static Item SHELL_ITEM;
+    public static EntityType<com.exodusvehicles.entity.FieldGunEntity> FIELD_GUN;
+    public static Item FIELD_GUN_ITEM;
+    public static Item FIELD_SHELL_ITEM;
+    public static net.minecraft.world.level.block.Block FIELD_SHELL_PILE;
+    public static Item FIELD_SHELL_PILE_ITEM;
+    public static SoundEvent FK_CREW, FK_CLOSE, FK_MID, FK_DISTANT, FK_FAR, FK_RELOAD;
     public static SoundEvent MORSER_CLOSE;
     public static SoundEvent MORSER_DISTANT;
     public static SoundEvent MORSER_MID;
@@ -147,6 +153,23 @@ public class ArmoredCarMod implements ModInitializer {
                 new ArmoredCarItem(new Item.Properties().stacksTo(1), () -> MORSER));
         SHELL_ITEM = Registry.register(BuiltInRegistries.ITEM, id("shell_21cm"), new Item(new Item.Properties().stacksTo(1)));
         // shells don't stack (one per slot), but a player may carry as many as they have room for
+        FIELD_GUN = Registry.register(BuiltInRegistries.ENTITY_TYPE, id("fk96"),
+                EntityType.Builder.<com.exodusvehicles.entity.FieldGunEntity>of(com.exodusvehicles.entity.FieldGunEntity::new, MobCategory.MISC)
+                        .sized(1.6F, 1.5F)
+                        .fireImmune()
+                        .clientTrackingRange(12)
+                        .updateInterval(2)
+                        .build("fk96"));
+        FIELD_GUN_ITEM = Registry.register(BuiltInRegistries.ITEM, id("fk96"),
+                new ArmoredCarItem(new Item.Properties().stacksTo(1), () -> FIELD_GUN));
+        FIELD_SHELL_ITEM = Registry.register(BuiltInRegistries.ITEM, id("shell_77mm"), new Item(new Item.Properties().stacksTo(1)));
+        FK_CREW = registerSound("fk_crew");
+        FK_CLOSE = registerSound("fk_close");
+        FK_MID = registerSound("fk_mid");
+        FK_DISTANT = registerSound("fk_distant");
+        FK_FAR = registerSound("fk_far");
+        FK_RELOAD = registerSound("fk_reload");
+        com.exodusvehicles.artillery.ArtilleryRules.register();
         MORSER_CLOSE = registerSound("morser_close");
         MORSER_DISTANT = registerSound("morser_distant");
         MORSER_MID = registerSound("morser_mid");
@@ -174,9 +197,15 @@ public class ArmoredCarMod implements ModInitializer {
         MG_BELT_ITEM = Registry.register(BuiltInRegistries.ITEM, id("mg_belt"), new Item(new Item.Properties().stacksTo(8)));
         SHELL_PILE = Registry.register(BuiltInRegistries.BLOCK, id("shell_pile"),
                 new com.exodusvehicles.block.ShellPileBlock(net.minecraft.world.level.block.state.BlockBehaviour.Properties.of()
-                        .strength(1.5F).sound(net.minecraft.world.level.block.SoundType.METAL).noOcclusion()));
+                        .strength(1.5F).sound(net.minecraft.world.level.block.SoundType.METAL).noOcclusion()
+                        .dynamicShape(), true, () -> SHELL_ITEM));
         SHELL_PILE_ITEM = Registry.register(BuiltInRegistries.ITEM, id("shell_pile"),
                 new net.minecraft.world.item.BlockItem(SHELL_PILE, new Item.Properties()));
+        FIELD_SHELL_PILE = Registry.register(BuiltInRegistries.BLOCK, id("field_shell_pile"),
+                new com.exodusvehicles.block.ShellPileBlock(net.minecraft.world.level.block.state.BlockBehaviour.Properties.of()
+                        .strength(1.0F).sound(net.minecraft.world.level.block.SoundType.METAL).noOcclusion(), false, () -> FIELD_SHELL_ITEM));
+        FIELD_SHELL_PILE_ITEM = Registry.register(BuiltInRegistries.ITEM, id("field_shell_pile"),
+                new net.minecraft.world.item.BlockItem(FIELD_SHELL_PILE, new Item.Properties()));
 
         SERVICE_STATION = Registry.register(BuiltInRegistries.BLOCK, id("service_station"),
                 new com.exodusvehicles.block.ServiceStationBlock(net.minecraft.world.level.block.state.BlockBehaviour.Properties.of()
@@ -198,6 +227,9 @@ public class ArmoredCarMod implements ModInitializer {
                             out.accept(MORSER_ITEM);
                             out.accept(SHELL_ITEM);
                             out.accept(SHELL_PILE_ITEM);
+                            out.accept(FIELD_GUN_ITEM);
+                            out.accept(FIELD_SHELL_ITEM);
+                            out.accept(FIELD_SHELL_PILE_ITEM);
                             out.accept(MG_BELT_ITEM);
                             out.accept(JERRY_CAN);
                             out.accept(JERRY_CAN_EMPTY);

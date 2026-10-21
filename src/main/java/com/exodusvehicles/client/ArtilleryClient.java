@@ -3,6 +3,7 @@ package com.exodusvehicles.client;
 import com.exodusvehicles.ArmoredCarMod;
 import com.exodusvehicles.ModConfig;
 import com.exodusvehicles.artillery.ShellManager;
+import com.exodusvehicles.entity.FieldGunEntity;
 import com.exodusvehicles.entity.MorserEntity;
 import com.exodusvehicles.network.ShellFiredPayload;
 import com.exodusvehicles.network.ShellImpactPayload;
@@ -71,6 +72,10 @@ public final class ArtilleryClient {
             return;
         }
         float pt = ctx.tickCounter().getGameTimeDeltaPartialTick(true);
+        if (gun instanceof FieldGunEntity fg) {
+            renderArc(ctx, fg, pt);
+            return;
+        }
         float range = localRange(gun, mc.player, pt);
         Vec3 aim = gun.aimPoint(localTraverse(gun, mc.player, pt), range);
         if (!mc.level.hasChunkAt(BlockPos.containing(aim))) {
@@ -101,6 +106,87 @@ public final class ArtilleryClient {
         ps.popPose();
     }
 
+    /** Predicted flight of the next round from the local gunner's aim: muzzle to where it meets the ground. */
+    public static List<Vec3> predictedArc(FieldGunEntity gun, Player p, float pt) {
+        float trav = localTraverse(gun, p, pt);
+        float elev = localRange(gun, p, pt);
+        float yaw = Mth.rotLerp(pt, gun.yRotO, gun.getYRot());
+        Vec3 base = new Vec3(Mth.lerp(pt, gun.xo, gun.getX()), Mth.lerp(pt, gun.yo, gun.getY()), Mth.lerp(pt, gun.zo, gun.getZ()));
+        Vec3 muzzle = gun.muzzle(base, yaw, trav, elev);
+        Vec3 vel = gun.boreDir(yaw, trav, elev).scale(gun.muzzleSpeed());
+        return FieldGunEntity.trajectory(p.level(), muzzle, vel, 300);
+    }
+
+    private static List<Vec3> arcCache;
+    private static long arcFrame = -1;
+
+    /** The glowing white arc of the round's path, and a ring where it comes down. Only on the gunner's own screen. */
+    private static void renderArc(net.fabricmc.fabric.api.client.rendering.v1.WorldRenderContext ctx, FieldGunEntity gun, float pt) {
+        Minecraft mc = Minecraft.getInstance();
+        List<Vec3> pts = predictedArc(gun, mc.player, pt);
+        arcCache = pts;
+        arcFrame = mc.level.getGameTime();
+        if (pts.size() < 2) {
+            return;
+        }
+        Vec3 cam = ctx.camera().getPosition();
+        com.mojang.blaze3d.vertex.PoseStack ps = ctx.matrixStack();
+        ps.pushPose();
+        ps.translate(-cam.x, -cam.y, -cam.z);
+        org.joml.Matrix4f m = ps.last().pose();
+        com.mojang.blaze3d.vertex.VertexConsumer vc = ctx.consumers().getBuffer(net.minecraft.client.renderer.RenderType.lightning());
+        int n = pts.size();
+        boolean sight = sightView();
+        for (int i = sight ? 2 : 0; i < n - 1; i++) {
+            Vec3 a = pts.get(i), b = pts.get(i + 1);
+            float fa = arcAlpha(i, n), fb = arcAlpha(i + 1, n);
+            ribbon(vc, m, cam, a, b, fa, fb);
+        }
+        // landing ring
+        Vec3 end = pts.get(n - 1);
+        double r = 1.2 + end.distanceTo(cam) * 0.004;
+        Vec3 prev = null;
+        for (int i = 0; i <= 32; i++) {
+            double ang = i * Mth.TWO_PI / 32;
+            Vec3 q = new Vec3(end.x + Math.cos(ang) * r, end.y + 0.08, end.z + Math.sin(ang) * r);
+            if (prev != null) {
+                ribbon(vc, m, cam, prev, q, 0.9F, 0.9F);
+            }
+            prev = q;
+        }
+        ps.popPose();
+    }
+
+    private static float arcAlpha(int i, int n) {
+        float t = i / (float) Math.max(1, n - 1);
+        return 0.35F + 0.55F * Mth.clamp(t * 6.0F, 0.0F, 1.0F);     // faint at the muzzle, bright down range
+    }
+
+    /** One camera-facing strip from a to b (both windings, so it shows from any side). */
+    private static void ribbon(com.mojang.blaze3d.vertex.VertexConsumer vc, org.joml.Matrix4f m, Vec3 cam, Vec3 a, Vec3 b, float aa, float ab) {
+        Vec3 d = b.subtract(a);
+        if (d.lengthSqr() < 1.0E-8) {
+            return;
+        }
+        Vec3 sa = d.cross(a.subtract(cam));
+        Vec3 sb = d.cross(b.subtract(cam));
+        if (sa.lengthSqr() < 1.0E-10 || sb.lengthSqr() < 1.0E-10) {
+            return;
+        }
+        double wa = 0.035 + a.distanceTo(cam) * 0.0022, wb = 0.035 + b.distanceTo(cam) * 0.0022;
+        sa = sa.normalize().scale(wa);
+        sb = sb.normalize().scale(wb);
+        int ca = (int) (aa * 255), cb = (int) (ab * 255);
+        Vec3[] q = {a.add(sa), a.subtract(sa), b.subtract(sb), b.add(sb)};
+        int[] al = {ca, ca, cb, cb};
+        for (int k = 0; k < 4; k++) {
+            vc.addVertex(m, (float) q[k].x, (float) q[k].y, (float) q[k].z).setColor(255, 252, 240, al[k]);
+        }
+        for (int k = 3; k >= 0; k--) {
+            vc.addVertex(m, (float) q[k].x, (float) q[k].y, (float) q[k].z).setColor(255, 252, 240, al[k]);
+        }
+    }
+
     private static void line(com.mojang.blaze3d.vertex.VertexConsumer vc, com.mojang.blaze3d.vertex.PoseStack.Pose pose, Vec3 a, Vec3 b) {
         Vec3 n = b.subtract(a).normalize();
         vc.addVertex(pose, (float) a.x, (float) a.y, (float) a.z).setColor(230, 50, 35, 255).setNormal(pose, (float) n.x, (float) n.y, (float) n.z);
@@ -121,8 +207,10 @@ public final class ArtilleryClient {
             // rushing air travelling with the shell (heard by the shell camera, and by anyone it passes over)
             mc.getSoundManager().play(new ShellFlightSound(ArmoredCarMod.SHELL_FLIGHT, () -> s.alive && SHELLS.contains(s) ? s.pos : null));
             if (mc.player != null && mc.player.getVehicle() != null && mc.player.getVehicle().getId() == p.gunId()) {
-                addShake(1.6F);          // the whole gun jumps
-                if (ModConfig.get().shellCamera) {
+                boolean field = mc.player.getVehicle() instanceof FieldGunEntity;
+                addShake(field ? 0.8F : 1.6F);          // the whole gun jumps
+                camZoom = 1.0F;
+                if (!field && ModConfig.get().shellCamera) {
                     phase = Phase.FOLLOW;
                     camShell = p.shellId();
                     phaseTicks = 0;
@@ -147,12 +235,17 @@ public final class ArtilleryClient {
             if (mc.player == null) {
                 return;
             }
-            blast(mc, at);
+            boolean small = p.radius() < 0.0F;
+            if (small) {
+                smallBlast(mc, at);
+            } else {
+                blast(mc, at);
+            }
             double d = mc.player.getEyePosition().distanceTo(at);
-            float r = Math.max(2.0F, p.radius());
+            float r = Math.max(2.0F, Math.abs(p.radius()));
             // screen shake reaches well beyond the blast; shell shock only close in
             float s = (float) Math.max(0.0, 1.0 - d / (r * 7.0));
-            addShake(16.0F * (float) Math.pow(s, 1.5));
+            addShake((small ? 9.0F : 16.0F) * (float) Math.pow(s, 1.5));
             double near = r * 1.8;
             if (d < near) {
                 float k = (float) (1.0 - d / near);
@@ -225,6 +318,46 @@ public final class ArtilleryClient {
         }
     }
 
+    /** A 7.7 cm burst: a sharp flash, a black-brown fountain of earth, a smaller smoke cloud. */
+    private static void smallBlast(Minecraft mc, Vec3 c) {
+        net.minecraft.client.multiplayer.ClientLevel lvl = mc.level;
+        if (lvl == null) {
+            return;
+        }
+        float k = Math.max(0.25F, ModConfig.get().shellEffectScale);
+        java.util.Random r = new java.util.Random();
+        lvl.addAlwaysVisibleParticle(ParticleTypes.FLASH, true, c.x, c.y + 0.6, c.z, 0, 0, 0);
+        lvl.addAlwaysVisibleParticle(ParticleTypes.EXPLOSION_EMITTER, true, c.x, c.y + 0.4, c.z, 0, 0, 0);
+        int n = (int) (8 * k);
+        for (int i = 0; i < n; i++) {
+            lvl.addAlwaysVisibleParticle(ParticleTypes.EXPLOSION, true, c.x + (r.nextDouble() - 0.5) * 2.5 * k,
+                    c.y + r.nextDouble() * 1.8 * k, c.z + (r.nextDouble() - 0.5) * 2.5 * k, 0, 0, 0);
+        }
+        net.minecraft.world.level.block.state.BlockState ground = lvl.getBlockState(BlockPos.containing(c.x, c.y - 1.0, c.z));
+        if (ground.isAir()) {
+            ground = net.minecraft.world.level.block.Blocks.DIRT.defaultBlockState();
+        }
+        net.minecraft.core.particles.BlockParticleOption dirt =
+                new net.minecraft.core.particles.BlockParticleOption(ParticleTypes.BLOCK, ground);
+        n = (int) (45 * k);
+        for (int i = 0; i < n; i++) {
+            double sp = 0.15 + r.nextDouble() * 0.3;
+            double a = r.nextDouble() * Math.PI * 2;
+            lvl.addAlwaysVisibleParticle(dirt, true, c.x + (r.nextDouble() - 0.5), c.y + r.nextDouble() * 0.5, c.z + (r.nextDouble() - 0.5),
+                    Math.cos(a) * sp * 0.5 * k, (0.5 + r.nextDouble() * 0.8) * k, Math.sin(a) * sp * 0.5 * k);
+        }
+        n = (int) (16 * k);
+        for (int i = 0; i < n; i++) {
+            lvl.addAlwaysVisibleParticle(ParticleTypes.LARGE_SMOKE, true, c.x + (r.nextDouble() - 0.5) * 3 * k,
+                    c.y + 0.3 + r.nextDouble() * 2 * k, c.z + (r.nextDouble() - 0.5) * 3 * k,
+                    (r.nextDouble() - 0.5) * 0.05, 0.03 + r.nextDouble() * 0.05, (r.nextDouble() - 0.5) * 0.05);
+        }
+        for (int i = 0; i < Math.max(2, (int) (4 * k)); i++) {
+            lvl.addAlwaysVisibleParticle(ParticleTypes.CAMPFIRE_COSY_SMOKE, true, c.x + (r.nextDouble() - 0.5) * 1.5,
+                    c.y + 0.4 + r.nextDouble(), c.z + (r.nextDouble() - 0.5) * 1.5, 0, 0.03 + r.nextDouble() * 0.03, 0);
+        }
+    }
+
     private static int hitTicks;
     private static boolean hitKill;
 
@@ -293,17 +426,18 @@ public final class ArtilleryClient {
         float elev = Mth.lerp(pt, gun.elevVisO, gun.elevVis);
         if (mc.player != null && gun.isOperatedBy(mc.player)) {
             trav = localTraverse(gun, mc.player, pt);
-            elev = gun.elevationForRange(localRange(gun, mc.player, pt));
+            elev = gun.shownElevation(localRange(gun, mc.player, pt));
         }
         float gunYaw = Mth.rotLerp(pt, gun.yRotO, gun.getYRot());
         double gy = Math.toRadians(gunYaw);
         Vec3 base = new Vec3(Mth.lerp(pt, gun.xo, gun.getX()), Mth.lerp(pt, gun.yo, gun.getY()), Mth.lerp(pt, gun.zo, gun.getZ()));
-        Vec3 trunnion = base.add(-Math.sin(gy) * MorserEntity.TRUNNION_FWD, MorserEntity.TRUNNION_UP, Math.cos(gy) * MorserEntity.TRUNNION_FWD);
+        Vec3 trunnion = base.add(-Math.sin(gy) * gun.trunnionFwd(), gun.trunnionUp(), Math.cos(gy) * gun.trunnionFwd());
         double yaw = Math.toRadians(gunYaw + trav), e = Math.toRadians(elev);
         Vec3 bore = new Vec3(-Math.sin(yaw) * Math.cos(e), Math.sin(e), Math.cos(yaw) * Math.cos(e));
         Vec3 left = new Vec3(Math.cos(yaw), 0, Math.sin(yaw));
         Vec3 up = new Vec3(Math.sin(yaw) * Math.sin(e), Math.cos(e), -Math.cos(yaw) * Math.sin(e));
-        return trunnion.add(bore.scale(-14.0 / 16.0)).add(up.scale(1.2 / 16.0)).add(left.scale(4.6 / 16.0));
+        double[] o = gun.breechOffset();
+        return trunnion.add(bore.scale(-o[0])).add(up.scale(o[1])).add(left.scale(o[2]));
     }
 
     /**
@@ -336,7 +470,11 @@ public final class ArtilleryClient {
         return new float[]{xRot, yRot, -0.35F, 0.08F};
     }
 
+    /** The local gunner's aim value: range for the Mörser, barrel elevation for the field gun. */
     public static float localRange(MorserEntity gun, Player p, float partialTick) {
+        if (gun instanceof FieldGunEntity fg) {
+            return fg.elevationForPitch(p.getViewXRot(partialTick));
+        }
         return MorserEntity.rangeForPitch(p.getViewXRot(partialTick), gun.minRange(), gun.maxRange());
     }
 
@@ -365,7 +503,8 @@ public final class ArtilleryClient {
             p.yRotO = yaw;
             p.setYHeadRot(yaw);
         }
-        float pitch = Mth.clamp(p.getXRot(), MorserEntity.PITCH_FAR, MorserEntity.PITCH_NEAR);
+        float pitch = gun instanceof FieldGunEntity fg ? Mth.clamp(p.getXRot(), -fg.maxElevation(), -fg.minElevation())
+                : Mth.clamp(p.getXRot(), MorserEntity.PITCH_FAR, MorserEntity.PITCH_NEAR);
         if (pitch != p.getXRot()) {
             p.setXRot(pitch);
             p.xRotO = pitch;
@@ -391,6 +530,7 @@ public final class ArtilleryClient {
             beginReturn();        // skip the shell camera
         }
         useWas = use;
+        zoomHeld = use && gun instanceof FieldGunEntity && mc.options.getCameraType().isFirstPerson();
     }
 
     /** Toggle from the shell-camera key. */
@@ -448,7 +588,40 @@ public final class ArtilleryClient {
         });
     }
 
+    private static boolean zoomHeld;
+    private static float sightZoom = 1.0F, sightZoomO = 1.0F;
+    /** Shell camera zoom: when the camera has to hang back (it never goes past the loaded world), it zooms in instead. */
+    private static float camZoom = 1.0F, camZoomWant = 1.0F;
+
+    /** FOV multiplier from the artillery views (field-gun sight zoom, shell camera zoom). */
+    public static double fovScale(float pt) {
+        float z = 1.0F;
+        if (sightView()) {
+            z = Mth.lerp(pt, sightZoomO, sightZoom);
+        } else if (phase == Phase.FOLLOW || phase == Phase.HOLD) {
+            z = camZoom;
+        }
+        return z <= 1.001F ? 1.0 : 1.0 / z;
+    }
+
+    public static double sensitivityScale() {
+        return sightView() && sightZoom > 1.001F ? 1.0 / sightZoom : 1.0;
+    }
+
+    /** First-person sight of the field gun (the operator looks along the barrel). */
+    public static boolean sightView() {
+        Minecraft mc = Minecraft.getInstance();
+        return operatedGun() instanceof FieldGunEntity && phase == Phase.NONE && mc.options.getCameraType().isFirstPerson();
+    }
+
     public static void endTick(Minecraft mc) {
+        sightZoomO = sightZoom;
+        float zt = zoomHeld && sightView() ? 2.6F : 1.0F;
+        sightZoom += (zt - sightZoom) * 0.4F;
+        if (Math.abs(zt - sightZoom) < 0.01F) {
+            sightZoom = zt;
+        }
+
         if (mc.player != null && mc.player.tickCount % 10 == 0) {
             tickGunSounds(mc);
         }
@@ -566,13 +739,19 @@ public final class ArtilleryClient {
                 cam = lastCamPos != null ? lastCamPos : mc.player.getEyePosition(pt);
                 look = impactAt != null ? impactAt : cam.add(0, -1, 1);
             }
+            Vec3 wanted = cam;
             cam = keepInRange(mc, cam);
+            // held back at the edge of the loaded world: zoom in so the strike still fills the view (up to 3.5x)
+            double back = cam.distanceTo(look);
+            camZoomWant = wanted.distanceToSqr(cam) > 1.0 ? (float) Mth.clamp(back / 75.0, 1.0, 3.5) : 1.0F;
+            camZoom += (camZoomWant - camZoom) * 0.08F;
             double[] r = lookAt(cam, look);
             lastCamPos = cam;
             lastCamYaw = (float) r[3];
             lastCamPitch = (float) r[4];
             return r;
         }
+        camZoom = 1.0F;
         // RETURN: ease from where the shell camera left off back to the gun
         if (aim == null || lastCamPos == null) {
             return aim;
@@ -595,6 +774,22 @@ public final class ArtilleryClient {
         float gunYaw = Mth.rotLerp(pt, gun.yRotO, gun.getYRot());
         double yaw = Math.toRadians(gunYaw + trav);
         Vec3 base = new Vec3(Mth.lerp(pt, gun.xo, gun.getX()), Mth.lerp(pt, gun.yo, gun.getY()), Mth.lerp(pt, gun.zo, gun.getZ()));
+        if (gun instanceof FieldGunEntity fg) {
+            float elev = localRange(fg, p, pt);
+            if (mc.options.getCameraType().isFirstPerson()) {
+                // eye at the sight on the left of the breech, looking straight along the barrel
+                double e = Math.toRadians(elev);
+                Vec3 bore = fg.boreDir(gunYaw, trav, elev);
+                Vec3 left = new Vec3(Math.cos(yaw), 0, Math.sin(yaw));
+                Vec3 up = new Vec3(Math.sin(yaw) * Math.sin(e), Math.cos(e), -Math.cos(yaw) * Math.sin(e));
+                double gy = Math.toRadians(gunYaw);
+                Vec3 trunnion = base.add(-Math.sin(gy) * fg.trunnionFwd(), fg.trunnionUp(), Math.cos(gy) * fg.trunnionFwd());
+                Vec3 eye = trunnion.add(bore.scale(-9.0 / 16.0)).add(up.scale(3.2 / 16.0)).add(left.scale(2.6 / 16.0));
+                return new double[]{eye.x, eye.y, eye.z, gunYaw + trav, -elev};
+            }
+            Vec3 cam = base.add(Math.sin(yaw) * 4.6, fg.trunnionUp() + 1.9, -Math.cos(yaw) * 4.6);
+            return new double[]{cam.x, cam.y, cam.z, gunYaw + trav, p.getViewXRot(pt) * 0.5F + 9.0F};
+        }
         Vec3 cam = base.add(Math.sin(yaw) * 6.0, MorserEntity.TRUNNION_UP + 2.6, -Math.cos(yaw) * 6.0);
         float pitch = p.getViewXRot(pt) * 0.6F + 4.0F;
         return new double[]{cam.x, cam.y, cam.z, gunYaw + trav, pitch};
@@ -634,6 +829,65 @@ public final class ArtilleryClient {
     }
 
     // ------------------------------------------------------------------ HUD
+
+    private static void drawFieldGunHud(GuiGraphics g, Minecraft mc, FieldGunEntity gun, float pt, int w, int h) {
+        int cx = w / 2, cy = h / 2;
+        int white = 0xFFF0ECDC;
+        if (sightView()) {
+            // gun sight: a post with mil marks along a horizontal bar
+            g.fill(cx - 40, cy, cx - 4, cy + 1, white);
+            g.fill(cx + 4, cy, cx + 40, cy + 1, white);
+            for (int i = 1; i <= 4; i++) {
+                g.fill(cx - 4 - i * 9, cy - 2, cx - 3 - i * 9, cy + 3, white);
+                g.fill(cx + 3 + i * 9, cy - 2, cx + 4 + i * 9, cy + 3, white);
+            }
+            g.fill(cx, cy + 3, cx + 1, cy + 22, white);
+            g.fill(cx - 2, cy + 1, cx + 3, cy + 3, white);
+        } else {
+            g.fill(cx - 7, cy, cx - 2, cy + 1, white);
+            g.fill(cx + 2, cy, cx + 7, cy + 1, white);
+            g.fill(cx, cy - 7, cx + 1, cy - 2, white);
+            g.fill(cx, cy + 2, cx + 1, cy + 7, white);
+        }
+        float elev = localRange(gun, mc.player, pt);
+        List<Vec3> arc = arcCache != null && mc.level != null && mc.level.getGameTime() - arcFrame < 3 ? arcCache : predictedArc(gun, mc.player, pt);
+        Vec3 land = arc.get(arc.size() - 1);
+        double dist = Math.sqrt((land.x - gun.getX()) * (land.x - gun.getX()) + (land.z - gun.getZ()) * (land.z - gun.getZ()));
+        int lx = 12, ly = cy - 26;
+        g.pose().pushPose();
+        g.pose().translate(lx, ly, 0);
+        g.pose().scale(1.5F, 1.5F, 1.0F);
+        g.drawString(mc.font, String.format(java.util.Locale.ROOT, "%+.1f\u00b0", elev), 0, 0, white, true);
+        g.pose().popPose();
+        g.drawString(mc.font, Math.round(dist) + " m", lx, ly + 15, 0xFFB9B6A3, true);
+        float trav = localTraverse(gun, mc.player, pt);
+        if (Math.abs(trav) >= gun.traverseLimit() - 0.05F) {
+            int sx = trav > 0 ? cx + 46 : cx - 48;
+            g.fill(sx, cy - 6, sx + 2, cy + 7, 0xFFE0603A);
+        }
+        int reload = gun.getReload();
+        int bw = 60, by = ly + 28;
+        float done = reload > 0 ? 1.0F - reload / (float) gun.getReloadTotal() : 1.0F;
+        g.fill(lx, by, lx + bw, by + 4, 0x80000000);
+        g.fill(lx, by, lx + (int) (bw * done), by + 4, reload > 0 ? 0xFFD9A441 : 0xFF9FD08A);
+        Component label = Component.translatable(reload > 0 ? "hud.exodus_vehicles.artillery_reload" : "hud.exodus_vehicles.artillery_ready");
+        g.drawString(mc.font, label, lx, by + 7, reload > 0 ? 0xFFB9B6A3 : 0xFF9FD08A, true);
+        Component where = Component.translatable("hud.exodus_vehicles.field_target", Mth.floor(land.x), Mth.floor(land.z));
+        g.drawString(mc.font, where, cx - mc.font.width(where) / 2, 8, white, true);
+        if (ModConfig.get().artilleryRequiresShells && !mc.player.getAbilities().instabuild) {
+            int shells = 0;
+            for (int i = 0; i < mc.player.getInventory().getContainerSize(); i++) {
+                if (mc.player.getInventory().getItem(i).is(ArmoredCarMod.FIELD_SHELL_ITEM)) {
+                    shells += mc.player.getInventory().getItem(i).getCount();
+                }
+            }
+            g.drawString(mc.font, Component.translatable("hud.exodus_vehicles.field_shells", shells), 8, 8,
+                    shells > 0 ? 0xFFE8E4D0 : 0xFFE0603A, true);
+        }
+        float hp = gun.getHealth() / gun.getMaxHealth();
+        g.fill(8, 20, 68, 22, 0x80000000);
+        g.fill(8, 20, 8 + (int) (60 * Math.max(0, Math.min(1, hp))), 22, hp > 0.5F ? 0xFF8D977A : hp > 0.25F ? 0xFFD9A441 : 0xFFC4553A);
+    }
 
     public static void drawOverlay(GuiGraphics g, float pt) {
         Minecraft mc = Minecraft.getInstance();
@@ -694,8 +948,12 @@ public final class ArtilleryClient {
             return;
         }
         int cx = w / 2, cy = h / 2;
-        // reticle: a small open cross; range under it; reload bar under that
         int white = 0xFFF0ECDC;
+        if (gun instanceof FieldGunEntity fg) {
+            drawFieldGunHud(g, mc, fg, pt, w, h);
+            return;
+        }
+        // reticle: a small open cross; range under it; reload bar under that
         g.fill(cx - 7, cy, cx - 2, cy + 1, white);
         g.fill(cx + 2, cy, cx + 7, cy + 1, white);
         g.fill(cx, cy - 7, cx + 1, cy - 2, white);

@@ -34,7 +34,7 @@ public abstract class CameraMixin {
                                                  float partialTick, CallbackInfo ci) {
         double[] view = ArtilleryClient.cameraView(partialTick);
         if (view != null) {
-            this.detached = true;          // draw the operator at the gun
+            this.detached = !ArtilleryClient.sightView();     // draw the operator at the gun (not when looking through the sight)
             this.setPosition(new Vec3(view[0], view[1], view[2]));
             this.setRotation((float) view[3], (float) view[4]);
         }

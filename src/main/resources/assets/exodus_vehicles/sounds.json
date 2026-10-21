@@ -205,5 +205,29 @@
   "shell_impact_mid": {
     "subtitle": "subtitles.exodus_vehicles.shell_impact_far",
     "sounds": []
+  },
+  "fk_crew": {
+    "subtitle": "subtitles.exodus_vehicles.fk_crew",
+    "sounds": []
+  },
+  "fk_close": {
+    "subtitle": "subtitles.exodus_vehicles.fk_close",
+    "sounds": []
+  },
+  "fk_mid": {
+    "subtitle": "subtitles.exodus_vehicles.fk_mid",
+    "sounds": []
+  },
+  "fk_distant": {
+    "subtitle": "subtitles.exodus_vehicles.fk_distant",
+    "sounds": []
+  },
+  "fk_far": {
+    "subtitle": "subtitles.exodus_vehicles.fk_far",
+    "sounds": []
+  },
+  "fk_reload": {
+    "subtitle": "subtitles.exodus_vehicles.fk_reload",
+    "sounds": []
   }
 }

@@ -18,7 +18,7 @@ import java.util.List;
 public class ModConfig {
     /** Bumped when a default changes in a way old config files must pick up. Don't edit. */
     public int configVersion = 0;
-    private static final int CURRENT_VERSION = 12;
+    private static final int CURRENT_VERSION = 13;
 
     // ---- armor / damage
     public float maxHealth = 300.0F;
@@ -73,13 +73,43 @@ public class ModConfig {
     public float shellShockRadius = 10.0F;          // players this close are dazed (slowness / nausea)
     public float shellVehicleDamage = 400.0F;       // extra damage to vehicles at the point of impact...
     public double shellVehicleRadius = 5.0;         // ...falling to nothing at this distance
-    /** Craters. Off by default; when on, never inside spawn protection or where the firing player may not build. */
-    public boolean shellBreaksBlocks = false;
-    public float shellBlockPower = 2.5F;
+    /**
+     * Crater size (explosion power; TNT is 4). Craters are switched on or off per world with the game rule
+     * exodusArtilleryCrater (/exodusartillerycrater true|false); never inside spawn protection or where the firing
+     * player may not build.
+     */
+    public float shellBlockPower = 3.2F;
     /** Danny's AoT: shell headshot strength (their field cannon is 25), limb-severing reach, and how close to the nape kills. */
     public float aotShellStrength = 40.0F;
     public double aotLimbReach = 3.0;
     public double aotNapeKillRadius = 4.0;
+    // ---- 7.7 cm FK 96 n.A. field gun: direct fire along a shallow arc. Angles in degrees.
+    public float fieldGunMaxHealth = 140.0F;
+    public float fieldGunTraverse = 25.0F;
+    public float fieldGunMaxElevation = 16.0F;
+    public float fieldGunMaxDepression = 8.0F;
+    /** Muzzle speed, blocks per tick: 9 gives ~500 m at full elevation on a slight arc. */
+    public double fieldGunMuzzleSpeed = 9.0;
+    /** Random angular error per shot. */
+    public float fieldGunSpread = 0.35F;
+    public int fieldGunReloadTicks = 110;           // 5.5 s
+    public int fieldGunDeployTicks = 50;            // 2.5 s
+    public float fieldShellDamage = 34.0F;          // near miss, at the burst, falling to 0 at the radius
+    public float fieldShellBlastRadius = 4.5F;
+    public double fieldShellKnockback = 1.1;
+    public float fieldShellShockRadius = 6.5F;
+    /** A round bursting this close to someone (or hitting them) kills outright. */
+    public double fieldShellKillRadius = 1.6;
+    /** Fraction of a vehicle's health one hit takes: armoured (Eisenwolf) dies to 2, anything else to 1. */
+    public float fieldShellArmoredFraction = 0.55F;
+    public float fieldShellSoftFraction = 1.05F;
+    public double fieldShellVehicleRadius = 2.5;
+    public float fieldShellBlockPower = 1.1F;
+    /** Danny's AoT: a round passing this close to a nape kills the titan; eyes and limbs on its path are hit too. */
+    public double fieldAotNapeReach = 2.5;
+    public float fieldAotShellStrength = 60.0F;
+    public double fieldAotLimbReach = 2.0;
+
     /** Client: size of the shell burst effects (1 = full, lower for weaker PCs). */
     public float shellEffectScale = 1.0F;
     /** Client: follow the shell with the camera after firing (toggle in game with the shell-camera key). */
@@ -220,6 +250,9 @@ public class ModConfig {
             if (cfg.fuelStationLitresPerSecond == 5.0F) {
                 cfg.fuelStationLitresPerSecond = 6.5F;
             }
+        }
+        if (cfg.configVersion < 13 && cfg.shellBlockPower == 2.5F) {
+            cfg.shellBlockPower = 3.2F;           // 2.1.0: bigger craters (now on by default via the game rule)
         }
         cfg.configVersion = CURRENT_VERSION;
         cfg.mgBeltSize = Math.max(1, cfg.mgBeltSize);
