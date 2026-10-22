@@ -266,6 +266,12 @@ public final class PlaneClient {
         if (p.isParkingBrakeOn()) {
             g.drawString(mc.font, Component.translatable("hud.exodus_vehicles.parking_brake"), sx, 8, 0xFFE0A040, true);
         }
+        // hull, under the seat line exactly like the Eisenwolf
+        float hpNow = p.getHealth(), hpMax = p.getMaxHealth(), hp = hpNow / hpMax;
+        g.drawString(mc.font, Component.translatable("hud.exodus_vehicles.hull",
+                String.valueOf((int) Math.ceil(hpNow)), String.valueOf((int) hpMax)), 8, 20, 0xFFE8E4D0, true);
+        g.fill(8, 31, 108, 35, 0x80000000);
+        g.fill(8, 31, 8 + Math.round(100 * Mth.clamp(hp, 0, 1)), 35, hp > 0.5F ? 0xFF8D977A : hp > 0.25F ? 0xFFD9A441 : 0xFFC4553A);
         // instruments, bottom left: speed, height, throttle, guns, airframe
         int x = 10, y = h - 64;
         double kmh = (p.isControlledByLocalInstance() ? p.speed : p.syncedSpeed()) * 20.0 * 3.6;
@@ -279,9 +285,6 @@ public final class PlaneClient {
         g.drawString(mc.font, Component.translatable("hud.exodus_vehicles.heat"), x, y + 35, 0xFFB9B6A3, true);
         g.fill(bx, y + 37, bx + 60, y + 41, 0x80000000);
         g.fill(bx, y + 37, bx + Math.round(60 * heat), y + 41, p.isOverheated() ? 0xFFE04A2A : heat > 0.7F ? 0xFFE0A030 : 0xFF6FA8C8);
-        float hp = p.getHealth() / p.getMaxHealth();
-        g.fill(x, y + 48, x + 112, y + 51, 0x80000000);
-        g.fill(x, y + 48, x + Math.round(112 * Mth.clamp(hp, 0, 1)), y + 51, hp > 0.5F ? 0xFF8D977A : hp > 0.25F ? 0xFFD9A441 : 0xFFC4553A);
         if (bailTicks > 0) {
             // bailing out: hold sneak for two seconds
             Component ex = Component.translatable("hud.exodus_vehicles.plane_exiting");

@@ -33,6 +33,24 @@ public abstract class HumanoidModelMixin {
     @Inject(method = "setupAnim(Lnet/minecraft/world/entity/LivingEntity;FFFFF)V", at = @At("TAIL"))
     private void exodus_vehicles$gunnerPose(LivingEntity entity, float limbSwing, float limbSwingAmount, float age,
                                             float headYaw, float headPitch, CallbackInfo ci) {
+        if (entity.getVehicle() instanceof com.exodusvehicles.entity.PlaneEntity) {
+            // pilot: both hands on the control column between his knees (thumbs on the gun triggers), elbows tucked
+            // in clear of the cockpit sides, knees together under the decking
+            HumanoidModel<?> self = (HumanoidModel<?>) (Object) this;
+            self.rightArm.xRot = -0.78F;
+            self.rightArm.yRot = -0.08F;
+            self.rightArm.zRot = -0.36F;
+            self.leftArm.xRot = -0.78F;
+            self.leftArm.yRot = 0.08F;
+            self.leftArm.zRot = 0.36F;
+            self.rightLeg.xRot = -1.45F;
+            self.leftLeg.xRot = -1.45F;
+            self.rightLeg.yRot = 0.04F;
+            self.leftLeg.yRot = -0.04F;
+            self.rightLeg.zRot = 0.0F;
+            self.leftLeg.zRot = 0.0F;
+            return;
+        }
         float[] mgPose = com.exodusvehicles.client.FieldMgClient.armPose(entity);
         if (mgPose != null) {
             HumanoidModel<?> self = (HumanoidModel<?>) (Object) this;     // seated behind the MG 08, hands on the grips

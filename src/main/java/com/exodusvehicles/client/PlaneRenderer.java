@@ -56,7 +56,7 @@ public class PlaneRenderer extends EntityRenderer<PlaneEntity> {
         poseStack.translate(0.0F, -1.501F, 0.0F);
         Minecraft mc = Minecraft.getInstance();
         boolean mine = mc.player != null && plane.hasPassenger(mc.player);
-        this.model.setupAnim(Mth.lerp(pt, plane.propRotO, plane.propRot), false);
+        this.model.setupAnim(Mth.lerp(pt, plane.propRotO, plane.propRot), false, plane.isWrecked());
         this.model.render(poseStack, buffers.getBuffer(RenderType.entityCutoutNoCull(getTextureLocation(plane))), light, OverlayTexture.NO_OVERLAY);
         if (plane.flashTicks > 0) {
             // both guns' muzzles (model units: x left, y down from 24, z backward)
