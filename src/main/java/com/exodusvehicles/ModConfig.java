@@ -122,6 +122,8 @@ public class ModConfig {
     public float fieldMgMaxElevation = 15.0F;
     public float fieldMgMaxDepression = 12.0F;
     public double fieldMgRange = 160.0;
+    /** Degrees per tick the whole gun swings round when the gunner keeps turning past the traverse stop. */
+    public float fieldMgSwingSpeed = 2.5F;
     /** Zoom while holding right-click on the sights. */
     public float fieldMgSightZoom = 1.6F;
     /** Suppression: rounds passing within this many blocks of a player rattle them (screen effects, shakier aim). */

@@ -141,5 +141,7 @@
   "entity.exodus_vehicles.mg08": "MG 08 (Sled Mount)",
   "item.exodus_vehicles.mg08": "MG 08 on Sled Mount",
   "entity.exodus_vehicles.mg08_shielded": "MG 08 (Sled Mount, Shielded)",
-  "item.exodus_vehicles.mg08_shielded": "MG 08 on Sled Mount (Shielded)"
+  "item.exodus_vehicles.mg08_shielded": "MG 08 on Sled Mount (Shielded)",
+  "entity.exodus_vehicles.mg08_bunker": "MG 08 (Bunker Mount)",
+  "item.exodus_vehicles.mg08_bunker": "MG 08 on Bunker Mount"
 }

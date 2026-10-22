@@ -14,7 +14,8 @@ public abstract class HumanoidModelMixin {
     @Inject(method = "setupAnim(Lnet/minecraft/world/entity/LivingEntity;FFFFF)V", at = @At("HEAD"))
     private void exodus_vehicles$standAtGun(LivingEntity entity, float limbSwing, float limbSwingAmount, float age,
                                             float headYaw, float headPitch, CallbackInfo ci) {
-        if (entity.getVehicle() instanceof com.exodusvehicles.entity.MorserEntity) {
+        if (entity.getVehicle() instanceof com.exodusvehicles.entity.MorserEntity
+                || entity.getVehicle() instanceof com.exodusvehicles.entity.FieldMgEntity mg && mg.gunnerStands()) {
             ((HumanoidModel<?>) (Object) this).riding = false;
         }
     }
@@ -32,6 +33,12 @@ public abstract class HumanoidModelMixin {
             self.leftArm.xRot = mgPose[2];
             self.leftArm.yRot = mgPose[3];
             self.leftArm.zRot = 0.0F;
+            if (entity.getVehicle() instanceof com.exodusvehicles.entity.FieldMgEntity mg && mg.gunnerStands()) {
+                self.rightLeg.xRot = 0.0F;
+                self.leftLeg.xRot = 0.0F;
+                self.rightLeg.yRot = 0.0F;
+                self.leftLeg.yRot = 0.0F;
+            }
             return;
         }
         float[] pose = ArtilleryClient.gunnerArmPose(entity);

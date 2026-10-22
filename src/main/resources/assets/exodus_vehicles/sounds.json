@@ -233,5 +233,13 @@
   "fk_move": {
     "subtitle": "subtitles.exodus_vehicles.fk_move",
     "sounds": []
+  },
+  "mgf_fire": {
+    "subtitle": "subtitles.exodus_vehicles.mg_fire",
+    "sounds": []
+  },
+  "mgf_fire_far": {
+    "subtitle": "subtitles.exodus_vehicles.mg_fire_far",
+    "sounds": []
   }
 }

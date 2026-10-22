@@ -15,12 +15,14 @@ import net.minecraft.util.Mth;
 
 public class FieldMgRenderer extends EntityRenderer<FieldMgEntity> {
     private static final ResourceLocation TEXTURE = ArmoredCarMod.id("textures/entity/mg08.png");
-    private final FieldMgModel model;
+    private static final ResourceLocation TEXTURE_BUNKER = ArmoredCarMod.id("textures/entity/mg08_bunker.png");
+    private final FieldMgModel model, bunkerModel;
 
     public FieldMgRenderer(EntityRendererProvider.Context context) {
         super(context);
         this.shadowRadius = 0.7F;
         this.model = new FieldMgModel(context.bakeLayer(FieldMgModel.LAYER));
+        this.bunkerModel = new FieldMgModel(context.bakeLayer(FieldMgModel.BUNKER_LAYER));
     }
 
     @Override
@@ -37,10 +39,11 @@ public class FieldMgRenderer extends EntityRenderer<FieldMgEntity> {
             rel = mg.relYaw(mc.player.getViewYRot(partialTick));
             pitch = FieldMgEntity.clampPitch(mc.player.getViewXRot(partialTick));
         }
-        this.model.setupAnim(mg.hasShield(), rel, pitch, Mth.lerp(partialTick, mg.recoilO, mg.recoil));
-        this.model.render(poseStack, buffers.getBuffer(RenderType.entityCutoutNoCull(TEXTURE)), packedLight, OverlayTexture.NO_OVERLAY);
+        FieldMgModel m = mg.isBunker() ? this.bunkerModel : this.model;
+        m.setupAnim(mg.hasShield(), rel, pitch, Mth.lerp(partialTick, mg.recoilO, mg.recoil));
+        m.render(poseStack, buffers.getBuffer(RenderType.entityCutoutNoCull(getTextureLocation(mg))), packedLight, OverlayTexture.NO_OVERLAY);
         if (mg.flashTicks > 0) {
-            org.joml.Vector3f[] mz = this.model.muzzle(poseStack);
+            org.joml.Vector3f[] mz = m.muzzle(poseStack);
             ArmoredCarRenderer.renderFlash(mg.flashTicks, mg.flashStyle, mg.flashScale, mg.flashSpin, partialTick, mz[0], mz[1],
                     buffers, gunner && mc.options.getCameraType().isFirstPerson());
         }
@@ -51,6 +54,6 @@ public class FieldMgRenderer extends EntityRenderer<FieldMgEntity> {
 
     @Override
     public ResourceLocation getTextureLocation(FieldMgEntity mg) {
-        return TEXTURE;
+        return mg.isBunker() ? TEXTURE_BUNKER : TEXTURE;
     }
 }

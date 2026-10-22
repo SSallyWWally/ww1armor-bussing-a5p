@@ -54,9 +54,8 @@ import java.util.UUID;
  * suppress them. Sneak + right-click (nobody on it) picks it up again.
  */
 public class FieldMgEntity extends Entity implements Repairable {
-    /** Traverse / elevation pivot, and the gunner's eye at the rear sight (gun frame, blocks). */
-    public static final double PIVOT_UP = 10.0 / 16.0;
-    public static final double EYE_UP = 4.2 / 16.0, EYE_BACK = 6.5 / 16.0;
+    /** The gunner's eye lined up with the rear notch and the front blade (gun frame, blocks from the elevation pivot). */
+    public static final double EYE_UP = 5.0 / 16.0, EYE_BACK = 12.0 / 16.0;
     public static final double BORE_UP = 1.4 / 16.0, MUZZLE_FWD = 15.0 / 16.0;
 
     private static final EntityDataAccessor<Float> DATA_HEALTH = def(EntityDataSerializers.FLOAT);
@@ -66,6 +65,8 @@ public class FieldMgEntity extends Entity implements Repairable {
     private static final EntityDataAccessor<Boolean> DATA_OVERHEATED = def(EntityDataSerializers.BOOLEAN);
     private static final EntityDataAccessor<Float> DATA_AIM_YAW = def(EntityDataSerializers.FLOAT);
     private static final EntityDataAccessor<Float> DATA_AIM_PITCH = def(EntityDataSerializers.FLOAT);
+    /** Where the gunner's feet are relative to the gun's base when standing (NaN = sitting behind the sled). */
+    private static final EntityDataAccessor<Float> DATA_STAND_DY = def(EntityDataSerializers.FLOAT);
 
     private static <T> EntityDataAccessor<T> def(net.minecraft.network.syncher.EntityDataSerializer<T> s) {
         return SynchedEntityData.defineId(FieldMgEntity.class, s);
@@ -96,6 +97,36 @@ public class FieldMgEntity extends Entity implements Repairable {
         return this.getType() == ArmoredCarMod.FIELD_MG_SHIELD;
     }
 
+    /** Pedestal mount for bunkers and trenches (no sled; the gunner stands). */
+    public boolean isBunker() {
+        return this.getType() == ArmoredCarMod.FIELD_MG_BUNKER;
+    }
+
+    /** Height of the elevation pivot above the base. */
+    public double pivotUp() {
+        return (isBunker() ? 22.0 : 10.0) / 16.0;
+    }
+
+    /** The gunner stands (bunker mount, or a sled set up on a parapet above where they are). */
+    public boolean gunnerStands() {
+        return !Float.isNaN(this.entityData.get(DATA_STAND_DY));
+    }
+
+    /** Ground under where a standing gunner would be, relative to the gun's base, or NaN if they should sit. */
+    private float standHeight() {
+        if (isBunker()) {
+            return 0.0F;
+        }
+        Vec3 spot = localToWorld(0.0, 0.4, -1.1);
+        BlockHitResult down = this.level().clip(new ClipContext(spot, spot.add(0, -3.0, 0), ClipContext.Block.COLLIDER,
+                ClipContext.Fluid.NONE, this));
+        if (down.getType() == HitResult.Type.MISS) {
+            return Float.NaN;
+        }
+        double dy = down.getLocation().y - this.getY();
+        return dy < -0.45 ? (float) Math.max(-1.6, dy) : Float.NaN;
+    }
+
     @Override
     protected void defineSynchedData(SynchedEntityData.Builder b) {
         b.define(DATA_HEALTH, getMaxHealth());
@@ -105,6 +136,7 @@ public class FieldMgEntity extends Entity implements Repairable {
         b.define(DATA_OVERHEATED, false);
         b.define(DATA_AIM_YAW, 0.0F);
         b.define(DATA_AIM_PITCH, 0.0F);
+        b.define(DATA_STAND_DY, Float.NaN);
     }
 
     // ------------------------------------------------------------------ state
@@ -157,7 +189,7 @@ public class FieldMgEntity extends Entity implements Repairable {
         if (u.y < 0) {
             u = u.scale(-1);
         }
-        return base.add(0, PIVOT_UP, 0).add(f.scale(fwd)).add(r.scale(right)).add(u.scale(up));
+        return base.add(0, pivotUp(), 0).add(f.scale(fwd)).add(r.scale(right)).add(u.scale(up));
     }
 
     public Vec3 localToWorld(double right, double up, double forward) {
@@ -194,7 +226,8 @@ public class FieldMgEntity extends Entity implements Repairable {
 
     @Override
     public ItemStack getPickResult() {
-        return new ItemStack(hasShield() ? ArmoredCarMod.FIELD_MG_SHIELD_ITEM : ArmoredCarMod.FIELD_MG_ITEM);
+        return new ItemStack(isBunker() ? ArmoredCarMod.FIELD_MG_BUNKER_ITEM
+                : hasShield() ? ArmoredCarMod.FIELD_MG_SHIELD_ITEM : ArmoredCarMod.FIELD_MG_ITEM);
     }
 
     @Override
@@ -207,16 +240,23 @@ public class FieldMgEntity extends Entity implements Repairable {
         return this.getPassengers().isEmpty();
     }
 
-    /** The gunner sits on the ground behind the spade grips. */
+    /**
+     * The gunner stays behind the spade grips, swinging round the pivot as the gun traverses: sitting on the ground
+     * behind the sled, or standing (bunker mount, or a sled set up on a parapet above them).
+     */
     @Override
     public void positionRider(Entity passenger, Entity.MoveFunction move) {
         if (!this.hasPassenger(passenger)) {
             return;
         }
-        Vec3 p = localToWorld(0.0, -0.62, -1.18);
-        move.accept(passenger, p.x, p.y, p.z);
+        float rel = relYaw(passenger.getYHeadRot());
+        double yaw = Math.toRadians(this.getYRot() + rel);
+        double back = gunnerStands() ? (isBunker() ? 1.0 : 1.1) : 1.18;
+        double dy = gunnerStands() ? this.entityData.get(DATA_STAND_DY) : -0.62;
+        move.accept(passenger, this.getX() + Math.sin(yaw) * back, this.getY() + dy, this.getZ() - Math.cos(yaw) * back);
         if (passenger instanceof LivingEntity living) {
-            living.setYBodyRot(this.getYRot() + aimYaw());
+            living.setYBodyRot(this.getYRot() + rel);
+            living.yBodyRotO = living.yBodyRot;
         }
     }
 
@@ -456,7 +496,7 @@ public class FieldMgEntity extends Entity implements Repairable {
             }
         }
         flybyAndSuppress(server, shooter, muzzle, end);
-        playGunSound(server, muzzle, ArmoredCarMod.MG_FIRE, ArmoredCarMod.MG_FIRE_FAR, 0.97F + this.random.nextFloat() * 0.06F);
+        playGunSound(server, muzzle, ArmoredCarMod.MGF_FIRE, ArmoredCarMod.MGF_FIRE_FAR, 0.97F + this.random.nextFloat() * 0.06F);
         this.lastShotTick = this.tickCount;
         this.burstActive = true;
         this.lastMuzzle = muzzle;
@@ -539,7 +579,7 @@ public class FieldMgEntity extends Entity implements Repairable {
     }
 
     private void gunSound(SoundEvent sound) {
-        this.level().playSound(null, this.getX(), this.getY() + PIVOT_UP, this.getZ(), sound, SoundSource.PLAYERS, 1.0F, 1.0F);
+        this.level().playSound(null, this.getX(), this.getY() + pivotUp(), this.getZ(), sound, SoundSource.PLAYERS, 1.0F, 1.0F);
     }
 
     @Override
@@ -581,8 +621,18 @@ public class FieldMgEntity extends Entity implements Repairable {
         ModConfig cfg = ModConfig.get();
         Player op = getGunner();
         if (op != null) {
+            // pushing the aim against the traverse stop drags the whole gun round after you
+            float lim = traverseLimit();
+            float want = Mth.wrapDegrees(op.getYHeadRot() - this.getYRot());
+            if (Math.abs(want) > lim - 1.0F) {
+                float step = Math.signum(want) * Math.min(cfg.fieldMgSwingSpeed, Math.abs(want) - (lim - 1.0F) + 1.0F);
+                this.setYRot(this.getYRot() + step);
+            }
             this.entityData.set(DATA_AIM_YAW, relYaw(op.getYHeadRot()));
             this.entityData.set(DATA_AIM_PITCH, clampPitch(op.getXRot()));
+        }
+        if (this.tickCount % 10 == 1) {
+            this.entityData.set(DATA_STAND_DY, standHeight());
         }
         if (this.burstActive && this.tickCount - this.lastShotTick > 3) {
             this.burstActive = false;
