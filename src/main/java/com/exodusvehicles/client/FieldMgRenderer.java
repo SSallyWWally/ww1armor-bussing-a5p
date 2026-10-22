@@ -42,7 +42,7 @@ public class FieldMgRenderer extends EntityRenderer<FieldMgEntity> {
             pitch = FieldMgEntity.clampPitch(mc.player.getViewXRot(partialTick));
         }
         FieldMgModel m = mg.isBunker() ? this.bunkerModel : mg.isTripod() ? this.tripodModel : this.model;
-        m.setupAnim(mg.hasShield(), rel, pitch, Mth.lerp(partialTick, mg.recoilO, mg.recoil));
+        m.setupAnim(mg.hasShield(), mg.hasScope() && !(gunner && FieldMgClient.scopeAmount(partialTick) > 0.5F), rel, pitch, Mth.lerp(partialTick, mg.recoilO, mg.recoil));
         m.render(poseStack, buffers.getBuffer(RenderType.entityCutoutNoCull(getTextureLocation(mg))), packedLight, OverlayTexture.NO_OVERLAY);
         if (mg.flashTicks > 0) {
             org.joml.Vector3f[] mz = m.muzzle(poseStack);

@@ -78,7 +78,8 @@ public final class FieldMgClient {
 
     public static void endTick(Minecraft mc) {
         zoomO = zoom;
-        float target = zoomHeld && onSights() ? Math.max(1.0F, ModConfig.get().fieldMgSightZoom) : 1.0F;
+        FieldMgEntity g = gun();
+        float target = zoomHeld && onSights() ? (g != null && g.hasScope() ? 2.5F : Math.max(1.0F, ModConfig.get().fieldMgSightZoom)) : 1.0F;
         zoom += (target - zoom) * 0.45F;
         if (Math.abs(target - zoom) < 0.01F) {
             zoom = target;
@@ -93,6 +94,15 @@ public final class FieldMgClient {
             ammoAge = 0;
             ammoCache = TaczCompat.countMgAmmo(mc.player);
         }
+    }
+
+    /** 0..1: how far the gunner has put their eye to the Zielfernrohr (scoped guns only). */
+    public static float scopeAmount(float pt) {
+        FieldMgEntity g = gun();
+        if (g == null || !g.hasScope() || !onSights()) {
+            return 0.0F;
+        }
+        return Mth.clamp((Mth.lerp(pt, zoomO, zoom) - 1.0F) / 1.5F, 0.0F, 1.0F);
     }
 
     public static double fovScale(float pt) {
@@ -118,6 +128,12 @@ public final class FieldMgClient {
         Vec3 base = new Vec3(Mth.lerp(pt, mg.xo, mg.getX()), Mth.lerp(pt, mg.yo, mg.getY()), Mth.lerp(pt, mg.zo, mg.getZ()));
         float sled = Mth.rotLerp(pt, mg.yRotO, mg.getYRot());
         Vec3 eye = mg.gunPoint(base, sled, rel, pitch, 0.0, FieldMgEntity.EYE_UP, -FieldMgEntity.EYE_BACK);
+        float sc = scopeAmount(pt);
+        if (sc > 0.0F) {
+            // eye moves across to the scope's leather eye rest
+            double[] e = FieldMgEntity.SCOPE_EYE;
+            eye = eye.lerp(mg.gunPoint(base, sled, rel, pitch, e[0], e[1], -e[2]), Math.min(1.0F, sc * 1.6F));
+        }
         return new double[]{eye.x, eye.y, eye.z, sled + rel, pitch};
     }
 
@@ -172,6 +188,34 @@ public final class FieldMgClient {
 
     // ------------------------------------------------------------------ HUD
 
+    /** Looking into the Zielfernrohr 12: round field of view, solid black around it, a thin inverted-V reticle. */
+    private static void drawScope(GuiGraphics g, int w, int h, float t) {
+        int cx = w / 2, cy = h / 2;
+        int black = (int) (Math.min(1.0F, t * 1.3F) * 255) << 24;
+        float rad = h * Mth.lerp(t, 0.9F, 0.42F);
+        for (int y = 0; y < h; y++) {
+            float dy = y + 0.5F - h * 0.5F;
+            if (Math.abs(dy) >= rad) {
+                g.fill(0, y, w, y + 1, black);
+                continue;
+            }
+            int half = (int) Math.sqrt(rad * rad - dy * dy);
+            g.fill(0, y, cx - half, y + 1, black);
+            g.fill(cx + half, y, w, y + 1, black);
+            // a soft dark rim just inside the edge
+            int rim = Math.max(2, (int) (rad * 0.06F));
+            int a = (int) (t * 150);
+            g.fill(cx - half, y, Math.min(cx + half, cx - half + rim), y + 1, a << 24);
+            g.fill(Math.max(cx - half, cx + half - rim), y, cx + half, y + 1, a << 24);
+        }
+        int ink = ((int) (t * 235) << 24) | 0x101010;
+        int arm = (int) (rad * 0.32F);
+        for (int i = 0; i < arm; i++) {      // inverted V, its point on the aim
+            g.fill(cx - i / 2 - 1, cy + i, cx - i / 2 + 1, cy + i + 1, ink);
+            g.fill(cx + i / 2, cy + i, cx + i / 2 + 2, cy + i + 1, ink);
+        }
+    }
+
     public static void drawOverlay(GuiGraphics g, float pt) {
         Minecraft mc = Minecraft.getInstance();
         int w = g.guiWidth(), h = g.guiHeight();
@@ -196,6 +240,10 @@ public final class FieldMgClient {
         FieldMgEntity mg = gun();
         if (mg == null || mc.options.hideGui) {
             return;
+        }
+        float sc = scopeAmount(pt);
+        if (sc > 0.05F) {
+            drawScope(g, w, h, sc);
         }
         ModConfig cfg = ModConfig.get();
         int x = 8, y = 8, barW = 100;

@@ -94,22 +94,34 @@ public class FieldMgEntity extends Entity implements Repairable {
     }
 
     public boolean hasShield() {
-        return this.getType() == ArmoredCarMod.FIELD_MG_SHIELD;
+        EntityType<?> t = this.getType();
+        return t == ArmoredCarMod.FIELD_MG_SHIELD || t == ArmoredCarMod.FIELD_MG_BUNKER_SHIELD;
     }
 
     /** Pedestal mount for bunkers and trenches (no sled; the gunner stands). */
     public boolean isBunker() {
-        return this.getType() == ArmoredCarMod.FIELD_MG_BUNKER;
+        EntityType<?> t = this.getType();
+        return t == ArmoredCarMod.FIELD_MG_BUNKER || t == ArmoredCarMod.FIELD_MG_BUNKER_SHIELD || t == ArmoredCarMod.FIELD_MG_BUNKER_SCOPED;
     }
 
     /** Light tripod: higher than the sled, the gunner kneels / sits low behind it. */
     public boolean isTripod() {
-        return this.getType() == ArmoredCarMod.FIELD_MG_TRIPOD;
+        EntityType<?> t = this.getType();
+        return t == ArmoredCarMod.FIELD_MG_TRIPOD || t == ArmoredCarMod.FIELD_MG_TRIPOD_SCOPED;
     }
+
+    /** Zielfernrohr 12 (2.5x) fitted at the left rear of the receiver. */
+    public boolean hasScope() {
+        EntityType<?> t = this.getType();
+        return t == ArmoredCarMod.FIELD_MG_SCOPED || t == ArmoredCarMod.FIELD_MG_TRIPOD_SCOPED || t == ArmoredCarMod.FIELD_MG_BUNKER_SCOPED;
+    }
+
+    /** The eye at the scope's eyepiece (gun frame, blocks): {right, up, back}. */
+    public static final double[] SCOPE_EYE = {-2.6 / 16.0, 4.4 / 16.0, 9.0 / 16.0};
 
     /** Height of the elevation pivot above the base. */
     public double pivotUp() {
-        return (isBunker() ? 22.0 : isTripod() ? 16.0 : 10.0) / 16.0;
+        return (isBunker() ? 18.0 : isTripod() ? 16.0 : 10.0) / 16.0;
     }
 
     /** The gunner stands (bunker mount, or a sled set up on a parapet above where they are). */
@@ -231,8 +243,8 @@ public class FieldMgEntity extends Entity implements Repairable {
 
     @Override
     public ItemStack getPickResult() {
-        return new ItemStack(isBunker() ? ArmoredCarMod.FIELD_MG_BUNKER_ITEM : isTripod() ? ArmoredCarMod.FIELD_MG_TRIPOD_ITEM
-                : hasShield() ? ArmoredCarMod.FIELD_MG_SHIELD_ITEM : ArmoredCarMod.FIELD_MG_ITEM);
+        net.minecraft.world.item.Item item = ArmoredCarMod.FIELD_MG_ITEMS.get(this.getType());
+        return new ItemStack(item != null ? item : ArmoredCarMod.FIELD_MG_ITEM);
     }
 
     @Override

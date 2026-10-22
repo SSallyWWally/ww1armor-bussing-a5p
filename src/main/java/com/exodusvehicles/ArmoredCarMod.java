@@ -50,7 +50,9 @@ public class ArmoredCarMod implements ModInitializer {
     public static Item MORSER_ITEM;
     public static Item SHELL_ITEM;
     public static EntityType<com.exodusvehicles.entity.FieldGunEntity> FIELD_GUN;
-    public static EntityType<com.exodusvehicles.entity.FieldMgEntity> FIELD_MG, FIELD_MG_SHIELD, FIELD_MG_BUNKER, FIELD_MG_TRIPOD;
+    public static EntityType<com.exodusvehicles.entity.FieldMgEntity> FIELD_MG, FIELD_MG_SHIELD, FIELD_MG_BUNKER, FIELD_MG_TRIPOD,
+            FIELD_MG_SCOPED, FIELD_MG_TRIPOD_SCOPED, FIELD_MG_BUNKER_SCOPED, FIELD_MG_BUNKER_SHIELD;
+    public static final java.util.Map<EntityType<?>, Item> FIELD_MG_ITEMS = new java.util.LinkedHashMap<>();
     public static Item FIELD_MG_ITEM, FIELD_MG_SHIELD_ITEM, FIELD_MG_BUNKER_ITEM, FIELD_MG_TRIPOD_ITEM;
     public static SoundEvent MGF_FIRE, MGF_FIRE_FAR;
     public static Item FIELD_GUN_ITEM;
@@ -181,12 +183,26 @@ public class ArmoredCarMod implements ModInitializer {
                         .sized(0.9F, 1.2F).fireImmune().clientTrackingRange(10).build("mg08_tripod"));
         FIELD_MG_TRIPOD_ITEM = Registry.register(BuiltInRegistries.ITEM, id("mg08_tripod"),
                 new ArmoredCarItem(new Item.Properties().stacksTo(1), () -> FIELD_MG_TRIPOD));
+        FIELD_MG_SCOPED = fieldMg("mg08_scoped", 0.9F, 0.9F);
+        FIELD_MG_TRIPOD_SCOPED = fieldMg("mg08_tripod_scoped", 0.9F, 1.2F);
+        FIELD_MG_BUNKER_SCOPED = fieldMg("mg08_bunker_scoped", 0.8F, 1.4F);
+        FIELD_MG_BUNKER_SHIELD = fieldMg("mg08_bunker_shielded", 0.8F, 1.4F);
+        FIELD_MG_ITEMS.put(FIELD_MG_TRIPOD, FIELD_MG_TRIPOD_ITEM);
+        FIELD_MG_ITEMS.put(FIELD_MG_BUNKER, FIELD_MG_BUNKER_ITEM);
+        for (EntityType<com.exodusvehicles.entity.FieldMgEntity> t : java.util.List.of(FIELD_MG_SCOPED, FIELD_MG_TRIPOD_SCOPED,
+                FIELD_MG_BUNKER_SCOPED, FIELD_MG_BUNKER_SHIELD)) {
+            ResourceLocation key = BuiltInRegistries.ENTITY_TYPE.getKey(t);
+            FIELD_MG_ITEMS.put(t, Registry.register(BuiltInRegistries.ITEM, key,
+                    new ArmoredCarItem(new Item.Properties().stacksTo(1), () -> t)));
+        }
         MGF_FIRE = registerSound("mgf_fire");
         MGF_FIRE_FAR = registerSound("mgf_fire_far");
         FIELD_MG_ITEM = Registry.register(BuiltInRegistries.ITEM, id("mg08"),
                 new ArmoredCarItem(new Item.Properties().stacksTo(1), () -> FIELD_MG));
         FIELD_MG_SHIELD_ITEM = Registry.register(BuiltInRegistries.ITEM, id("mg08_shielded"),
                 new ArmoredCarItem(new Item.Properties().stacksTo(1), () -> FIELD_MG_SHIELD));
+        FIELD_MG_ITEMS.put(FIELD_MG, FIELD_MG_ITEM);
+        FIELD_MG_ITEMS.put(FIELD_MG_SHIELD, FIELD_MG_SHIELD_ITEM);
         FIELD_SHELL_ITEM = Registry.register(BuiltInRegistries.ITEM, id("shell_77mm"), new Item(new Item.Properties().stacksTo(1)));
         FK_CREW = registerSound("fk_crew");
         FK_CLOSE = registerSound("fk_close");
@@ -253,10 +269,10 @@ public class ArmoredCarMod implements ModInitializer {
                             out.accept(MORSER_ITEM);
                             out.accept(SHELL_ITEM);
                             out.accept(SHELL_PILE_ITEM);
-                            out.accept(FIELD_MG_ITEM);
-                            out.accept(FIELD_MG_SHIELD_ITEM);
-                            out.accept(FIELD_MG_TRIPOD_ITEM);
-                            out.accept(FIELD_MG_BUNKER_ITEM);
+                            for (EntityType<?> t : java.util.List.of(FIELD_MG, FIELD_MG_SHIELD, FIELD_MG_SCOPED, FIELD_MG_TRIPOD,
+                                    FIELD_MG_TRIPOD_SCOPED, FIELD_MG_BUNKER, FIELD_MG_BUNKER_SHIELD, FIELD_MG_BUNKER_SCOPED)) {
+                                out.accept(FIELD_MG_ITEMS.get(t));
+                            }
                             out.accept(FIELD_GUN_ITEM);
                             out.accept(FIELD_SHELL_ITEM);
                             out.accept(FIELD_SHELL_PILE_ITEM);
@@ -396,6 +412,12 @@ public class ArmoredCarMod implements ModInitializer {
             n += p.containerMenu.getCarried().getCount();
         }
         return n;
+    }
+
+    private static EntityType<com.exodusvehicles.entity.FieldMgEntity> fieldMg(String name, float w, float h) {
+        return Registry.register(BuiltInRegistries.ENTITY_TYPE, id(name),
+                EntityType.Builder.<com.exodusvehicles.entity.FieldMgEntity>of(com.exodusvehicles.entity.FieldMgEntity::new, MobCategory.MISC)
+                        .sized(w, h).fireImmune().clientTrackingRange(10).build(name));
     }
 
     private static SoundEvent registerSound(String name) {
