@@ -225,8 +225,8 @@ public final class PlaneClient {
         float pitch = Mth.lerp(pt, p.xRotO, p.getXRot()) - Mth.lerp(pt, p.groundTiltO, p.groundTilt);
         float roll = Mth.lerp(pt, p.rollO, p.roll);
         Vec3 base = p.getPosition(pt);
-        // the guns fire along the pilot's sight line (eye through the ring sight to the bead), so the sight on the
-        // screen sits on the ring: dead centre in the cockpit, just above the aircraft from outside
+        // the guns fire along the pilot's line of sight down the nose: dead centre in the cockpit, just above the
+        // aircraft from outside
         Vec3 gunsAt = PlaneEntity.bodyPoint(base, yaw, pitch, roll, PlaneEntity.EYE[0], PlaneEntity.EYE[1], PlaneEntity.EYE[2])
                 .add(Vec3.directionFromRotation(pitch, yaw).scale(150.0));
         float sy = freelook ? holdYaw : mc.player.getViewYRot(pt), sp = freelook ? holdPitch : mc.player.getViewXRot(pt);
@@ -236,9 +236,17 @@ public final class PlaneClient {
             ring(g, gs[0], gs[1], 9, white);           // gun sight
             g.fill(Math.round(gs[0]), Math.round(gs[1]), Math.round(gs[0]) + 1, Math.round(gs[1]) + 1, white);
         }
+        // top left, like the Eisenwolf: seat, then engine / brake state
+        Component seat = Component.translatable("seat.exodus_vehicles.plane.pilot");
+        g.drawString(mc.font, seat, 8, 8, 0xFFE8E4D0, true);
+        int sx = 8 + mc.font.width(seat) + 8;
         if (!p.isEngineOn() && !p.isDowned()) {
-            Component hint = Component.translatable("hud.exodus_vehicles.plane_engine_off");
-            g.drawString(mc.font, hint, w / 2 - mc.font.width(hint) / 2, h / 2 + 44, 0xFFE0C060, true);
+            Component off = Component.translatable("hud.exodus_vehicles.engine_off");
+            g.drawString(mc.font, off, sx, 8, 0xFFB9B6A3, true);
+            sx += mc.font.width(off) + 6;
+        }
+        if (p.isParkingBrakeOn()) {
+            g.drawString(mc.font, Component.translatable("hud.exodus_vehicles.parking_brake"), sx, 8, 0xFFE0A040, true);
         }
         // instruments, bottom left: speed, height, throttle, guns, airframe
         int x = 10, y = h - 64;
@@ -256,9 +264,6 @@ public final class PlaneClient {
         float hp = p.getHealth() / p.getMaxHealth();
         g.fill(x, y + 48, x + 112, y + 51, 0x80000000);
         g.fill(x, y + 48, x + Math.round(112 * Mth.clamp(hp, 0, 1)), y + 51, hp > 0.5F ? 0xFF8D977A : hp > 0.25F ? 0xFFD9A441 : 0xFFC4553A);
-        if (p.isParkingBrakeOn()) {
-            g.drawString(mc.font, Component.translatable("hud.exodus_vehicles.parking_brake"), x + 64, y + 11, 0xFFE0A040, true);
-        }
         if (freelook) {
             Component fl = Component.translatable("hud.exodus_vehicles.plane_freelook");
             g.drawString(mc.font, fl, w / 2 - mc.font.width(fl) / 2, 8, 0xFFE0C060, true);

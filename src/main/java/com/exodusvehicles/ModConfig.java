@@ -18,7 +18,7 @@ import java.util.List;
 public class ModConfig {
     /** Bumped when a default changes in a way old config files must pick up. Don't edit. */
     public int configVersion = 0;
-    private static final int CURRENT_VERSION = 13;
+    private static final int CURRENT_VERSION = 14;
 
     // ---- armor / damage
     public float maxHealth = 300.0F;
@@ -148,8 +148,8 @@ public class ModConfig {
     public float planeGunDamage = 4.5F;
     public double planeGunRange = 150.0;
     public double planeGunSpread = 0.008;
-    public float planeGunHeatPerShot = 0.02F;   // ~5 s of fire to overheat
-    public float planeGunCooling = 0.012F;
+    public float planeGunHeatPerShot = 0.034F;  // ~5 s of continuous fire to overheat
+    public float planeGunCooling = 0.0075F;     // ~6 s to cool right down
 
     /** Client: size of the shell burst effects (1 = full, lower for weaker PCs). */
     public float shellEffectScale = 1.0F;
@@ -294,6 +294,15 @@ public class ModConfig {
         }
         if (cfg.configVersion < 13 && cfg.shellBlockPower == 2.5F) {
             cfg.shellBlockPower = 3.2F;           // 2.1.0: bigger craters (now on by default via the game rule)
+        }
+        if (cfg.configVersion < 14) {
+            // 2.3.9: the plane's guns cooled faster than they heated, so they never overheated
+            if (cfg.planeGunHeatPerShot == 0.02F) {
+                cfg.planeGunHeatPerShot = 0.034F;
+            }
+            if (cfg.planeGunCooling == 0.012F) {
+                cfg.planeGunCooling = 0.0075F;
+            }
         }
         cfg.configVersion = CURRENT_VERSION;
         cfg.mgBeltSize = Math.max(1, cfg.mgBeltSize);

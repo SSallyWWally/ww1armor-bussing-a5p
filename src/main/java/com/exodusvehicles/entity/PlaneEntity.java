@@ -662,7 +662,9 @@ public class PlaneEntity extends Entity implements Repairable {
         if (getHealth() <= 0.0F) {
             this.entityData.set(DATA_DOWNED, true);
             this.entityData.set(DATA_HEALTH, 0.0F);
-            sound(ArmoredCarMod.PLANE_DEATH, 2.5F, 1.0F);
+            if (!this.onGround()) {
+                sound(ArmoredCarMod.PLANE_DEATH, 2.5F, 1.0F);   // the spin-out: only when it dies in the air
+            }
             if (source.getEntity() instanceof ServerPlayer killer) {
                 net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(killer,
                         new com.exodusvehicles.network.HitMarkerPayload(true, -1));
