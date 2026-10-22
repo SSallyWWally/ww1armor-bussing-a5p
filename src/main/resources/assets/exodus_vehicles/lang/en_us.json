@@ -98,7 +98,7 @@
   "item.exodus_vehicles.jerry_can.litres": "%s / 20 litres of petrol",
   "item.exodus_vehicles.jerry_can.hint": "Hold right-click on a vehicle to refuel it",
   "item.exodus_vehicles.wrench": "Repair Wrench",
-  "item.exodus_vehicles.mg_belt": "MG 08 Ammunition Belt (250)",
+  "item.exodus_vehicles.mg_belt": "MG 08 Ammunition Box (250)",
   "block.exodus_vehicles.shell_pile": "Heavy Artillery Shell Pile",
   "item.exodus_vehicles.shell_pile": "Heavy Artillery Shell Pile",
   "hud.exodus_vehicles.fuel": "Fuel %s / %s L",
@@ -143,5 +143,7 @@
   "entity.exodus_vehicles.mg08_shielded": "MG 08 (Sled Mount, Shielded)",
   "item.exodus_vehicles.mg08_shielded": "MG 08 on Sled Mount (Shielded)",
   "entity.exodus_vehicles.mg08_bunker": "MG 08 (Bunker Mount)",
-  "item.exodus_vehicles.mg08_bunker": "MG 08 on Bunker Mount"
+  "item.exodus_vehicles.mg08_bunker": "MG 08 on Bunker Mount",
+  "entity.exodus_vehicles.mg08_tripod": "MG 08 (Tripod)",
+  "item.exodus_vehicles.mg08_tripod": "MG 08 on Tripod"
 }

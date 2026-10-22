@@ -50,8 +50,8 @@ public class ArmoredCarMod implements ModInitializer {
     public static Item MORSER_ITEM;
     public static Item SHELL_ITEM;
     public static EntityType<com.exodusvehicles.entity.FieldGunEntity> FIELD_GUN;
-    public static EntityType<com.exodusvehicles.entity.FieldMgEntity> FIELD_MG, FIELD_MG_SHIELD, FIELD_MG_BUNKER;
-    public static Item FIELD_MG_ITEM, FIELD_MG_SHIELD_ITEM, FIELD_MG_BUNKER_ITEM;
+    public static EntityType<com.exodusvehicles.entity.FieldMgEntity> FIELD_MG, FIELD_MG_SHIELD, FIELD_MG_BUNKER, FIELD_MG_TRIPOD;
+    public static Item FIELD_MG_ITEM, FIELD_MG_SHIELD_ITEM, FIELD_MG_BUNKER_ITEM, FIELD_MG_TRIPOD_ITEM;
     public static SoundEvent MGF_FIRE, MGF_FIRE_FAR;
     public static Item FIELD_GUN_ITEM;
     public static Item FIELD_SHELL_ITEM;
@@ -176,6 +176,11 @@ public class ArmoredCarMod implements ModInitializer {
                         .sized(0.8F, 1.5F).fireImmune().clientTrackingRange(10).build("mg08_bunker"));
         FIELD_MG_BUNKER_ITEM = Registry.register(BuiltInRegistries.ITEM, id("mg08_bunker"),
                 new ArmoredCarItem(new Item.Properties().stacksTo(1), () -> FIELD_MG_BUNKER));
+        FIELD_MG_TRIPOD = Registry.register(BuiltInRegistries.ENTITY_TYPE, id("mg08_tripod"),
+                EntityType.Builder.<com.exodusvehicles.entity.FieldMgEntity>of(com.exodusvehicles.entity.FieldMgEntity::new, MobCategory.MISC)
+                        .sized(0.9F, 1.2F).fireImmune().clientTrackingRange(10).build("mg08_tripod"));
+        FIELD_MG_TRIPOD_ITEM = Registry.register(BuiltInRegistries.ITEM, id("mg08_tripod"),
+                new ArmoredCarItem(new Item.Properties().stacksTo(1), () -> FIELD_MG_TRIPOD));
         MGF_FIRE = registerSound("mgf_fire");
         MGF_FIRE_FAR = registerSound("mgf_fire_far");
         FIELD_MG_ITEM = Registry.register(BuiltInRegistries.ITEM, id("mg08"),
@@ -250,6 +255,7 @@ public class ArmoredCarMod implements ModInitializer {
                             out.accept(SHELL_PILE_ITEM);
                             out.accept(FIELD_MG_ITEM);
                             out.accept(FIELD_MG_SHIELD_ITEM);
+                            out.accept(FIELD_MG_TRIPOD_ITEM);
                             out.accept(FIELD_MG_BUNKER_ITEM);
                             out.accept(FIELD_GUN_ITEM);
                             out.accept(FIELD_SHELL_ITEM);

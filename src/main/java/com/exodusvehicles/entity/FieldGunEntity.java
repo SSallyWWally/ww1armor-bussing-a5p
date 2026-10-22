@@ -45,6 +45,10 @@ public class FieldGunEntity extends MorserEntity {
     public FieldGunEntity(EntityType<? extends FieldGunEntity> type, Level level) {
         super(type, level);
         this.elevVis = this.elevVisO = 0.0F;
+        // the shared synced fields start with the Mörser's defaults (a range of 95 m read as 95 degrees of
+        // elevation pointed the barrel straight up after a rejoin); give them the field gun's own values at once
+        refreshSettings(ModConfig.get());
+        setAim(0.0F);
     }
 
     @Override public float getMaxHealth() { return ModConfig.get().fieldGunMaxHealth; }
@@ -66,7 +70,8 @@ public class FieldGunEntity extends MorserEntity {
     /** Aim value is the barrel elevation itself. */
     @Override
     public float shownElevation(float aim) {
-        return aim;
+        ModConfig c = ModConfig.get();
+        return Mth.clamp(aim, -Math.abs(c.fieldGunMaxDepression), c.fieldGunMaxElevation);
     }
 
     public float minElevation() { return minRange(); }

@@ -102,9 +102,14 @@ public class FieldMgEntity extends Entity implements Repairable {
         return this.getType() == ArmoredCarMod.FIELD_MG_BUNKER;
     }
 
+    /** Light tripod: higher than the sled, the gunner kneels / sits low behind it. */
+    public boolean isTripod() {
+        return this.getType() == ArmoredCarMod.FIELD_MG_TRIPOD;
+    }
+
     /** Height of the elevation pivot above the base. */
     public double pivotUp() {
-        return (isBunker() ? 22.0 : 10.0) / 16.0;
+        return (isBunker() ? 22.0 : isTripod() ? 16.0 : 10.0) / 16.0;
     }
 
     /** The gunner stands (bunker mount, or a sled set up on a parapet above where they are). */
@@ -226,7 +231,7 @@ public class FieldMgEntity extends Entity implements Repairable {
 
     @Override
     public ItemStack getPickResult() {
-        return new ItemStack(isBunker() ? ArmoredCarMod.FIELD_MG_BUNKER_ITEM
+        return new ItemStack(isBunker() ? ArmoredCarMod.FIELD_MG_BUNKER_ITEM : isTripod() ? ArmoredCarMod.FIELD_MG_TRIPOD_ITEM
                 : hasShield() ? ArmoredCarMod.FIELD_MG_SHIELD_ITEM : ArmoredCarMod.FIELD_MG_ITEM);
     }
 
@@ -252,7 +257,7 @@ public class FieldMgEntity extends Entity implements Repairable {
         float rel = relYaw(passenger.getYHeadRot());
         double yaw = Math.toRadians(this.getYRot() + rel);
         double back = gunnerStands() ? (isBunker() ? 1.0 : 1.1) : 1.18;
-        double dy = gunnerStands() ? this.entityData.get(DATA_STAND_DY) : -0.62;
+        double dy = gunnerStands() ? this.entityData.get(DATA_STAND_DY) : isTripod() ? -0.38 : -0.62;
         move.accept(passenger, this.getX() + Math.sin(yaw) * back, this.getY() + dy, this.getZ() - Math.cos(yaw) * back);
         if (passenger instanceof LivingEntity living) {
             living.setYBodyRot(this.getYRot() + rel);
