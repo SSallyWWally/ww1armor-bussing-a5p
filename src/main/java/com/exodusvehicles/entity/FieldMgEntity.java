@@ -141,7 +141,21 @@ public class FieldMgEntity extends Entity implements Repairable {
             return Float.NaN;
         }
         double dy = down.getLocation().y - this.getY();
-        return dy < -0.45 ? (float) Math.max(-1.6, dy) : Float.NaN;
+        return dy < -0.45 ? (float) Math.max(-MAX_REACH, dy) : Float.NaN;
+    }
+
+    /** A sled / tripod gun may sit at most this far above where its gunner stands (a block and a bit). */
+    public static final double MAX_REACH = 1.2;
+
+    /** True when the gun is set up higher than a gunner behind it could reach. */
+    public boolean tooHighToReach() {
+        if (isBunker()) {
+            return false;
+        }
+        Vec3 spot = localToWorld(0.0, 0.4, -1.1);
+        BlockHitResult down = this.level().clip(new ClipContext(spot, spot.add(0, -4.0, 0), ClipContext.Block.COLLIDER,
+                ClipContext.Fluid.NONE, this));
+        return down.getType() == HitResult.Type.MISS || down.getLocation().y - this.getY() < -MAX_REACH;
     }
 
     @Override
@@ -328,6 +342,10 @@ public class FieldMgEntity extends Entity implements Repairable {
             return InteractionResult.sidedSuccess(client);
         }
         if (!client) {
+            if (tooHighToReach()) {
+                player.displayClientMessage(Component.translatable("msg.exodus_vehicles.mg_too_high"), true);
+                return InteractionResult.FAIL;
+            }
             return player.startRiding(this) ? InteractionResult.CONSUME : InteractionResult.PASS;
         }
         return InteractionResult.SUCCESS;
@@ -650,6 +668,10 @@ public class FieldMgEntity extends Entity implements Repairable {
         }
         if (this.tickCount % 10 == 1) {
             this.entityData.set(DATA_STAND_DY, standHeight());
+            if (op != null && tooHighToReach()) {
+                op.stopRiding();
+                op.displayClientMessage(Component.translatable("msg.exodus_vehicles.mg_too_high"), true);
+            }
         }
         if (this.burstActive && this.tickCount - this.lastShotTick > 3) {
             this.burstActive = false;

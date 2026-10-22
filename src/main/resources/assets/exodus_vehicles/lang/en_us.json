@@ -153,5 +153,6 @@
   "item.exodus_vehicles.mg08_bunker_scoped": "MG 08 on Bunker Mount (Scoped)",
   "entity.exodus_vehicles.mg08_bunker_scoped": "MG 08 (Bunker Mount, Scoped)",
   "item.exodus_vehicles.mg08_bunker_shielded": "MG 08 on Bunker Mount (Shielded)",
-  "entity.exodus_vehicles.mg08_bunker_shielded": "MG 08 (Bunker Mount, Shielded)"
+  "entity.exodus_vehicles.mg08_bunker_shielded": "MG 08 (Bunker Mount, Shielded)",
+  "msg.exodus_vehicles.mg_too_high": "Too high to reach - the gun can be at most a block above where you stand"
 }
