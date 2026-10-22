@@ -12,7 +12,8 @@ public abstract class GuiMixin {
     /** The iron sight replaces the vanilla crosshair. */
     @Inject(method = "renderCrosshair", at = @At("HEAD"), cancellable = true)
     private void exodus_vehicles$hideCrosshair(CallbackInfo ci) {
-        if (GunSight.inSight() || com.exodusvehicles.client.ArtilleryClient.cameraActive()) {
+        if (GunSight.inSight() || com.exodusvehicles.client.ArtilleryClient.cameraActive()
+                || com.exodusvehicles.client.FieldMgClient.gun() != null) {
             ci.cancel();
         }
     }

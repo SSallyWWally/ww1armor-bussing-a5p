@@ -241,5 +241,49 @@
   "mgf_fire_far": {
     "subtitle": "subtitles.exodus_vehicles.mg_fire_far",
     "sounds": []
+  },
+  "plane_start": {
+    "subtitle": "subtitles.exodus_vehicles.plane_start",
+    "sounds": []
+  },
+  "plane_stop": {
+    "subtitle": "subtitles.exodus_vehicles.plane_stop",
+    "sounds": []
+  },
+  "plane_death": {
+    "subtitle": "subtitles.exodus_vehicles.plane_death",
+    "sounds": []
+  },
+  "plane_mg": {
+    "subtitle": "subtitles.exodus_vehicles.plane_mg",
+    "sounds": []
+  },
+  "plane_mg_tail": {
+    "subtitle": "subtitles.exodus_vehicles.plane_mg",
+    "sounds": []
+  },
+  "plane_flyby": {
+    "subtitle": "subtitles.exodus_vehicles.plane_flyby",
+    "sounds": []
+  },
+  "plane_engine_low_ext": {
+    "subtitle": "subtitles.exodus_vehicles.plane_engine",
+    "sounds": []
+  },
+  "plane_engine_high_ext": {
+    "subtitle": "subtitles.exodus_vehicles.plane_engine",
+    "sounds": []
+  },
+  "plane_engine_low_int": {
+    "subtitle": "subtitles.exodus_vehicles.plane_engine",
+    "sounds": []
+  },
+  "plane_engine_high_int": {
+    "subtitle": "subtitles.exodus_vehicles.plane_engine",
+    "sounds": []
+  },
+  "plane_engine_distant": {
+    "subtitle": "subtitles.exodus_vehicles.plane_engine",
+    "sounds": []
   }
 }

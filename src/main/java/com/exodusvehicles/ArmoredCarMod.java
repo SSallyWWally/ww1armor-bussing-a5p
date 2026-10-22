@@ -55,6 +55,10 @@ public class ArmoredCarMod implements ModInitializer {
     public static final java.util.Map<EntityType<?>, Item> FIELD_MG_ITEMS = new java.util.LinkedHashMap<>();
     public static Item FIELD_MG_ITEM, FIELD_MG_SHIELD_ITEM, FIELD_MG_BUNKER_ITEM, FIELD_MG_TRIPOD_ITEM;
     public static SoundEvent MGF_FIRE, MGF_FIRE_FAR;
+    public static EntityType<com.exodusvehicles.entity.PlaneEntity> FOKKER;
+    public static Item FOKKER_ITEM;
+    public static SoundEvent PLANE_START, PLANE_STOP, PLANE_DEATH, PLANE_MG, PLANE_MG_TAIL, PLANE_FLYBY,
+            PLANE_ENG_LOW_EXT, PLANE_ENG_HIGH_EXT, PLANE_ENG_LOW_INT, PLANE_ENG_HIGH_INT, PLANE_ENG_DISTANT;
     public static Item FIELD_GUN_ITEM;
     public static Item FIELD_SHELL_ITEM;
     public static net.minecraft.world.level.block.Block FIELD_SHELL_PILE;
@@ -195,6 +199,22 @@ public class ArmoredCarMod implements ModInitializer {
             FIELD_MG_ITEMS.put(t, Registry.register(BuiltInRegistries.ITEM, key,
                     new ArmoredCarItem(new Item.Properties().stacksTo(1), () -> t)));
         }
+        FOKKER = Registry.register(BuiltInRegistries.ENTITY_TYPE, id("fokker_dr1"),
+                EntityType.Builder.<com.exodusvehicles.entity.PlaneEntity>of(com.exodusvehicles.entity.PlaneEntity::new, MobCategory.MISC)
+                        .sized(4.0F, 2.4F).clientTrackingRange(16).updateInterval(1).build("fokker_dr1"));
+        FOKKER_ITEM = Registry.register(BuiltInRegistries.ITEM, id("fokker_dr1"),
+                new ArmoredCarItem(new Item.Properties().stacksTo(1), () -> FOKKER));
+        PLANE_START = registerSound("plane_start");
+        PLANE_STOP = registerSound("plane_stop");
+        PLANE_DEATH = registerSound("plane_death");
+        PLANE_MG = registerSound("plane_mg");
+        PLANE_MG_TAIL = registerSound("plane_mg_tail");
+        PLANE_FLYBY = registerSound("plane_flyby");
+        PLANE_ENG_LOW_EXT = registerSound("plane_engine_low_ext");
+        PLANE_ENG_HIGH_EXT = registerSound("plane_engine_high_ext");
+        PLANE_ENG_LOW_INT = registerSound("plane_engine_low_int");
+        PLANE_ENG_HIGH_INT = registerSound("plane_engine_high_int");
+        PLANE_ENG_DISTANT = registerSound("plane_engine_distant");
         MGF_FIRE = registerSound("mgf_fire");
         MGF_FIRE_FAR = registerSound("mgf_fire_far");
         FIELD_MG_ITEM = Registry.register(BuiltInRegistries.ITEM, id("mg08"),
@@ -266,6 +286,7 @@ public class ArmoredCarMod implements ModInitializer {
                             out.accept(EISENWOLF_ITEM);
                             out.accept(DAIMLER_DR_ITEM);
                             out.accept(DAIMLER_DR_OPEN_ITEM);
+                            out.accept(FOKKER_ITEM);
                             out.accept(MORSER_ITEM);
                             out.accept(SHELL_ITEM);
                             out.accept(SHELL_PILE_ITEM);
@@ -318,6 +339,16 @@ public class ArmoredCarMod implements ModInitializer {
 
         PayloadTypeRegistry.playC2S().register(SwitchSeatPayload.TYPE, SwitchSeatPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(FireGunPayload.TYPE, FireGunPayload.CODEC);
+        PayloadTypeRegistry.playC2S().register(com.exodusvehicles.network.PlaneInputPayload.TYPE,
+                com.exodusvehicles.network.PlaneInputPayload.CODEC);
+        ServerPlayNetworking.registerGlobalReceiver(com.exodusvehicles.network.PlaneInputPayload.TYPE, (payload, context) -> {
+            ServerPlayer player = context.player();
+            player.getServer().execute(() -> {
+                if (player.getVehicle() instanceof com.exodusvehicles.entity.PlaneEntity plane) {
+                    plane.pilotReport(player, payload.throttle(), payload.roll(), payload.crashed());
+                }
+            });
+        });
         PayloadTypeRegistry.playC2S().register(ReloadPayload.TYPE, ReloadPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(ToggleEnginePayload.TYPE, ToggleEnginePayload.CODEC);
         PayloadTypeRegistry.playC2S().register(ToggleBrakePayload.TYPE, ToggleBrakePayload.CODEC);
@@ -368,6 +399,8 @@ public class ArmoredCarMod implements ModInitializer {
                     gun.fire(player);
                 } else if (player.getVehicle() instanceof com.exodusvehicles.entity.FieldMgEntity mg) {
                     mg.fire(player);
+                } else if (player.getVehicle() instanceof com.exodusvehicles.entity.PlaneEntity plane) {
+                    plane.fire(player);
                 }
             });
         });

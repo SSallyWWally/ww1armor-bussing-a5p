@@ -9,7 +9,8 @@
     "client.ItemInHandRendererMixin",
     "client.MouseHandlerMixin",
     "client.CameraMixin",
-    "client.HumanoidModelMixin"
+    "client.HumanoidModelMixin",
+    "client.EntityRenderDispatcherMixin"
   ],
   "injectors": {
     "defaultRequire": 0

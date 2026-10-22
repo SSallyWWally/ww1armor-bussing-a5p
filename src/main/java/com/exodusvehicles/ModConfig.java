@@ -131,6 +131,22 @@ public class ModConfig {
     public double suppressionRadius = 4.0;
     public float suppressionPerRound = 0.09F;
 
+    // ---- Fokker Dr.I triplane (speeds in blocks per tick: 1.6 = 115 km/h)
+    public float planeMaxHealth = 70.0F;
+    public float planeMaxSpeed = 1.6F;
+    public float planeIdleSpeed = 0.45F;        // throttle closed in the air: below stall, it glides down
+    public float planeStallSpeed = 0.6F;
+    public float planeTakeoffSpeed = 0.75F;
+    public float planeTurnRate = 3.2F;          // degrees per tick at full control authority
+    public float planeCeiling = 260.0F;         // can't climb above this height
+    public float planeCrashSpeed = 0.55F;       // hitting something faster than this is a crash
+    public float planeCrashDamage = 40.0F;
+    public float planeGunDamage = 4.5F;
+    public double planeGunRange = 150.0;
+    public double planeGunSpread = 0.008;
+    public float planeGunHeatPerShot = 0.02F;   // ~5 s of fire to overheat
+    public float planeGunCooling = 0.012F;
+
     /** Client: size of the shell burst effects (1 = full, lower for weaker PCs). */
     public float shellEffectScale = 1.0F;
     /** Client: follow the shell with the camera after firing (toggle in game with the shell-camera key). */

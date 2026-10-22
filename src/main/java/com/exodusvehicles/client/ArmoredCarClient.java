@@ -62,6 +62,8 @@ public class ArmoredCarClient implements ClientModInitializer {
         EntityRendererRegistry.register(ArmoredCarMod.FIELD_MG_BUNKER, FieldMgRenderer::new);
         EntityModelLayerRegistry.registerModelLayer(FieldMgModel.TRIPOD_LAYER, FieldMgTripodLayer::createBodyLayer);
         EntityRendererRegistry.register(ArmoredCarMod.FIELD_MG_TRIPOD, FieldMgRenderer::new);
+        EntityModelLayerRegistry.registerModelLayer(FokkerModel.LAYER, FokkerModel::createBodyLayer);
+        EntityRendererRegistry.register(ArmoredCarMod.FOKKER, PlaneRenderer::new);
         EntityRendererRegistry.register(ArmoredCarMod.FIELD_MG_SCOPED, FieldMgRenderer::new);
         EntityRendererRegistry.register(ArmoredCarMod.FIELD_MG_TRIPOD_SCOPED, FieldMgRenderer::new);
         EntityRendererRegistry.register(ArmoredCarMod.FIELD_MG_BUNKER_SCOPED, FieldMgRenderer::new);
@@ -89,9 +91,14 @@ public class ArmoredCarClient implements ClientModInitializer {
                 "key.exodus_vehicles.shell_cam", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_K, "key.categories.exodus_vehicles"));
         ArtilleryClient.init();
         FieldMgClient.init();
+        PlaneClient.init();
 
         ClientPlayNetworking.registerGlobalReceiver(TracerPayload.TYPE, (payload, context) -> {
             Minecraft mc = context.client();
+            if (mc.level != null && mc.level.getEntity(payload.carId()) instanceof com.exodusvehicles.entity.PlaneEntity plane) {
+                plane.tracers.add(new ArmoredCarEntity.Tracer(new net.minecraft.world.phys.Vec3(payload.sx(), payload.sy(), payload.sz()),
+                        new net.minecraft.world.phys.Vec3(payload.ex(), payload.ey(), payload.ez())));
+            }
             if (mc.level != null && mc.level.getEntity(payload.carId()) instanceof com.exodusvehicles.entity.FieldMgEntity mg) {
                 mg.tracers.add(new ArmoredCarEntity.Tracer(new net.minecraft.world.phys.Vec3(payload.sx(), payload.sy(), payload.sz()),
                         new net.minecraft.world.phys.Vec3(payload.ex(), payload.ey(), payload.ez())));
@@ -125,6 +132,7 @@ public class ArmoredCarClient implements ClientModInitializer {
             GunSight.tick(mc);
             ArtilleryClient.startTick(mc);
             FieldMgClient.startTick(mc);
+            PlaneClient.startTick(mc);
             if (mc.screen == null && GunSight.isGunner(mc)) {
                 boolean trigger = GunSight.physicallyDown(mc, mc.options.keyAttack);
                 mc.options.keyAttack.setDown(false);
@@ -148,6 +156,7 @@ public class ArmoredCarClient implements ClientModInitializer {
             }
             ArtilleryClient.endTick(mc);
             FieldMgClient.endTick(mc);
+            PlaneClient.endTick(mc);
             if (pressed(mc, SWITCH_SEAT, riding)) {
                 ClientPlayNetworking.send(new SwitchSeatPayload());
             }
@@ -176,6 +185,7 @@ public class ArmoredCarClient implements ClientModInitializer {
             drawHud(graphics);
             ArtilleryClient.drawOverlay(graphics, tickCounter.getGameTimeDeltaPartialTick(true));
             FieldMgClient.drawOverlay(graphics, tickCounter.getGameTimeDeltaPartialTick(true));
+            PlaneClient.drawOverlay(graphics, tickCounter.getGameTimeDeltaPartialTick(true));
         });
     }
 

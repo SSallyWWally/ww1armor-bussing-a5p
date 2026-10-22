@@ -154,5 +154,20 @@
   "entity.exodus_vehicles.mg08_bunker_scoped": "MG 08 (Bunker Mount, Scoped)",
   "item.exodus_vehicles.mg08_bunker_shielded": "MG 08 on Bunker Mount (Shielded)",
   "entity.exodus_vehicles.mg08_bunker_shielded": "MG 08 (Bunker Mount, Shielded)",
-  "msg.exodus_vehicles.mg_too_high": "Too high to reach - the gun can be at most a block above where you stand"
+  "msg.exodus_vehicles.mg_too_high": "Too high to reach - the gun can be at most a block above where you stand",
+  "entity.exodus_vehicles.fokker_dr1": "Fokker Dr.I",
+  "item.exodus_vehicles.fokker_dr1": "Fokker Dr.I Triplane",
+  "key.exodus_vehicles.freelook": "Aircraft: Free Look (hold)",
+  "hud.exodus_vehicles.plane_speed": "%s km/h",
+  "hud.exodus_vehicles.plane_alt": "Alt %s",
+  "hud.exodus_vehicles.plane_throttle": "Throttle",
+  "hud.exodus_vehicles.plane_freelook": "Free look",
+  "hud.exodus_vehicles.plane_stall": "STALL",
+  "msg.exodus_vehicles.plane_overheated": "Guns overheated, let them cool",
+  "subtitles.exodus_vehicles.plane_engine": "Aircraft engine",
+  "subtitles.exodus_vehicles.plane_mg": "Aircraft machine guns fire",
+  "subtitles.exodus_vehicles.plane_flyby": "Aircraft flies past",
+  "subtitles.exodus_vehicles.plane_death": "Aircraft engine dies",
+  "subtitles.exodus_vehicles.plane_start": "Aircraft engine starts",
+  "subtitles.exodus_vehicles.plane_stop": "Aircraft engine stops"
 }
