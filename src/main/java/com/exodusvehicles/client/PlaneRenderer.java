@@ -15,7 +15,10 @@ import net.minecraft.util.Mth;
 
 public class PlaneRenderer extends EntityRenderer<PlaneEntity> {
     private static final ResourceLocation TEXTURE = ArmoredCarMod.id("textures/entity/fokker_dr1.png");
+    private static final ResourceLocation TEXTURE_BURNT = ArmoredCarMod.id("textures/entity/fokker_dr1_wrecked.png");
     private final FokkerModel model;
+    /** True while the aircraft draws its own pilot (lets that one drawing through the pilot-hiding mixin). */
+    public static boolean DRAWING_PILOT;
 
     public PlaneRenderer(EntityRendererProvider.Context context) {
         super(context);
@@ -33,14 +36,28 @@ public class PlaneRenderer extends EntityRenderer<PlaneEntity> {
         poseStack.mulPose(Axis.YP.rotationDegrees(180.0F - yaw));
         poseStack.mulPose(Axis.XP.rotationDegrees(-pitch));
         poseStack.mulPose(Axis.ZP.rotationDegrees(-roll));
+        Minecraft mc0 = Minecraft.getInstance();
+        if (plane.getPilot() != null && !(plane.hasPassenger(mc0.player) && mc0.options.getCameraType().isFirstPerson())) {
+            // the pilot, seated in the cockpit and banking with the aircraft (his own upright drawing is suppressed)
+            net.minecraft.world.entity.player.Player pilot = plane.getPilot();
+            poseStack.pushPose();
+            poseStack.translate(0.0, (7.0 - 22.0) / 16.0, 10.5 / 16.0);
+            poseStack.mulPose(Axis.YP.rotationDegrees(Mth.rotLerp(pt, pilot.yBodyRotO, pilot.yBodyRot) - 180.0F));
+            DRAWING_PILOT = true;
+            try {
+                mc0.getEntityRenderDispatcher().render(pilot, 0.0, 0.0, 0.0, pilot.getYRot(), pt, poseStack, buffers, light);
+            } finally {
+                DRAWING_PILOT = false;
+            }
+            poseStack.popPose();
+        }
         poseStack.translate(0.0, -PlaneEntity.CG_UP, 0.0);
         poseStack.scale(-1.0F, -1.0F, 1.0F);
         poseStack.translate(0.0F, -1.501F, 0.0F);
         Minecraft mc = Minecraft.getInstance();
         boolean mine = mc.player != null && plane.hasPassenger(mc.player);
-        boolean showPilot = plane.getPilot() != null && !(mine && mc.options.getCameraType().isFirstPerson());
-        this.model.setupAnim(Mth.lerp(pt, plane.propRotO, plane.propRot), showPilot);
-        this.model.render(poseStack, buffers.getBuffer(RenderType.entityCutoutNoCull(TEXTURE)), light, OverlayTexture.NO_OVERLAY);
+        this.model.setupAnim(Mth.lerp(pt, plane.propRotO, plane.propRot), false);
+        this.model.render(poseStack, buffers.getBuffer(RenderType.entityCutoutNoCull(getTextureLocation(plane))), light, OverlayTexture.NO_OVERLAY);
         if (plane.flashTicks > 0) {
             // both guns' muzzles (model units: x left, y down from 24, z backward)
             for (float x : new float[]{2.5F, -2.5F}) {
@@ -58,6 +75,6 @@ public class PlaneRenderer extends EntityRenderer<PlaneEntity> {
 
     @Override
     public ResourceLocation getTextureLocation(PlaneEntity plane) {
-        return TEXTURE;
+        return plane.isDowned() ? TEXTURE_BURNT : TEXTURE;
     }
 }

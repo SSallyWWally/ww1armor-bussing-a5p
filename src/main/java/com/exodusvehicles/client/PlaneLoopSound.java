@@ -57,7 +57,7 @@ public class PlaneLoopSound extends AbstractTickableSoundInstance {
             this.stop();
             return;
         }
-        boolean running = !this.plane.isDowned() && this.plane.getPilot() != null;
+        boolean running = this.plane.isEngineOn();
         float want = running ? 0.15F + 0.85F * this.plane.throttle : 0.0F;
         this.rpm += (want - this.rpm) * 0.06F;
         boolean mine = this.plane.hasPassenger(mc.player);
@@ -76,7 +76,7 @@ public class PlaneLoopSound extends AbstractTickableSoundInstance {
             case HIGH_INT -> v = cockpit ? hi * level : 0.0F;
             default -> v = mine ? 0.0F : far * level * 0.9F;
         }
-        this.volume = v;
+        this.volume = v * 0.5F;
         this.pitch = 0.85F + 0.3F * this.rpm + Math.min(0.15F, this.plane.syncedSpeed() * 0.05F);
         if (!this.relative) {
             Vec3 p = this.plane.position();

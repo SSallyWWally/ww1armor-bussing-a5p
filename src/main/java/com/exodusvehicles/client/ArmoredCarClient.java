@@ -154,7 +154,8 @@ public class ArmoredCarClient implements ClientModInitializer {
             // same key (very common for N, G, P...) can't swallow them.
             boolean riding = mc.player != null && mc.screen == null && (mc.player.getVehicle() instanceof ArmoredCarEntity
                     || mc.player.getVehicle() instanceof com.exodusvehicles.entity.MorserEntity
-                    || mc.player.getVehicle() instanceof com.exodusvehicles.entity.FieldMgEntity);
+                    || mc.player.getVehicle() instanceof com.exodusvehicles.entity.FieldMgEntity
+                    || mc.player.getVehicle() instanceof com.exodusvehicles.entity.PlaneEntity);
             if (pressed(mc, SHELL_CAM, riding) && mc.player.getVehicle() instanceof com.exodusvehicles.entity.MorserEntity) {
                 ArtilleryClient.toggleShellCamera(mc);
             }

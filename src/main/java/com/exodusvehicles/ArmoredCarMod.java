@@ -374,6 +374,8 @@ public class ArmoredCarMod implements ModInitializer {
                     car.toggleEngine(player);
                 } else if (player.getVehicle() instanceof com.exodusvehicles.entity.MorserEntity gun) {
                     gun.toggleDeploy(player);
+                } else if (player.getVehicle() instanceof com.exodusvehicles.entity.PlaneEntity plane) {
+                    plane.toggleEngine(player);
                 }
             });
         });

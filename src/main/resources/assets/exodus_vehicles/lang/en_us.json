@@ -175,5 +175,7 @@
   "item.exodus_vehicles.mg08_bunker_tall_shielded": "MG 08 on Tall Bunker Mount (Shielded)",
   "entity.exodus_vehicles.mg08_bunker_tall_shielded": "MG 08 (Tall Bunker Mount, Shielded)",
   "item.exodus_vehicles.mg08_bunker_tall_scoped": "MG 08 on Tall Bunker Mount (Scoped)",
-  "entity.exodus_vehicles.mg08_bunker_tall_scoped": "MG 08 (Tall Bunker Mount, Scoped)"
+  "entity.exodus_vehicles.mg08_bunker_tall_scoped": "MG 08 (Tall Bunker Mount, Scoped)",
+  "msg.exodus_vehicles.plane_start_hint": "Press P to start the engine",
+  "hud.exodus_vehicles.plane_engine_off": "Engine off - press P to start"
 }

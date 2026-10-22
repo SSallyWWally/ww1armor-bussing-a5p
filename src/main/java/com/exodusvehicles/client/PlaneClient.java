@@ -235,9 +235,9 @@ public final class PlaneClient {
             ring(g, gs[0], gs[1], 9, white);           // gun sight
             g.fill(Math.round(gs[0]), Math.round(gs[1]), Math.round(gs[0]) + 1, Math.round(gs[1]) + 1, white);
         }
-        float[] st = project(steerAt, w, h);
-        if (st != null) {
-            cross(g, st[0], st[1], 4, aimCol);         // steering marker (mouse aim)
+        if (!p.isEngineOn() && !p.isDowned()) {
+            Component hint = Component.translatable("hud.exodus_vehicles.plane_engine_off");
+            g.drawString(mc.font, hint, w / 2 - mc.font.width(hint) / 2, h / 2 + 44, 0xFFE0C060, true);
         }
         // instruments, bottom left: speed, height, throttle, guns, airframe
         int x = 10, y = h - 64;

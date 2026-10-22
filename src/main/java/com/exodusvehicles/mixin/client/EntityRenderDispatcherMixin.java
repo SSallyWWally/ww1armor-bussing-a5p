@@ -15,7 +15,7 @@ public abstract class EntityRenderDispatcherMixin {
     @Inject(method = "render", at = @At("HEAD"), cancellable = true)
     private <E extends Entity> void exodus_vehicles$hidePilot(E entity, double x, double y, double z, float yaw, float partialTick,
                                                               PoseStack poseStack, MultiBufferSource buffers, int light, CallbackInfo ci) {
-        if (entity.getVehicle() instanceof com.exodusvehicles.entity.PlaneEntity) {
+        if (entity.getVehicle() instanceof com.exodusvehicles.entity.PlaneEntity && !com.exodusvehicles.client.PlaneRenderer.DRAWING_PILOT) {
             ci.cancel();
         }
     }

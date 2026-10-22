@@ -134,13 +134,17 @@ public class ModConfig {
     // ---- Fokker Dr.I triplane (speeds in blocks per tick: 1.6 = 115 km/h)
     public float planeMaxHealth = 70.0F;
     public float planeMaxSpeed = 1.6F;
-    public float planeIdleSpeed = 0.45F;        // throttle closed in the air: below stall, it glides down
+    public float planeIdleSpeed = 0.45F;        // (unused since 2.3.5)
+    /** How quickly holding W / S changes the speed (blocks per tick, per tick): 0 to full in ~4 s. */
+    public float planeAccel = 0.02F;
     public float planeStallSpeed = 0.6F;
     public float planeTakeoffSpeed = 0.75F;
     public float planeTurnRate = 3.2F;          // degrees per tick at full control authority
     public float planeCeiling = 260.0F;         // can't climb above this height
     public float planeCrashSpeed = 0.55F;       // hitting something faster than this is a crash
     public float planeCrashDamage = 40.0F;
+    /** A destroyed aircraft lies burning where it fell for this long before it is cleared away. */
+    public int planeWreckSeconds = 300;
     public float planeGunDamage = 4.5F;
     public double planeGunRange = 150.0;
     public double planeGunSpread = 0.008;

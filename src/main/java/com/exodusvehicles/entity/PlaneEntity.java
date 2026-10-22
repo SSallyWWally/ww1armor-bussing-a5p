@@ -67,6 +67,8 @@ public class PlaneEntity extends Entity implements Repairable {
     private static final EntityDataAccessor<Boolean> DATA_OVERHEATED = def(EntityDataSerializers.BOOLEAN);
     private static final EntityDataAccessor<Boolean> DATA_DOWNED = def(EntityDataSerializers.BOOLEAN);
     private static final EntityDataAccessor<Float> DATA_SPEED = def(EntityDataSerializers.FLOAT);
+    private static final EntityDataAccessor<Boolean> DATA_ENGINE = def(EntityDataSerializers.BOOLEAN);
+    private static final EntityDataAccessor<Boolean> DATA_WRECKED = def(EntityDataSerializers.BOOLEAN);
 
     private static <T> EntityDataAccessor<T> def(net.minecraft.network.syncher.EntityDataSerializer<T> s) {
         return SynchedEntityData.defineId(PlaneEntity.class, s);
@@ -116,6 +118,8 @@ public class PlaneEntity extends Entity implements Repairable {
         b.define(DATA_OVERHEATED, false);
         b.define(DATA_DOWNED, false);
         b.define(DATA_SPEED, 0.0F);
+        b.define(DATA_ENGINE, false);
+        b.define(DATA_WRECKED, false);
     }
 
     // ------------------------------------------------------------------ state
@@ -128,6 +132,26 @@ public class PlaneEntity extends Entity implements Repairable {
     public float getHeat() { return this.entityData.get(DATA_HEAT); }
     public boolean isOverheated() { return this.entityData.get(DATA_OVERHEATED); }
     public boolean isDowned() { return this.entityData.get(DATA_DOWNED); }
+    /** Burnt-out wreck on the ground (despawns after a while, like the armoured car's). */
+    public boolean isWrecked() { return this.entityData.get(DATA_WRECKED); }
+    private int wreckTicks;
+    public boolean isEngineOn() { return this.entityData.get(DATA_ENGINE) && !isDowned(); }
+
+    /** Ticks since the engine was started (it needs a few seconds to pick up before it pulls). */
+    private int engineTicks;
+    /** The pilot jumped out in the air: the next thing it touches, it hits. */
+    private boolean abandoned;
+
+    /** P (the engine key): start or stop the engine. */
+    public void toggleEngine(Player player) {
+        if (getPilot() != player || isDowned()) {
+            return;
+        }
+        boolean on = !this.entityData.get(DATA_ENGINE);
+        this.entityData.set(DATA_ENGINE, on);
+        this.engineTicks = 0;
+        sound(on ? ArmoredCarMod.PLANE_START : ArmoredCarMod.PLANE_STOP, 0.7F, 1.0F);
+    }
 
     @Override
     public boolean repairBy(float amount) {
@@ -175,11 +199,22 @@ public class PlaneEntity extends Entity implements Repairable {
         if (tag.contains("Health")) {
             this.entityData.set(DATA_HEALTH, tag.getFloat("Health"));
         }
+        if (tag.contains("Wreck")) {
+            this.entityData.set(DATA_WRECKED, true);
+            this.entityData.set(DATA_DOWNED, true);
+            this.wreckTicks = tag.getInt("Wreck");
+            this.roll = tag.getFloat("Roll");
+            this.entityData.set(DATA_ROLL, this.roll);
+        }
     }
 
     @Override
     protected void addAdditionalSaveData(CompoundTag tag) {
         tag.putFloat("Health", getHealth());
+        if (isWrecked()) {
+            tag.putInt("Wreck", this.wreckTicks);
+            tag.putFloat("Roll", this.roll);
+        }
     }
 
     // ------------------------------------------------------------------ basics
@@ -187,6 +222,8 @@ public class PlaneEntity extends Entity implements Repairable {
     @Override public boolean canBeCollidedWith() { return false; }
     @Override public boolean isPushable() { return false; }
     @Override public boolean isPickable() { return !this.isRemoved(); }
+    /** The hitbox is the fuselage; the wings and tail still count when you click on them. */
+    @Override public float getPickRadius() { return 2.0F; }
     @Override protected Entity.MovementEmission getMovementEmission() { return Entity.MovementEmission.NONE; }
     @Override public ItemStack getPickResult() { return new ItemStack(ArmoredCarMod.FOKKER_ITEM); }
     @Override public AABB getBoundingBoxForCulling() { return this.getBoundingBox().inflate(5.0, 3.0, 5.0); }
@@ -194,7 +231,7 @@ public class PlaneEntity extends Entity implements Repairable {
 
     @Override
     protected boolean canAddPassenger(Entity passenger) {
-        return this.getPassengers().isEmpty() && !isDowned();
+        return this.getPassengers().isEmpty() && !isDowned() && !isWrecked();
     }
 
     /** The pilot sits in the cockpit (drawn as part of the aircraft; his own model is hidden). */
@@ -209,7 +246,7 @@ public class PlaneEntity extends Entity implements Repairable {
 
     @Override
     public Vec3 getDismountLocationForPassenger(LivingEntity passenger) {
-        Vec3 side = bodyPoint(-1.0, 0.0, -1.0);
+        Vec3 side = bodyPoint(-2.6, 0.0, -1.2);
         if (this.onGround()) {
             return new Vec3(side.x, this.getY(), side.z);
         }
@@ -222,12 +259,13 @@ public class PlaneEntity extends Entity implements Repairable {
         if (stack.getItem() instanceof com.exodusvehicles.item.VehicleToolItem) {
             return InteractionResult.PASS;
         }
-        if (player.getVehicle() == this || isDowned()) {
+        if (player.getVehicle() == this || isDowned() || isWrecked()) {
             return InteractionResult.PASS;
         }
         if (!this.level().isClientSide) {
             if (player.startRiding(this)) {
-                sound(ArmoredCarMod.PLANE_START, 1.0F, 1.0F);
+                this.abandoned = false;
+                player.displayClientMessage(Component.translatable("msg.exodus_vehicles.plane_start_hint"), true);
                 return InteractionResult.CONSUME;
             }
             return InteractionResult.PASS;
@@ -239,7 +277,12 @@ public class PlaneEntity extends Entity implements Repairable {
     protected void removePassenger(Entity passenger) {
         super.removePassenger(passenger);
         if (!this.level().isClientSide && !isDowned()) {
-            sound(ArmoredCarMod.PLANE_STOP, 1.0F, 1.0F);
+            if (!this.onGround()) {
+                this.abandoned = true;           // bailed out: it'll come down hard somewhere
+            } else if (this.entityData.get(DATA_ENGINE)) {
+                this.entityData.set(DATA_ENGINE, false);
+                sound(ArmoredCarMod.PLANE_STOP, 0.7F, 1.0F);
+            }
         }
     }
 
@@ -253,19 +296,40 @@ public class PlaneEntity extends Entity implements Repairable {
      * One tick of flight toward a target heading (yaw / pitch the pilot is looking at). Throttle input -1..1 moves the
      * throttle, which then stays put; speed follows the throttle, falls off climbing and builds diving.
      */
+    /** Speed the pilot has set with W / S; the aircraft holds it, apart from what climbing and diving add or take. */
+    public float cruise;
+
     private void fly(float tYaw, float tPitch, float throttleIn, float rudder, boolean engine) {
         ModConfig c = ModConfig.get();
         boolean ground = this.onGround();
-        this.throttle = Mth.clamp(this.throttle + throttleIn * 0.02F, 0.0F, 1.0F);
         float max = c.planeMaxSpeed, stall = c.planeStallSpeed;
-        float target = !engine ? 0.0F : ground ? this.throttle * max : Mth.lerp(this.throttle, c.planeIdleSpeed, max);
+        boolean pulling = engine && this.engineTicks > 50;
+        if (pulling) {
+            if (throttleIn > 0) {
+                this.cruise = Math.min(max, this.cruise + c.planeAccel);
+            } else if (throttleIn < 0) {
+                this.cruise = Math.max(0.0F, this.cruise - c.planeAccel * 1.3F);
+            }
+        } else {
+            this.cruise = Math.max(0.0F, this.cruise - 0.01F);   // engine off: it only glides
+        }
+        this.throttle = max > 0 ? this.cruise / max : 0.0F;
         float pitch = this.getXRot(), yaw = this.getYRot();
         double climb = Math.sin(Math.toRadians(-pitch));
-        this.speed += (target - this.speed) * (ground ? 0.025F : 0.012F) - (float) climb * 0.024F;
-        if (ground && this.throttle < 0.05F) {
-            this.speed *= 0.96F;              // rolling to a stop
+        if (ground) {
+            this.speed += (this.cruise - this.speed) * 0.05F;
+            if (this.cruise < 0.02F) {
+                this.speed *= 0.95F;          // rolling to a stop
+            }
+        } else {
+            this.speed -= (float) climb * 0.022F;                 // gravity along the flight path
+            float back = pulling ? 0.006F : 0.0F;                 // and back toward the set speed once level again
+            this.speed += Mth.clamp(this.cruise - this.speed, -back, back);
+            if (!pulling) {
+                this.speed -= 0.004F;                             // no engine: drag wins
+            }
         }
-        this.speed = Mth.clamp(this.speed, 0.0F, max * 1.45F);
+        this.speed = Mth.clamp(this.speed, 0.0F, max * 1.5F);
         float lift = Mth.clamp(this.speed / stall, 0.0F, 1.0F);
         float auth = Mth.clamp(this.speed / (stall * 1.3F), 0.12F, 1.0F);
         float dy = Mth.wrapDegrees(tYaw - yaw) + rudder * 8.0F;
@@ -311,6 +375,9 @@ public class PlaneEntity extends Entity implements Repairable {
         if (!settled && this.verticalCollision && !ground && vel.y < -0.7 && this.speed > c.planeStallSpeed) {
             this.crashedLocally = true;            // flown into the ground
         }
+        if (this.abandoned && (this.horizontalCollision || this.verticalCollision || this.isInWater())) {
+            this.crashedLocally = true;            // nobody at the controls when it came down
+        }
         if (this.horizontalCollision && before > 0.01) {
             this.speed *= (float) Mth.clamp(moved.length() / before, 0.0, 1.0);
         }
@@ -319,8 +386,13 @@ public class PlaneEntity extends Entity implements Repairable {
     @Override
     public void tick() {
         super.tick();
+        this.engineTicks = isEngineOn() ? this.engineTicks + 1 : 0;
         this.rollO = this.roll;
         this.groundTiltO = this.groundTilt;
+        if (isWrecked()) {
+            tickWreck();
+            return;
+        }
         if (this.lerpSteps > 0 && !this.isControlledByLocalInstance()) {
             double x = this.getX() + (this.lerpX - this.getX()) / this.lerpSteps;
             double y = this.getY() + (this.lerpY - this.getY()) / this.lerpSteps;
@@ -336,12 +408,15 @@ public class PlaneEntity extends Entity implements Repairable {
             if (isDowned()) {
                 // shot down: no engine, spinning in
                 this.throttle = 0.0F;
-                fly(this.getYRot() + 14.0F, Math.min(70.0F, this.getXRot() + 6.0F), -1.0F, 0.0F, false);
-                this.roll = Math.min(95.0F, this.roll + 4.0F);
+                // spinning down slowly, trailing smoke
+                fly(this.getYRot() + 10.0F, Math.min(38.0F, this.getXRot() + 2.0F), -1.0F, 0.0F, false);
+                this.speed = Math.max(this.speed, 0.55F);
+                this.cruise = Math.max(this.cruise, 0.5F);
+                this.roll = Math.min(70.0F, this.roll + 3.0F);
             } else if (this.hasInput && getPilot() != null) {
-                fly(this.inYaw, this.inPitch, this.inThrottle, this.inRudder, true);
+                fly(this.inYaw, this.inPitch, this.inThrottle, this.inRudder, isEngineOn());
             } else {
-                fly(this.getYRot(), this.onGround() ? 0.0F : Math.min(30.0F, this.getXRot() + 0.5F), -1.0F, 0.0F, true);
+                fly(this.getYRot(), this.onGround() ? 0.0F : Math.min(35.0F, this.getXRot() + 0.8F), -1.0F, 0.0F, false);
             }
             this.hasInput = false;
             if (!this.level().isClientSide && this.crashedLocally) {
@@ -383,6 +458,9 @@ public class PlaneEntity extends Entity implements Repairable {
 
     private void tickServer() {
         ModConfig cfg = ModConfig.get();
+        if (getPilot() == null && this.onGround()) {
+            this.abandoned = false;
+        }
         Vec3 pos = this.position();
         if (this.lastServerPos != null) {
             this.entityData.set(DATA_SPEED, (float) pos.distanceTo(this.lastServerPos));
@@ -440,19 +518,79 @@ public class PlaneEntity extends Entity implements Repairable {
 
     /** Hit the ground or a wall too hard, or came down shot to pieces: it goes up, and so does the pilot. */
     public void crash() {
-        if (this.isRemoved() || !(this.level() instanceof ServerLevel server)) {
+        crash(true);
+    }
+
+    /**
+     * The aircraft is destroyed: an explosion (and, coming down out of the sky, a small crater) and it stays where it
+     * fell as a charred wreck, nose in the dirt, burning for a while, until it is cleared away.
+     */
+    public void crash(boolean fromTheAir) {
+        if (this.isRemoved() || isWrecked() || !(this.level() instanceof ServerLevel server)) {
             return;
         }
-        Vec3 c = this.position().add(0, CG_UP, 0);
+        ModConfig cfg = ModConfig.get();
+        Vec3 c = this.position().add(0, CG_UP * 0.5, 0);
         List<Entity> riders = new ArrayList<>(this.getPassengers());
         this.ejectPassengers();
         for (Entity r : riders) {
-            r.hurt(this.damageSources().explosion(this, null), ModConfig.get().planeCrashDamage);
+            r.hurt(this.damageSources().explosion(this, null), cfg.planeCrashDamage);
         }
         server.explode(this, c.x, c.y, c.z, 2.5F, false, Level.ExplosionInteraction.NONE);
+        if (fromTheAir && com.exodusvehicles.artillery.ArtilleryRules.craters(server)) {
+            server.explode(null, c.x, this.getY() + 0.2, c.z, 1.7F, false, Level.ExplosionInteraction.TNT);
+        }
         server.sendParticles(ParticleTypes.LARGE_SMOKE, c.x, c.y, c.z, 40, 2.0, 1.0, 2.0, 0.04);
         server.sendParticles(ParticleTypes.FLAME, c.x, c.y, c.z, 25, 1.5, 0.6, 1.5, 0.02);
-        this.discard();
+        this.entityData.set(DATA_WRECKED, true);
+        this.entityData.set(DATA_DOWNED, true);
+        this.entityData.set(DATA_ENGINE, false);
+        this.entityData.set(DATA_HEALTH, 0.0F);
+        this.wreckTicks = Math.max(20, cfg.planeWreckSeconds * 20);
+        this.speed = 0.0F;
+        this.cruise = 0.0F;
+        if (fromTheAir) {
+            // came down: nose dug in, one wing low
+            this.setXRot(Mth.clamp(this.getXRot(), 10.0F, 24.0F));
+            this.roll = this.roll >= 0 ? Math.min(28.0F, Math.max(12.0F, this.roll % 90.0F)) : Math.max(-28.0F, Math.min(-12.0F, this.roll % 90.0F));
+        } else {
+            this.setXRot(0.0F);
+            this.roll = 0.0F;
+        }
+        this.entityData.set(DATA_ROLL, this.roll);
+        this.setDeltaMovement(Vec3.ZERO);
+    }
+
+    private void tickWreck() {
+        if (!this.level().isClientSide) {
+            Vec3 dm = this.getDeltaMovement();
+            double vy = this.onGround() ? -0.04 : (dm.y - 0.08) * 0.98;
+            this.setDeltaMovement(0, vy, 0);
+            this.move(MoverType.SELF, this.getDeltaMovement());
+            if (--this.wreckTicks <= 0) {
+                this.discard();
+            }
+            return;
+        }
+        this.roll += (syncedRoll() - this.roll) * 0.35F;
+        if (this.lerpSteps > 0) {
+            double x = this.getX() + (this.lerpX - this.getX()) / this.lerpSteps;
+            double y = this.getY() + (this.lerpY - this.getY()) / this.lerpSteps;
+            double z = this.getZ() + (this.lerpZ - this.getZ()) / this.lerpSteps;
+            this.setXRot(this.getXRot() + (this.lerpXRot - this.getXRot()) / this.lerpSteps);
+            this.lerpSteps--;
+            this.setPos(x, y, z);
+        }
+        this.groundTilt *= 0.8F;
+        // burning, then smouldering
+        int age = this.tickCount;
+        if (this.random.nextInt(age < 1200 ? 2 : 6) == 0) {
+            Vec3 e = bodyPoint((this.random.nextDouble() - 0.5) * 3.0, 0.3, (this.random.nextDouble() - 0.5) * 3.0);
+            this.level().addParticle(ParticleTypes.LARGE_SMOKE, e.x, e.y, e.z, 0, 0.04, 0);
+            if (age < 1200 && this.random.nextInt(2) == 0) {
+                this.level().addParticle(ParticleTypes.FLAME, e.x, e.y, e.z, 0, 0.02, 0);
+            }
+        }
     }
 
     // ------------------------------------------------------------------ damage
@@ -486,6 +624,9 @@ public class PlaneEntity extends Entity implements Repairable {
                 this.lastExplosionAmount = amount;
             }
         }
+        if (isWrecked()) {
+            return false;
+        }
         if (isDowned()) {
             return true;
         }
@@ -494,13 +635,13 @@ public class PlaneEntity extends Entity implements Repairable {
         if (getHealth() <= 0.0F) {
             this.entityData.set(DATA_DOWNED, true);
             this.entityData.set(DATA_HEALTH, 0.0F);
-            sound(ArmoredCarMod.PLANE_DEATH, 4.0F, 1.0F);
+            sound(ArmoredCarMod.PLANE_DEATH, 2.5F, 1.0F);
             if (source.getEntity() instanceof ServerPlayer killer) {
                 net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(killer,
                         new com.exodusvehicles.network.HitMarkerPayload(true, -1));
             }
             if (this.onGround()) {
-                crash();
+                crash(false);           // destroyed where it stands: it just blows up
             }
         }
         return true;
@@ -581,7 +722,7 @@ public class PlaneEntity extends Entity implements Repairable {
             if (d > 220) {
                 continue;
             }
-            float vol = this.hasPassenger(p) ? 0.85F : (float) Math.max(0.15, 1.0 - d / 220.0) * 3.0F;
+            float vol = this.hasPassenger(p) ? 0.45F : (float) Math.max(0.15, 1.0 - d / 220.0) * 2.0F;
             p.connection.send(new ClientboundSoundPacket(h, SoundSource.PLAYERS, at.x, at.y, at.z, vol, pitch, seed));
         }
     }
