@@ -110,8 +110,13 @@ public final class PlaneClient {
         p.hasInput = true;
     }
 
+    /** Client copy of the bail-out hold, for the "Exiting" bar. */
+    private static int bailTicks;
+
     public static void endTick(Minecraft mc) {
         PlaneEntity p = plane();
+        boolean holding = p != null && !p.onGround() && mc.screen == null && GunSight.physicallyDown(mc, mc.options.keyShift);
+        bailTicks = holding ? Math.min(PlaneEntity.BAIL_TICKS, bailTicks + 1) : 0;
         if (p != null && p.isControlledByLocalInstance()) {
             ClientPlayNetworking.send(new PlaneInputPayload(p.throttle, p.roll, p.crashedLocally));
             p.crashedLocally = false;
@@ -264,6 +269,14 @@ public final class PlaneClient {
         float hp = p.getHealth() / p.getMaxHealth();
         g.fill(x, y + 48, x + 112, y + 51, 0x80000000);
         g.fill(x, y + 48, x + Math.round(112 * Mth.clamp(hp, 0, 1)), y + 51, hp > 0.5F ? 0xFF8D977A : hp > 0.25F ? 0xFFD9A441 : 0xFFC4553A);
+        if (bailTicks > 0) {
+            // bailing out: hold sneak for two seconds
+            Component ex = Component.translatable("hud.exodus_vehicles.plane_exiting");
+            int bw = 100, bx2 = w / 2 - bw / 2, by2 = h - 70;
+            g.drawString(mc.font, ex, w / 2 - mc.font.width(ex) / 2, by2 - 11, 0xFFE8E4D0, true);
+            g.fill(bx2, by2, bx2 + bw, by2 + 5, 0x80000000);
+            g.fill(bx2, by2, bx2 + Math.round(bw * Math.min(1.0F, (bailTicks + pt) / PlaneEntity.BAIL_TICKS)), by2 + 5, 0xFFE0A040);
+        }
         if (freelook) {
             Component fl = Component.translatable("hud.exodus_vehicles.plane_freelook");
             g.drawString(mc.font, fl, w / 2 - mc.font.width(fl) / 2, 8, 0xFFE0C060, true);

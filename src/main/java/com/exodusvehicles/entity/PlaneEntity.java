@@ -101,6 +101,7 @@ public class PlaneEntity extends Entity implements Repairable {
     public final List<ArmoredCarEntity.Tracer> tracers = new ArrayList<>();
     public int flashTicks, flashStyle;
     public float flashScale = 1.0F, flashSpin;
+    private boolean localControl;
     private int lerpSteps;
     private double lerpX, lerpY, lerpZ;
     private float lerpYRot, lerpXRot;
@@ -409,6 +410,19 @@ public class PlaneEntity extends Entity implements Repairable {
 
     @Override
     public void tick() {
+        boolean wasLocal = this.localControl;
+        this.localControl = this.isControlledByLocalInstance();
+        if (this.level().isClientSide && wasLocal && !this.localControl) {
+            // we just stopped flying it ourselves: take where we are as the base for the server's position updates,
+            // so the first one doesn't throw the aircraft somewhere stale
+            this.syncPacketPositionCodec(this.getX(), this.getY(), this.getZ());
+            this.lerpSteps = 0;
+            this.lerpX = this.getX();
+            this.lerpY = this.getY();
+            this.lerpZ = this.getZ();
+            this.lerpYRot = this.getYRot();
+            this.lerpXRot = this.getXRot();
+        }
         super.tick();
         this.engineTicks = isEngineOn() ? this.engineTicks + 1 : 0;
         this.rollO = this.roll;
@@ -483,8 +497,22 @@ public class PlaneEntity extends Entity implements Repairable {
         }
     }
 
+    /** Ticks the pilot has held sneak in flight; at BAIL_TICKS he jumps. */
+    private int bailTicks;
+    public static final int BAIL_TICKS = 40;
+
     private void tickServer() {
         ModConfig cfg = ModConfig.get();
+        Player pilotNow = getPilot();
+        if (pilotNow != null && !this.onGround() && pilotNow.isShiftKeyDown()) {
+            if (++this.bailTicks >= BAIL_TICKS) {
+                this.bailTicks = 0;
+                pilotNow.stopRiding();
+                pilotNow.setShiftKeyDown(false);
+            }
+        } else {
+            this.bailTicks = 0;
+        }
         if (getPilot() == null && this.onGround()) {
             this.abandoned = false;
         }

@@ -179,5 +179,6 @@
   "msg.exodus_vehicles.plane_start_hint": "Press P to start the engine",
   "hud.exodus_vehicles.plane_engine_off": "Engine off - press P to start",
   "msg.exodus_vehicles.plane_brake_air": "Parking brake only works on the ground",
-  "seat.exodus_vehicles.plane.pilot": "Pilot"
+  "seat.exodus_vehicles.plane.pilot": "Pilot",
+  "hud.exodus_vehicles.plane_exiting": "Exiting..."
 }
