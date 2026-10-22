@@ -51,7 +51,8 @@ public class ArmoredCarMod implements ModInitializer {
     public static Item SHELL_ITEM;
     public static EntityType<com.exodusvehicles.entity.FieldGunEntity> FIELD_GUN;
     public static EntityType<com.exodusvehicles.entity.FieldMgEntity> FIELD_MG, FIELD_MG_SHIELD, FIELD_MG_BUNKER, FIELD_MG_TRIPOD,
-            FIELD_MG_SCOPED, FIELD_MG_TRIPOD_SCOPED, FIELD_MG_BUNKER_SCOPED, FIELD_MG_BUNKER_SHIELD;
+            FIELD_MG_SCOPED, FIELD_MG_TRIPOD_SCOPED, FIELD_MG_BUNKER_SCOPED, FIELD_MG_BUNKER_SHIELD,
+            FIELD_MG_BUNKER_TALL, FIELD_MG_BUNKER_TALL_SHIELD, FIELD_MG_BUNKER_TALL_SCOPED;
     public static final java.util.Map<EntityType<?>, Item> FIELD_MG_ITEMS = new java.util.LinkedHashMap<>();
     public static Item FIELD_MG_ITEM, FIELD_MG_SHIELD_ITEM, FIELD_MG_BUNKER_ITEM, FIELD_MG_TRIPOD_ITEM;
     public static SoundEvent MGF_FIRE, MGF_FIRE_FAR;
@@ -191,10 +192,14 @@ public class ArmoredCarMod implements ModInitializer {
         FIELD_MG_TRIPOD_SCOPED = fieldMg("mg08_tripod_scoped", 0.9F, 1.2F);
         FIELD_MG_BUNKER_SCOPED = fieldMg("mg08_bunker_scoped", 0.8F, 1.4F);
         FIELD_MG_BUNKER_SHIELD = fieldMg("mg08_bunker_shielded", 0.8F, 1.4F);
+        FIELD_MG_BUNKER_TALL = fieldMg("mg08_bunker_tall", 0.8F, 1.7F);
+        FIELD_MG_BUNKER_TALL_SHIELD = fieldMg("mg08_bunker_tall_shielded", 0.8F, 1.7F);
+        FIELD_MG_BUNKER_TALL_SCOPED = fieldMg("mg08_bunker_tall_scoped", 0.8F, 1.7F);
         FIELD_MG_ITEMS.put(FIELD_MG_TRIPOD, FIELD_MG_TRIPOD_ITEM);
         FIELD_MG_ITEMS.put(FIELD_MG_BUNKER, FIELD_MG_BUNKER_ITEM);
         for (EntityType<com.exodusvehicles.entity.FieldMgEntity> t : java.util.List.of(FIELD_MG_SCOPED, FIELD_MG_TRIPOD_SCOPED,
-                FIELD_MG_BUNKER_SCOPED, FIELD_MG_BUNKER_SHIELD)) {
+                FIELD_MG_BUNKER_SCOPED, FIELD_MG_BUNKER_SHIELD, FIELD_MG_BUNKER_TALL, FIELD_MG_BUNKER_TALL_SHIELD,
+                FIELD_MG_BUNKER_TALL_SCOPED)) {
             ResourceLocation key = BuiltInRegistries.ENTITY_TYPE.getKey(t);
             FIELD_MG_ITEMS.put(t, Registry.register(BuiltInRegistries.ITEM, key,
                     new ArmoredCarItem(new Item.Properties().stacksTo(1), () -> t)));
@@ -291,7 +296,8 @@ public class ArmoredCarMod implements ModInitializer {
                             out.accept(SHELL_ITEM);
                             out.accept(SHELL_PILE_ITEM);
                             for (EntityType<?> t : java.util.List.of(FIELD_MG, FIELD_MG_SHIELD, FIELD_MG_SCOPED,
-                                    FIELD_MG_BUNKER, FIELD_MG_BUNKER_SHIELD, FIELD_MG_BUNKER_SCOPED)) {     // (tripod versions retired)
+                                    FIELD_MG_BUNKER, FIELD_MG_BUNKER_SHIELD, FIELD_MG_BUNKER_SCOPED,
+                                    FIELD_MG_BUNKER_TALL, FIELD_MG_BUNKER_TALL_SHIELD, FIELD_MG_BUNKER_TALL_SCOPED)) {     // (tripod versions retired)
                                 out.accept(FIELD_MG_ITEMS.get(t));
                             }
                             out.accept(FIELD_GUN_ITEM);

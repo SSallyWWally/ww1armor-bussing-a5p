@@ -17,6 +17,7 @@ import net.minecraft.util.Mth;
 public class FieldMgModel {
     public static final ModelLayerLocation LAYER = new ModelLayerLocation(ArmoredCarMod.id("mg08"), "main");
     public static final ModelLayerLocation TRIPOD_LAYER = new ModelLayerLocation(ArmoredCarMod.id("mg08_tripod"), "main");
+    public static final ModelLayerLocation BUNKER_TALL_LAYER = new ModelLayerLocation(ArmoredCarMod.id("mg08_bunker_tall"), "main");
     public static final ModelLayerLocation BUNKER_LAYER = new ModelLayerLocation(ArmoredCarMod.id("mg08_bunker"), "main");
 
     private final ModelPart root, mount, shield, gun, scope;

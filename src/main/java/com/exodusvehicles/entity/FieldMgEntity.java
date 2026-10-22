@@ -95,13 +95,20 @@ public class FieldMgEntity extends Entity implements Repairable {
 
     public boolean hasShield() {
         EntityType<?> t = this.getType();
-        return t == ArmoredCarMod.FIELD_MG_SHIELD || t == ArmoredCarMod.FIELD_MG_BUNKER_SHIELD;
+        return t == ArmoredCarMod.FIELD_MG_SHIELD || t == ArmoredCarMod.FIELD_MG_BUNKER_SHIELD || t == ArmoredCarMod.FIELD_MG_BUNKER_TALL_SHIELD;
     }
 
     /** Pedestal mount for bunkers and trenches (no sled; the gunner stands). */
     public boolean isBunker() {
         EntityType<?> t = this.getType();
-        return t == ArmoredCarMod.FIELD_MG_BUNKER || t == ArmoredCarMod.FIELD_MG_BUNKER_SHIELD || t == ArmoredCarMod.FIELD_MG_BUNKER_SCOPED;
+        return t == ArmoredCarMod.FIELD_MG_BUNKER || t == ArmoredCarMod.FIELD_MG_BUNKER_SHIELD || t == ArmoredCarMod.FIELD_MG_BUNKER_SCOPED
+                || isTallBunker();
+    }
+
+    /** Tall pedestal (stand-up height, for open trenches) rather than the low loophole one. */
+    public boolean isTallBunker() {
+        EntityType<?> t = this.getType();
+        return t == ArmoredCarMod.FIELD_MG_BUNKER_TALL || t == ArmoredCarMod.FIELD_MG_BUNKER_TALL_SHIELD || t == ArmoredCarMod.FIELD_MG_BUNKER_TALL_SCOPED;
     }
 
     /** Light tripod: higher than the sled, the gunner kneels / sits low behind it. */
@@ -113,7 +120,8 @@ public class FieldMgEntity extends Entity implements Repairable {
     /** Zielfernrohr 12 (2.5x) fitted at the left rear of the receiver. */
     public boolean hasScope() {
         EntityType<?> t = this.getType();
-        return t == ArmoredCarMod.FIELD_MG_SCOPED || t == ArmoredCarMod.FIELD_MG_TRIPOD_SCOPED || t == ArmoredCarMod.FIELD_MG_BUNKER_SCOPED;
+        return t == ArmoredCarMod.FIELD_MG_SCOPED || t == ArmoredCarMod.FIELD_MG_TRIPOD_SCOPED || t == ArmoredCarMod.FIELD_MG_BUNKER_SCOPED
+                || t == ArmoredCarMod.FIELD_MG_BUNKER_TALL_SCOPED;
     }
 
     /** The eye at the scope's eyepiece (gun frame, blocks): {right, up, back}. */
@@ -121,7 +129,7 @@ public class FieldMgEntity extends Entity implements Repairable {
 
     /** Height of the elevation pivot above the base. */
     public double pivotUp() {
-        return (isBunker() ? 17.0 : isTripod() ? 16.0 : 10.0) / 16.0;
+        return (isTallBunker() ? 22.0 : isBunker() ? 17.0 : isTripod() ? 16.0 : 10.0) / 16.0;
     }
 
     /** The gunner stands (bunker mount, or a sled set up on a parapet above where they are). */

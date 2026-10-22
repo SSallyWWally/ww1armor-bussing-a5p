@@ -17,7 +17,8 @@ public class FieldMgRenderer extends EntityRenderer<FieldMgEntity> {
     private static final ResourceLocation TEXTURE = ArmoredCarMod.id("textures/entity/mg08.png");
     private static final ResourceLocation TEXTURE_BUNKER = ArmoredCarMod.id("textures/entity/mg08_bunker.png");
     private static final ResourceLocation TEXTURE_TRIPOD = ArmoredCarMod.id("textures/entity/mg08_tripod.png");
-    private final FieldMgModel model, bunkerModel, tripodModel;
+    private static final ResourceLocation TEXTURE_BUNKER_TALL = ArmoredCarMod.id("textures/entity/mg08_bunker_tall.png");
+    private final FieldMgModel model, bunkerModel, tripodModel, tallModel;
 
     public FieldMgRenderer(EntityRendererProvider.Context context) {
         super(context);
@@ -25,6 +26,7 @@ public class FieldMgRenderer extends EntityRenderer<FieldMgEntity> {
         this.model = new FieldMgModel(context.bakeLayer(FieldMgModel.LAYER));
         this.bunkerModel = new FieldMgModel(context.bakeLayer(FieldMgModel.BUNKER_LAYER));
         this.tripodModel = new FieldMgModel(context.bakeLayer(FieldMgModel.TRIPOD_LAYER));
+        this.tallModel = new FieldMgModel(context.bakeLayer(FieldMgModel.BUNKER_TALL_LAYER));
     }
 
     @Override
@@ -41,7 +43,7 @@ public class FieldMgRenderer extends EntityRenderer<FieldMgEntity> {
             rel = mg.relYaw(mc.player.getViewYRot(partialTick));
             pitch = FieldMgEntity.clampPitch(mc.player.getViewXRot(partialTick));
         }
-        FieldMgModel m = mg.isBunker() ? this.bunkerModel : mg.isTripod() ? this.tripodModel : this.model;
+        FieldMgModel m = mg.isTallBunker() ? this.tallModel : mg.isBunker() ? this.bunkerModel : mg.isTripod() ? this.tripodModel : this.model;
         m.setupAnim(mg.hasShield(), mg.hasScope() && !(gunner && FieldMgClient.scopeAmount(partialTick) > 0.5F), rel, pitch, Mth.lerp(partialTick, mg.recoilO, mg.recoil));
         m.render(poseStack, buffers.getBuffer(RenderType.entityCutoutNoCull(getTextureLocation(mg))), packedLight, OverlayTexture.NO_OVERLAY);
         if (mg.flashTicks > 0) {
@@ -56,6 +58,6 @@ public class FieldMgRenderer extends EntityRenderer<FieldMgEntity> {
 
     @Override
     public ResourceLocation getTextureLocation(FieldMgEntity mg) {
-        return mg.isBunker() ? TEXTURE_BUNKER : mg.isTripod() ? TEXTURE_TRIPOD : TEXTURE;
+        return mg.isTallBunker() ? TEXTURE_BUNKER_TALL : mg.isBunker() ? TEXTURE_BUNKER : mg.isTripod() ? TEXTURE_TRIPOD : TEXTURE;
     }
 }
