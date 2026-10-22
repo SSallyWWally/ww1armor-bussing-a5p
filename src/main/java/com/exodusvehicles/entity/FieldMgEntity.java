@@ -129,6 +129,12 @@ public class FieldMgEntity extends Entity implements Repairable {
         return !Float.isNaN(this.entityData.get(DATA_STAND_DY));
     }
 
+    /** Height of the spade grips above a standing gunner's feet (blocks). */
+    public double gripAboveFeet() {
+        float dy = this.entityData.get(DATA_STAND_DY);
+        return pivotUp() + 1.4 / 16.0 - (Float.isNaN(dy) ? 0.0 : dy);
+    }
+
     /** Ground under where a standing gunner would be, relative to the gun's base, or NaN if they should sit. */
     private float standHeight() {
         if (isBunker()) {
