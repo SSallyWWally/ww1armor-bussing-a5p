@@ -290,8 +290,8 @@ public class ArmoredCarMod implements ModInitializer {
                             out.accept(MORSER_ITEM);
                             out.accept(SHELL_ITEM);
                             out.accept(SHELL_PILE_ITEM);
-                            for (EntityType<?> t : java.util.List.of(FIELD_MG, FIELD_MG_SHIELD, FIELD_MG_SCOPED, FIELD_MG_TRIPOD,
-                                    FIELD_MG_TRIPOD_SCOPED, FIELD_MG_BUNKER, FIELD_MG_BUNKER_SHIELD, FIELD_MG_BUNKER_SCOPED)) {
+                            for (EntityType<?> t : java.util.List.of(FIELD_MG, FIELD_MG_SHIELD, FIELD_MG_SCOPED,
+                                    FIELD_MG_BUNKER, FIELD_MG_BUNKER_SHIELD, FIELD_MG_BUNKER_SCOPED)) {     // (tripod versions retired)
                                 out.accept(FIELD_MG_ITEMS.get(t));
                             }
                             out.accept(FIELD_GUN_ITEM);
