@@ -56,7 +56,7 @@ import java.util.UUID;
 public class FieldMgEntity extends Entity implements Repairable {
     /** The gunner's eye lined up with the rear notch and the front blade (gun frame, blocks from the elevation pivot). */
     public static final double EYE_UP = 5.0 / 16.0, EYE_BACK = 12.0 / 16.0;
-    public static final double BORE_UP = 1.4 / 16.0, MUZZLE_FWD = 15.0 / 16.0;
+    public static final double BORE_UP = 1.4 / 16.0, MUZZLE_FWD = 15.6 / 16.0;
 
     private static final EntityDataAccessor<Float> DATA_HEALTH = def(EntityDataSerializers.FLOAT);
     private static final EntityDataAccessor<Integer> DATA_BELT = def(EntityDataSerializers.INT);
