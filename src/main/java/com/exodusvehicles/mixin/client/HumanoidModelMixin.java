@@ -18,6 +18,10 @@ public abstract class HumanoidModelMixin {
                 || entity.getVehicle() instanceof com.exodusvehicles.entity.FieldMgEntity mg && mg.gunnerStands()) {
             ((HumanoidModel<?>) (Object) this).riding = false;
         }
+        // field gun crew: hunched over the breech, Battlefield-style
+        if (entity.getVehicle() instanceof com.exodusvehicles.entity.FieldGunEntity gun && gun.isDeployed()) {
+            ((HumanoidModel<?>) (Object) this).crouching = true;
+        }
     }
 
     /** Gunner at a howitzer: standing, right hand on the breech, left arm loose. */
