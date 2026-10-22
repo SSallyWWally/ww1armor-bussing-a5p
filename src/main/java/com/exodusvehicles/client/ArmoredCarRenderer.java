@@ -68,15 +68,20 @@ public class ArmoredCarRenderer extends EntityRenderer<ArmoredCarEntity> {
      */
     private void renderMuzzleFlash(ArmoredCarEntity car, float partialTick, org.joml.Vector3f tip, org.joml.Vector3f dir,
                                    MultiBufferSource buffers, boolean gunnerView) {
-        float age = (2 - car.flashTicks) + partialTick;
+        renderFlash(car.flashTicks, car.flashStyle, car.flashScale, car.flashSpin, partialTick, tip, dir, buffers, gunnerView);
+    }
+
+    static void renderFlash(int flashTicks, int flashStyle, float flashScale, float flashSpin, float partialTick,
+                            org.joml.Vector3f tip, org.joml.Vector3f dir, MultiBufferSource buffers, boolean gunnerView) {
+        float age = (2 - flashTicks) + partialTick;
         int stage = age < 0.45F ? 0 : age < 1.3F ? 1 : 2;
-        float size = 0.42F * car.flashScale * (stage == 0 ? 0.6F : stage == 1 ? 1.0F : 1.25F) * (gunnerView ? 0.5F : 1.0F);
-        float u0 = car.flashStyle * 0.25F, v0 = stage / 3.0F, u1 = u0 + 0.25F, v1 = v0 + 1.0F / 3.0F;
+        float size = 0.42F * flashScale * (stage == 0 ? 0.6F : stage == 1 ? 1.0F : 1.25F) * (gunnerView ? 0.5F : 1.0F);
+        float u0 = flashStyle * 0.25F, v0 = stage / 3.0F, u1 = u0 + 0.25F, v1 = v0 + 1.0F / 3.0F;
         // the burst blooms just ahead of the muzzle, not around the barrel
         org.joml.Vector3f at = new org.joml.Vector3f(dir).mul(size * 0.55F).add(tip);
 
         org.joml.Quaternionf camRot = Minecraft.getInstance().gameRenderer.getMainCamera().rotation();
-        float c = Mth.cos(car.flashSpin), s = Mth.sin(car.flashSpin);
+        float c = Mth.cos(flashSpin), s = Mth.sin(flashSpin);
         float[][] corners = {{-1, -1}, {1, -1}, {1, 1}, {-1, 1}};
         float[][] uvs = {{u1, v1}, {u0, v1}, {u0, v0}, {u1, v0}};
         VertexConsumer vc = buffers.getBuffer(RenderType.entityTranslucentEmissive(FLASH));
@@ -96,7 +101,12 @@ public class ArmoredCarRenderer extends EntityRenderer<ArmoredCarEntity> {
      * Drawn as camera-facing ribbons with additive blending, relative to the car's render origin.
      */
     private void renderTracers(ArmoredCarEntity car, float partialTick, PoseStack poseStack, MultiBufferSource buffers) {
-        if (car.tracers.isEmpty()) {
+        renderTracers(car.tracers, car, partialTick, poseStack, buffers);
+    }
+
+    static void renderTracers(java.util.List<ArmoredCarEntity.Tracer> tracers, net.minecraft.world.entity.Entity car, float partialTick,
+                              PoseStack poseStack, MultiBufferSource buffers) {
+        if (tracers.isEmpty()) {
             return;
         }
         Vec3 origin = new Vec3(Mth.lerp(partialTick, car.xo, car.getX()), Mth.lerp(partialTick, car.yo, car.getY()),
@@ -104,7 +114,7 @@ public class ArmoredCarRenderer extends EntityRenderer<ArmoredCarEntity> {
         Vec3 cam = Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
         VertexConsumer vc = buffers.getBuffer(RenderType.lightning());
         Matrix4f m = poseStack.last().pose();
-        for (ArmoredCarEntity.Tracer t : car.tracers) {
+        for (ArmoredCarEntity.Tracer t : tracers) {
             Vec3 path = t.end.subtract(t.start);
             double len = path.length();
             if (len < 0.5) {

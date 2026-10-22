@@ -37,6 +37,13 @@ public abstract class CameraMixin {
             this.detached = !ArtilleryClient.sightView();     // draw the operator at the gun (not when looking through the sight)
             this.setPosition(new Vec3(view[0], view[1], view[2]));
             this.setRotation((float) view[3], (float) view[4]);
+        } else if ((view = com.exodusvehicles.client.FieldMgClient.cameraView(partialTick)) != null) {
+            this.setPosition(new Vec3(view[0], view[1], view[2]));      // MG 08 gunner: eye behind the rear sight
+            this.setRotation((float) view[3], (float) view[4]);
+        }
+        float[] supp = com.exodusvehicles.client.FieldMgClient.shake(partialTick);
+        if (supp != null) {
+            this.setRotation(this.getYRot() + supp[0], this.getXRot() + supp[1]);
         }
         float[] shake = ArtilleryClient.shake(partialTick);
         if (shake != null) {

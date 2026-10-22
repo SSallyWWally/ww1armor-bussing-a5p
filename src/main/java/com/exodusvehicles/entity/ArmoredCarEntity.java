@@ -910,9 +910,10 @@ public class ArmoredCarEntity extends Entity implements Repairable {
 
         float pitch = Mth.clamp(shooter.getXRot(), -cfg.mgMaxElevation, cfg.mgMaxDepression);
         Vec3 dir = Vec3.directionFromRotation(pitch, shooter.getYHeadRot());
-        dir = dir.add(this.random.nextGaussian() * cfg.mgSpread,
-                this.random.nextGaussian() * cfg.mgSpread,
-                this.random.nextGaussian() * cfg.mgSpread).normalize();
+        double spread = cfg.mgSpread * (1.0 + 2.5 * com.exodusvehicles.artillery.Suppression.level(shooter));   // suppressed: shaky
+        dir = dir.add(this.random.nextGaussian() * spread,
+                this.random.nextGaussian() * spread,
+                this.random.nextGaussian() * spread).normalize();
 
         // Rounds travel along the sight line (so they land on the reticle); the barrel itself sits
         // below the sight, so flash, smoke and tracers start there and stay out of the gunner's view.
@@ -1068,6 +1069,11 @@ public class ArmoredCarEntity extends Entity implements Repairable {
                 continue;               // not passed: in front of the gun, or it hit them / landed by them
             }
             Vec3 closest = from.add(seg.scale(t));
+            ModConfig sc = ModConfig.get();
+            double sd = closest.distanceTo(eye);
+            if (sc.suppressionEnabled && sd < sc.suppressionRadius) {
+                com.exodusvehicles.artillery.Suppression.add(p, (float) (sc.suppressionPerRound * (0.35 + 0.65 * (1.0 - sd / sc.suppressionRadius))));
+            }
             if (closest.distanceToSqr(eye) > 2.5 * 2.5) {
                 continue;
             }

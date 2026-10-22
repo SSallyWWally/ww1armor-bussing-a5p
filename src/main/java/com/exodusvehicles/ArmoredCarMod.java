@@ -50,6 +50,8 @@ public class ArmoredCarMod implements ModInitializer {
     public static Item MORSER_ITEM;
     public static Item SHELL_ITEM;
     public static EntityType<com.exodusvehicles.entity.FieldGunEntity> FIELD_GUN;
+    public static EntityType<com.exodusvehicles.entity.FieldMgEntity> FIELD_MG, FIELD_MG_SHIELD;
+    public static Item FIELD_MG_ITEM, FIELD_MG_SHIELD_ITEM;
     public static Item FIELD_GUN_ITEM;
     public static Item FIELD_SHELL_ITEM;
     public static net.minecraft.world.level.block.Block FIELD_SHELL_PILE;
@@ -162,6 +164,16 @@ public class ArmoredCarMod implements ModInitializer {
                         .build("fk96"));
         FIELD_GUN_ITEM = Registry.register(BuiltInRegistries.ITEM, id("fk96"),
                 new ArmoredCarItem(new Item.Properties().stacksTo(1), () -> FIELD_GUN));
+        FIELD_MG = Registry.register(BuiltInRegistries.ENTITY_TYPE, id("mg08"),
+                EntityType.Builder.<com.exodusvehicles.entity.FieldMgEntity>of(com.exodusvehicles.entity.FieldMgEntity::new, MobCategory.MISC)
+                        .sized(0.9F, 0.9F).fireImmune().clientTrackingRange(10).build("mg08"));
+        FIELD_MG_SHIELD = Registry.register(BuiltInRegistries.ENTITY_TYPE, id("mg08_shielded"),
+                EntityType.Builder.<com.exodusvehicles.entity.FieldMgEntity>of(com.exodusvehicles.entity.FieldMgEntity::new, MobCategory.MISC)
+                        .sized(0.9F, 0.9F).fireImmune().clientTrackingRange(10).build("mg08_shielded"));
+        FIELD_MG_ITEM = Registry.register(BuiltInRegistries.ITEM, id("mg08"),
+                new ArmoredCarItem(new Item.Properties().stacksTo(1), () -> FIELD_MG));
+        FIELD_MG_SHIELD_ITEM = Registry.register(BuiltInRegistries.ITEM, id("mg08_shielded"),
+                new ArmoredCarItem(new Item.Properties().stacksTo(1), () -> FIELD_MG_SHIELD));
         FIELD_SHELL_ITEM = Registry.register(BuiltInRegistries.ITEM, id("shell_77mm"), new Item(new Item.Properties().stacksTo(1)));
         FK_CREW = registerSound("fk_crew");
         FK_CLOSE = registerSound("fk_close");
@@ -228,6 +240,8 @@ public class ArmoredCarMod implements ModInitializer {
                             out.accept(MORSER_ITEM);
                             out.accept(SHELL_ITEM);
                             out.accept(SHELL_PILE_ITEM);
+                            out.accept(FIELD_MG_ITEM);
+                            out.accept(FIELD_MG_SHIELD_ITEM);
                             out.accept(FIELD_GUN_ITEM);
                             out.accept(FIELD_SHELL_ITEM);
                             out.accept(FIELD_SHELL_PILE_ITEM);
@@ -242,6 +256,8 @@ public class ArmoredCarMod implements ModInitializer {
                 com.exodusvehicles.artillery.ShellManager::tick);
         PayloadTypeRegistry.playS2C().register(com.exodusvehicles.network.ShellFiredPayload.TYPE,
                 com.exodusvehicles.network.ShellFiredPayload.CODEC);
+        PayloadTypeRegistry.playS2C().register(com.exodusvehicles.network.SuppressPayload.TYPE,
+                com.exodusvehicles.network.SuppressPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(com.exodusvehicles.network.HitMarkerPayload.TYPE,
                 com.exodusvehicles.network.HitMarkerPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(com.exodusvehicles.network.ShellImpactPayload.TYPE,
@@ -298,6 +314,8 @@ public class ArmoredCarMod implements ModInitializer {
             player.getServer().execute(() -> {
                 if (player.getVehicle() instanceof ArmoredCarEntity car) {
                     car.startReload(player);
+                } else if (player.getVehicle() instanceof com.exodusvehicles.entity.FieldMgEntity mg) {
+                    mg.startReload(player);
                 }
             });
         });
@@ -317,12 +335,24 @@ public class ArmoredCarMod implements ModInitializer {
                     car.fireGun(player);
                 } else if (player.getVehicle() instanceof com.exodusvehicles.entity.MorserEntity gun) {
                     gun.fire(player);
+                } else if (player.getVehicle() instanceof com.exodusvehicles.entity.FieldMgEntity mg) {
+                    mg.fire(player);
                 }
             });
         });
 
         // The crew sit inside the armour: bullets and blows aimed at a crew member hit the hull instead.
         ServerLivingEntityEvents.ALLOW_DAMAGE.register((entity, source, amount) -> {
+            // the shielded MG 08's plate stops small-arms fire from the front
+            if (entity.getVehicle() instanceof com.exodusvehicles.entity.FieldMgEntity mg && mg.hasShield()
+                    && !source.is(DamageTypeTags.IS_EXPLOSION) && !source.is(DamageTypeTags.BYPASSES_INVULNERABILITY)) {
+                net.minecraft.world.phys.Vec3 from = source.getEntity() != null ? source.getEntity().getEyePosition() : source.getSourcePosition();
+                if (from != null && source.getDirectEntity() != null && source.getDirectEntity() != entity && mg.shieldCovers(from)) {
+                    entity.level().playSound(null, entity.getX(), entity.getEyeY(), entity.getZ(), RICOCHET,
+                            net.minecraft.sounds.SoundSource.PLAYERS, 0.9F, 0.9F + entity.getRandom().nextFloat() * 0.2F);
+                    return false;
+                }
+            }
             if (entity.getVehicle() instanceof ArmoredCarEntity car && car.isArmored() && !car.isWrecked()) {
                 if (source.is(DamageTypeTags.IS_EXPLOSION) || source.is(DamageTypeTags.BYPASSES_INVULNERABILITY)) {
                     return true;

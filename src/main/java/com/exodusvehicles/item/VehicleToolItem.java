@@ -36,7 +36,8 @@ public abstract class VehicleToolItem extends Item {
         Vec3 end = eye.add(look.scale(REACH));
         EntityHitResult hit = ProjectileUtil.getEntityHitResult(player.level(), player, eye, end,
                 player.getBoundingBox().expandTowards(look.scale(REACH)).inflate(1.0),
-                e -> (e instanceof ArmoredCarEntity || e instanceof MorserEntity || e instanceof HullSegmentEntity)
+                e -> (e instanceof ArmoredCarEntity || e instanceof MorserEntity || e instanceof HullSegmentEntity
+                        || e instanceof com.exodusvehicles.entity.FieldMgEntity)
                         && !e.isRemoved() && !player.isPassengerOfSameVehicle(e), 0.0F);
         if (hit == null) {
             return null;

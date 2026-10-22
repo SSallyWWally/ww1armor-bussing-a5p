@@ -57,12 +57,12 @@ public final class GunSight {
         Minecraft mc = Minecraft.getInstance();
         float pt = mc.getTimer().getGameTimeDeltaPartialTick(true);
         float z = zoomAmount(pt);
-        return (z <= 1.001F ? 1.0 : 1.0 / z) * ArtilleryClient.fovScale(pt);
+        return (z <= 1.001F ? 1.0 : 1.0 / z) * ArtilleryClient.fovScale(pt) * FieldMgClient.fovScale(pt);
     }
 
     /** Mouse sensitivity multiplier while zoomed. */
     public static double sensitivityScale() {
-        return (zoom <= 1.001F ? 1.0 : 1.0 / zoom) * ArtilleryClient.sensitivityScale();
+        return (zoom <= 1.001F ? 1.0 : 1.0 / zoom) * ArtilleryClient.sensitivityScale() * FieldMgClient.sensitivityScale();
     }
 
     /** Physical state of a key or mouse button, independent of the KeyMapping's own state. */

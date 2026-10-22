@@ -23,6 +23,17 @@ public abstract class HumanoidModelMixin {
     @Inject(method = "setupAnim(Lnet/minecraft/world/entity/LivingEntity;FFFFF)V", at = @At("TAIL"))
     private void exodus_vehicles$gunnerPose(LivingEntity entity, float limbSwing, float limbSwingAmount, float age,
                                             float headYaw, float headPitch, CallbackInfo ci) {
+        float[] mgPose = com.exodusvehicles.client.FieldMgClient.armPose(entity);
+        if (mgPose != null) {
+            HumanoidModel<?> self = (HumanoidModel<?>) (Object) this;     // seated behind the MG 08, hands on the grips
+            self.rightArm.xRot = mgPose[0];
+            self.rightArm.yRot = mgPose[1];
+            self.rightArm.zRot = 0.0F;
+            self.leftArm.xRot = mgPose[2];
+            self.leftArm.yRot = mgPose[3];
+            self.leftArm.zRot = 0.0F;
+            return;
+        }
         float[] pose = ArtilleryClient.gunnerArmPose(entity);
         if (pose == null) {
             return;

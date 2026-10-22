@@ -116,6 +116,19 @@ public class ModConfig {
     public float fieldAotShellStrength = 60.0F;
     public double fieldAotLimbReach = 2.0;
 
+    // ---- MG 08 on the sled mount (field MG). Belt, rate of fire, heat and damage are the MG 08 settings above.
+    public float fieldMgMaxHealth = 60.0F;
+    public float fieldMgTraverse = 45.0F;            // degrees either side of how it was set down
+    public float fieldMgMaxElevation = 15.0F;
+    public float fieldMgMaxDepression = 12.0F;
+    public double fieldMgRange = 160.0;
+    /** Zoom while holding right-click on the sights. */
+    public float fieldMgSightZoom = 1.6F;
+    /** Suppression: rounds passing within this many blocks of a player rattle them (screen effects, shakier aim). */
+    public boolean suppressionEnabled = true;
+    public double suppressionRadius = 4.0;
+    public float suppressionPerRound = 0.09F;
+
     /** Client: size of the shell burst effects (1 = full, lower for weaker PCs). */
     public float shellEffectScale = 1.0F;
     /** Client: follow the shell with the camera after firing (toggle in game with the shell-camera key). */

@@ -55,6 +55,9 @@ public class ArmoredCarClient implements ClientModInitializer {
         EntityRendererRegistry.register(ArmoredCarMod.MORSER, MorserRenderer::new);
         EntityModelLayerRegistry.registerModelLayer(FieldGunModel.LAYER, FieldGunModel::createBodyLayer);
         EntityRendererRegistry.register(ArmoredCarMod.FIELD_GUN, FieldGunRenderer::new);
+        EntityModelLayerRegistry.registerModelLayer(FieldMgModel.LAYER, FieldMgModel::createBodyLayer);
+        EntityRendererRegistry.register(ArmoredCarMod.FIELD_MG, FieldMgRenderer::new);
+        EntityRendererRegistry.register(ArmoredCarMod.FIELD_MG_SHIELD, FieldMgRenderer::new);
         EntityRendererRegistry.register(ArmoredCarMod.TRUCK_SEGMENT, NoopRenderer::new);
 
         // the engine loop is the car's only driving sound
@@ -77,9 +80,14 @@ public class ArmoredCarClient implements ClientModInitializer {
         SHELL_CAM = KeyBindingHelper.registerKeyBinding(new KeyMapping(
                 "key.exodus_vehicles.shell_cam", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_K, "key.categories.exodus_vehicles"));
         ArtilleryClient.init();
+        FieldMgClient.init();
 
         ClientPlayNetworking.registerGlobalReceiver(TracerPayload.TYPE, (payload, context) -> {
             Minecraft mc = context.client();
+            if (mc.level != null && mc.level.getEntity(payload.carId()) instanceof com.exodusvehicles.entity.FieldMgEntity mg) {
+                mg.tracers.add(new ArmoredCarEntity.Tracer(new net.minecraft.world.phys.Vec3(payload.sx(), payload.sy(), payload.sz()),
+                        new net.minecraft.world.phys.Vec3(payload.ex(), payload.ey(), payload.ez())));
+            }
             if (mc.level != null && mc.level.getEntity(payload.carId()) instanceof ArmoredCarEntity car) {
                 net.minecraft.world.phys.Vec3 start = new net.minecraft.world.phys.Vec3(payload.sx(), payload.sy(), payload.sz());
                 if (GunSight.inSight() && mc.player != null && car.seatOf(mc.player) == ArmoredCarEntity.GUNNER) {
@@ -108,6 +116,7 @@ public class ArmoredCarClient implements ClientModInitializer {
             }
             GunSight.tick(mc);
             ArtilleryClient.startTick(mc);
+            FieldMgClient.startTick(mc);
             if (mc.screen == null && GunSight.isGunner(mc)) {
                 boolean trigger = GunSight.physicallyDown(mc, mc.options.keyAttack);
                 mc.options.keyAttack.setDown(false);
@@ -124,11 +133,13 @@ public class ArmoredCarClient implements ClientModInitializer {
             // Vehicle keys are read straight from the keyboard while riding, so another mod bound to the
             // same key (very common for N, G, P...) can't swallow them.
             boolean riding = mc.player != null && mc.screen == null && (mc.player.getVehicle() instanceof ArmoredCarEntity
-                    || mc.player.getVehicle() instanceof com.exodusvehicles.entity.MorserEntity);
+                    || mc.player.getVehicle() instanceof com.exodusvehicles.entity.MorserEntity
+                    || mc.player.getVehicle() instanceof com.exodusvehicles.entity.FieldMgEntity);
             if (pressed(mc, SHELL_CAM, riding) && mc.player.getVehicle() instanceof com.exodusvehicles.entity.MorserEntity) {
                 ArtilleryClient.toggleShellCamera(mc);
             }
             ArtilleryClient.endTick(mc);
+            FieldMgClient.endTick(mc);
             if (pressed(mc, SWITCH_SEAT, riding)) {
                 ClientPlayNetworking.send(new SwitchSeatPayload());
             }
@@ -156,6 +167,7 @@ public class ArmoredCarClient implements ClientModInitializer {
             drawSight(graphics, tickCounter.getGameTimeDeltaPartialTick(true));
             drawHud(graphics);
             ArtilleryClient.drawOverlay(graphics, tickCounter.getGameTimeDeltaPartialTick(true));
+            FieldMgClient.drawOverlay(graphics, tickCounter.getGameTimeDeltaPartialTick(true));
         });
     }
 

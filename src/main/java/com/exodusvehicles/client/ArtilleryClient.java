@@ -409,7 +409,7 @@ public final class ArtilleryClient {
 
     /** True while one of our cameras replaces the first-person view. */
     public static boolean cameraActive() {
-        return operatedGun() != null || phase != Phase.NONE;
+        return operatedGun() != null || phase != Phase.NONE || FieldMgClient.onSights();
     }
 
     /** Traverse the local operator is aiming at (client prediction for a smooth barrel and camera). */

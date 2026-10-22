@@ -246,7 +246,8 @@ public final class ShellManager {
         float shockRadius = field ? cfg.fieldShellShockRadius : cfg.shellShockRadius;
         boolean hit = false, kill = false;
         for (Entity e : level.getEntities((Entity) null, new AABB(c, c).inflate(radius + 2.0), e -> !e.isSpectator())) {
-            if (e instanceof ArmoredCarEntity || e instanceof MorserEntity || e instanceof com.exodusvehicles.entity.HullSegmentEntity) {
+            if (e instanceof ArmoredCarEntity || e instanceof MorserEntity || e instanceof com.exodusvehicles.entity.HullSegmentEntity
+                    || e instanceof com.exodusvehicles.entity.FieldMgEntity) {
                 continue;      // vehicles below
             }
             Vec3 mid = e.getBoundingBox().getCenter();
@@ -292,7 +293,8 @@ public final class ShellManager {
             double vr = cfg.fieldShellVehicleRadius;
             java.util.Map<Entity, Double> nearest = new java.util.HashMap<>();
             for (Entity e : level.getEntities((Entity) null, new AABB(c, c).inflate(vr + 6.0),
-                    e -> e instanceof ArmoredCarEntity || e instanceof MorserEntity || e instanceof com.exodusvehicles.entity.HullSegmentEntity)) {
+                    e -> e instanceof ArmoredCarEntity || e instanceof MorserEntity || e instanceof com.exodusvehicles.entity.HullSegmentEntity
+                            || e instanceof com.exodusvehicles.entity.FieldMgEntity)) {
                 Entity v = e instanceof com.exodusvehicles.entity.HullSegmentEntity seg ? seg.getCar() : e;
                 if (v == null) {
                     continue;
@@ -315,6 +317,9 @@ public final class ShellManager {
                     car.shellHit((float) (car.getMaxHealth() * frac * f));
                     hit = true;
                     kill |= car.isWrecked();
+                } else if (v instanceof com.exodusvehicles.entity.FieldMgEntity mg && !mg.isRemoved()) {
+                    hit = true;
+                    kill |= mg.shellHit(mg.getMaxHealth() * 2.0F);
                 } else if (v instanceof MorserEntity gun && !gun.isRemoved()) {
                     hit = true;
                     kill |= gun.shellHit((float) (gun.getMaxHealth() * cfg.fieldShellSoftFraction * f));
@@ -323,7 +328,8 @@ public final class ShellManager {
         } else {
             // vehicles: a heavy shell wrecks an armoured car on a direct hit and badly hurts it close by
             double vr = cfg.shellVehicleRadius;
-            for (Entity e : level.getEntities((Entity) null, new AABB(c, c).inflate(vr + 4.0), e -> e instanceof ArmoredCarEntity || e instanceof MorserEntity)) {
+            for (Entity e : level.getEntities((Entity) null, new AABB(c, c).inflate(vr + 4.0), e -> e instanceof ArmoredCarEntity || e instanceof MorserEntity
+                    || e instanceof com.exodusvehicles.entity.FieldMgEntity)) {
                 double d = Math.sqrt(e.getBoundingBox().distanceToSqr(c));
                 if (d < vr && e.hurt(src, (float) (cfg.shellVehicleDamage * (1.0 - d / vr)))) {
                     hit = true;
