@@ -41,7 +41,7 @@ public class PlaneRenderer extends EntityRenderer<PlaneEntity> {
             // the pilot, seated in the cockpit and banking with the aircraft (his own upright drawing is suppressed)
             net.minecraft.world.entity.player.Player pilot = plane.getPilot();
             poseStack.pushPose();
-            poseStack.translate(0.0, (7.0 - 22.0) / 16.0, 10.5 / 16.0);
+            poseStack.translate(0.0, (9.0 - 22.0) / 16.0, 10.5 / 16.0);
             poseStack.mulPose(Axis.YP.rotationDegrees(Mth.rotLerp(pt, pilot.yBodyRotO, pilot.yBodyRot) - 180.0F));
             DRAWING_PILOT = true;
             try {
@@ -60,10 +60,10 @@ public class PlaneRenderer extends EntityRenderer<PlaneEntity> {
         this.model.render(poseStack, buffers.getBuffer(RenderType.entityCutoutNoCull(getTextureLocation(plane))), light, OverlayTexture.NO_OVERLAY);
         if (plane.flashTicks > 0) {
             // both guns' muzzles (model units: x left, y down from 24, z backward)
-            for (float x : new float[]{2.5F, -2.5F}) {
+            for (float x : new float[]{2.7F, -2.7F}) {
                 org.joml.Matrix4f m = poseStack.last().pose();
-                org.joml.Vector3f tip = m.transformPosition(new org.joml.Vector3f(x / 16.0F, (24.0F - 30.3F) / 16.0F, -16.6F / 16.0F));
-                org.joml.Vector3f ahead = m.transformPosition(new org.joml.Vector3f(x / 16.0F, (24.0F - 30.3F) / 16.0F, -17.6F / 16.0F));
+                org.joml.Vector3f tip = m.transformPosition(new org.joml.Vector3f(x / 16.0F, (24.0F - 32.85F) / 16.0F, -17.2F / 16.0F));
+                org.joml.Vector3f ahead = m.transformPosition(new org.joml.Vector3f(x / 16.0F, (24.0F - 32.85F) / 16.0F, -18.2F / 16.0F));
                 ArmoredCarRenderer.renderFlash(plane.flashTicks, plane.flashStyle, plane.flashScale * 0.8F, plane.flashSpin, pt, tip,
                         ahead.sub(tip).normalize(), buffers, mine && mc.options.getCameraType().isFirstPerson());
             }

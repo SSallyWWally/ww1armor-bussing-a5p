@@ -363,6 +363,8 @@ public class ArmoredCarMod implements ModInitializer {
             player.getServer().execute(() -> {
                 if (player.getVehicle() instanceof ArmoredCarEntity car) {
                     car.toggleParkingBrake(player);
+                } else if (player.getVehicle() instanceof com.exodusvehicles.entity.PlaneEntity plane) {
+                    plane.toggleParkingBrake(player);
                 }
             });
         });

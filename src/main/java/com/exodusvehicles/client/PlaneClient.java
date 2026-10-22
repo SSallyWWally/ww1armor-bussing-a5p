@@ -255,6 +255,9 @@ public final class PlaneClient {
         float hp = p.getHealth() / p.getMaxHealth();
         g.fill(x, y + 48, x + 112, y + 51, 0x80000000);
         g.fill(x, y + 48, x + Math.round(112 * Mth.clamp(hp, 0, 1)), y + 51, hp > 0.5F ? 0xFF8D977A : hp > 0.25F ? 0xFFD9A441 : 0xFFC4553A);
+        if (p.isParkingBrakeOn()) {
+            g.drawString(mc.font, Component.translatable("hud.exodus_vehicles.parking_brake"), x + 64, y + 11, 0xFFE0A040, true);
+        }
         if (freelook) {
             Component fl = Component.translatable("hud.exodus_vehicles.plane_freelook");
             g.drawString(mc.font, fl, w / 2 - mc.font.width(fl) / 2, 8, 0xFFE0C060, true);

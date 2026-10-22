@@ -54,9 +54,9 @@ public class PlaneEntity extends Entity implements Repairable {
     /** Centre of gravity above the entity position (wheels on the ground, aircraft level). */
     public static final double CG_UP = 22.0 / 16.0;
     /** Pilot's eye, from the CG: {right, up, forward} (blocks). */
-    public static final double[] EYE = {0.0, 12.0 / 16.0, -8.5 / 16.0};
+    public static final double[] EYE = {0.0, 14.0 / 16.0, -8.5 / 16.0};
     /** Gun muzzles from the CG: {right (left gun is negative), up, forward}. */
-    public static final double GUN_SIDE = 2.5 / 16.0, GUN_UP = 8.3 / 16.0, GUN_FWD = 16.5 / 16.0;
+    public static final double GUN_SIDE = 2.7 / 16.0, GUN_UP = 10.85 / 16.0, GUN_FWD = 17.2 / 16.0;
     /** Nose-up angle the aircraft sits at on its tail skid (visual). */
     public static final float GROUND_TILT = 11.0F;
 
@@ -69,6 +69,7 @@ public class PlaneEntity extends Entity implements Repairable {
     private static final EntityDataAccessor<Float> DATA_SPEED = def(EntityDataSerializers.FLOAT);
     private static final EntityDataAccessor<Boolean> DATA_ENGINE = def(EntityDataSerializers.BOOLEAN);
     private static final EntityDataAccessor<Boolean> DATA_WRECKED = def(EntityDataSerializers.BOOLEAN);
+    private static final EntityDataAccessor<Boolean> DATA_BRAKE = def(EntityDataSerializers.BOOLEAN);
 
     private static <T> EntityDataAccessor<T> def(net.minecraft.network.syncher.EntityDataSerializer<T> s) {
         return SynchedEntityData.defineId(PlaneEntity.class, s);
@@ -120,6 +121,7 @@ public class PlaneEntity extends Entity implements Repairable {
         b.define(DATA_SPEED, 0.0F);
         b.define(DATA_ENGINE, false);
         b.define(DATA_WRECKED, false);
+        b.define(DATA_BRAKE, false);
     }
 
     // ------------------------------------------------------------------ state
@@ -135,6 +137,22 @@ public class PlaneEntity extends Entity implements Repairable {
     /** Burnt-out wreck on the ground (despawns after a while, like the armoured car's). */
     public boolean isWrecked() { return this.entityData.get(DATA_WRECKED); }
     private int wreckTicks;
+
+    public boolean isParkingBrakeOn() { return this.entityData.get(DATA_BRAKE); }
+
+    /** G (the parking-brake key), on the ground only: chocks the wheels so it can't roll or be taxied away. */
+    public void toggleParkingBrake(Player player) {
+        if (getPilot() != player || isWrecked()) {
+            return;
+        }
+        if (!this.onGround() && !isParkingBrakeOn()) {
+            player.displayClientMessage(Component.translatable("msg.exodus_vehicles.plane_brake_air"), true);
+            return;
+        }
+        boolean on = !isParkingBrakeOn();
+        this.entityData.set(DATA_BRAKE, on);
+        this.playSound(on ? SoundEvents.CHAIN_PLACE : SoundEvents.CHAIN_BREAK, 0.7F, 1.2F);
+    }
     public boolean isEngineOn() { return this.entityData.get(DATA_ENGINE) && !isDowned(); }
 
     /** Ticks since the engine was started (it needs a few seconds to pick up before it pulls). */
@@ -276,6 +294,9 @@ public class PlaneEntity extends Entity implements Repairable {
     @Override
     protected void removePassenger(Entity passenger) {
         super.removePassenger(passenger);
+        // the server takes over flying it: carry on at the speed it was really going (not a stale zero, or a fling)
+        this.speed = this.cruise = this.onGround() ? 0.0F : syncedSpeed();
+        this.setDeltaMovement(Vec3.ZERO);
         if (!this.level().isClientSide && !isDowned()) {
             if (!this.onGround()) {
                 this.abandoned = true;           // bailed out: it'll come down hard somewhere
@@ -330,6 +351,9 @@ public class PlaneEntity extends Entity implements Repairable {
             }
         }
         this.speed = Mth.clamp(this.speed, 0.0F, max * 1.5F);
+        if (ground && isParkingBrakeOn()) {
+            this.speed = 0.0F;                    // chocked: it stays put whatever the throttle says
+        }
         float lift = Mth.clamp(this.speed / stall, 0.0F, 1.0F);
         float auth = Mth.clamp(this.speed / (stall * 1.3F), 0.12F, 1.0F);
         float dy = Mth.wrapDegrees(tYaw - yaw) + rudder * 8.0F;
@@ -392,6 +416,9 @@ public class PlaneEntity extends Entity implements Repairable {
         if (isWrecked()) {
             tickWreck();
             return;
+        }
+        if (this.isControlledByLocalInstance()) {
+            this.lerpSteps = 0;      // flying it ourselves: never ease back toward an old network position
         }
         if (this.lerpSteps > 0 && !this.isControlledByLocalInstance()) {
             double x = this.getX() + (this.lerpX - this.getX()) / this.lerpSteps;
