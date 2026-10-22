@@ -222,15 +222,16 @@ public final class PlaneClient {
         int w = g.guiWidth(), h = g.guiHeight();
         int white = 0xF0F0ECDC, aimCol = 0xC0F0ECDC;
         float yaw = Mth.rotLerp(pt, p.yRotO, p.getYRot());
-        float pitch = Mth.lerp(pt, p.xRotO, p.getXRot());
+        float pitch = Mth.lerp(pt, p.xRotO, p.getXRot()) - Mth.lerp(pt, p.groundTiltO, p.groundTilt);
         float roll = Mth.lerp(pt, p.rollO, p.roll);
         Vec3 base = p.getPosition(pt);
-        // where the guns point (converging ahead of the nose) and where the aircraft is being steered
-        Vec3 gunsAt = PlaneEntity.bodyPoint(base, yaw, pitch, roll, 0.0, PlaneEntity.GUN_UP, 0.0)
-                .add(Vec3.directionFromRotation(pitch, yaw).scale(120.0));
+        // the guns fire along the pilot's sight line (eye through the ring sight to the bead), so the sight on the
+        // screen sits on the ring: dead centre in the cockpit, just above the aircraft from outside
+        Vec3 gunsAt = PlaneEntity.bodyPoint(base, yaw, pitch, roll, PlaneEntity.EYE[0], PlaneEntity.EYE[1], PlaneEntity.EYE[2])
+                .add(Vec3.directionFromRotation(pitch, yaw).scale(150.0));
         float sy = freelook ? holdYaw : mc.player.getViewYRot(pt), sp = freelook ? holdPitch : mc.player.getViewXRot(pt);
         Vec3 steerAt = base.add(0, PlaneEntity.CG_UP, 0).add(Vec3.directionFromRotation(sp, sy).scale(200.0));
-        float[] gs = project(gunsAt, w, h);
+        float[] gs = cockpitView() && !freelook ? new float[]{w / 2.0F, h / 2.0F} : project(gunsAt, w, h);
         if (gs != null) {
             ring(g, gs[0], gs[1], 9, white);           // gun sight
             g.fill(Math.round(gs[0]), Math.round(gs[1]), Math.round(gs[0]) + 1, Math.round(gs[1]) + 1, white);

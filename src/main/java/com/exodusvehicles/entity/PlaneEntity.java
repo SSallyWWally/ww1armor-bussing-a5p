@@ -56,7 +56,7 @@ public class PlaneEntity extends Entity implements Repairable {
     /** Pilot's eye, from the CG: {right, up, forward} (blocks). */
     public static final double[] EYE = {0.0, 12.5 / 16.0, -8.5 / 16.0};
     /** Gun muzzles from the CG: {right (left gun is negative), up, forward}. */
-    public static final double GUN_SIDE = 2.0 / 16.0, GUN_UP = 8.5 / 16.0, GUN_FWD = 14.8 / 16.0;
+    public static final double GUN_SIDE = 2.0 / 16.0, GUN_UP = 9.1 / 16.0, GUN_FWD = 14.8 / 16.0;
     /** Nose-up angle the aircraft sits at on its tail skid (visual). */
     public static final float GROUND_TILT = 11.0F;
 
@@ -700,15 +700,19 @@ public class PlaneEntity extends Entity implements Repairable {
         int shot = this.shotCounter++;
         double side = (shot % 2 == 0 ? -1 : 1) * GUN_SIDE;
         Vec3 muzzle = bodyPoint(side, GUN_UP, GUN_FWD);
-        Vec3 dir = Vec3.directionFromRotation(this.getXRot(), this.getYRot());
+        // rounds go along the pilot's sight line (eye -> ring -> bead), where the sight on his screen is
+        float aimPitch = this.getXRot() - this.groundTilt;
+        Vec3 dir = Vec3.directionFromRotation(aimPitch, this.getYRot());
+        Vec3 eye = bodyPoint(EYE[0], EYE[1], EYE[2]);
         double sp = cfg.planeGunSpread;
         dir = dir.add(this.random.nextGaussian() * sp, this.random.nextGaussian() * sp, this.random.nextGaussian() * sp).normalize();
-        Vec3 end = muzzle.add(dir.scale(cfg.planeGunRange));
-        BlockHitResult bh = server.clip(new ClipContext(muzzle, end, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, this));
+        Vec3 rayFrom = eye.add(dir.scale(2.0));
+        Vec3 end = rayFrom.add(dir.scale(cfg.planeGunRange));
+        BlockHitResult bh = server.clip(new ClipContext(rayFrom, end, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, this));
         if (bh.getType() != HitResult.Type.MISS) {
             end = bh.getLocation();
         }
-        EntityHitResult eh = ProjectileUtil.getEntityHitResult(server, this, muzzle, end, new AABB(muzzle, end).inflate(1.0),
+        EntityHitResult eh = ProjectileUtil.getEntityHitResult(server, this, rayFrom, end, new AABB(rayFrom, end).inflate(1.0),
                 e -> e != this && !this.hasPassenger(e) && e.isPickable() && e.isAlive() && !e.isSpectator(), 0.3F);
         if (eh != null) {
             Entity target = eh.getEntity();

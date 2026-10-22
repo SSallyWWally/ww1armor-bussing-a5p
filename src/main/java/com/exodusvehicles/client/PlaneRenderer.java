@@ -62,8 +62,8 @@ public class PlaneRenderer extends EntityRenderer<PlaneEntity> {
             // both guns' muzzles (model units: x left, y down from 24, z backward)
             for (float x : new float[]{2.0F, -2.0F}) {
                 org.joml.Matrix4f m = poseStack.last().pose();
-                org.joml.Vector3f tip = m.transformPosition(new org.joml.Vector3f(x / 16.0F, (24.0F - 30.5F) / 16.0F, -14.8F / 16.0F));
-                org.joml.Vector3f ahead = m.transformPosition(new org.joml.Vector3f(x / 16.0F, (24.0F - 30.5F) / 16.0F, -15.8F / 16.0F));
+                org.joml.Vector3f tip = m.transformPosition(new org.joml.Vector3f(x / 16.0F, (24.0F - 31.1F) / 16.0F, -14.8F / 16.0F));
+                org.joml.Vector3f ahead = m.transformPosition(new org.joml.Vector3f(x / 16.0F, (24.0F - 31.1F) / 16.0F, -15.8F / 16.0F));
                 ArmoredCarRenderer.renderFlash(plane.flashTicks, plane.flashStyle, plane.flashScale * 0.8F, plane.flashSpin, pt, tip,
                         ahead.sub(tip).normalize(), buffers, mine && mc.options.getCameraType().isFirstPerson());
             }
