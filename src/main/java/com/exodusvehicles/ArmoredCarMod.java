@@ -206,7 +206,7 @@ public class ArmoredCarMod implements ModInitializer {
         }
         FOKKER = Registry.register(BuiltInRegistries.ENTITY_TYPE, id("fokker_dr1"),
                 EntityType.Builder.<com.exodusvehicles.entity.PlaneEntity>of(com.exodusvehicles.entity.PlaneEntity::new, MobCategory.MISC)
-                        .sized(4.0F, 2.4F).clientTrackingRange(16).updateInterval(1).build("fokker_dr1"));
+                        .sized(4.6F, 2.75F).clientTrackingRange(16).updateInterval(1).build("fokker_dr1"));
         FOKKER_ITEM = Registry.register(BuiltInRegistries.ITEM, id("fokker_dr1"),
                 new ArmoredCarItem(new Item.Properties().stacksTo(1), () -> FOKKER));
         PLANE_START = registerSound("plane_start");

@@ -52,11 +52,15 @@ import java.util.UUID;
  */
 public class PlaneEntity extends Entity implements Repairable {
     /** Centre of gravity above the entity position (wheels on the ground, aircraft level). */
-    public static final double CG_UP = 22.0 / 16.0;
+    /** The airframe is drawn 15% over scale so a Minecraft pilot (much broader than a real one) fits the cockpit. */
+    public static final float SCALE = 1.15F;
+    public static final double CG_UP = 22.0 / 16.0 * SCALE;
     /** Pilot's eye, from the CG: {right, up, forward} (blocks). */
-    public static final double[] EYE = {0.0, 12.5 / 16.0, -8.5 / 16.0};
+    public static final double[] EYE = {0.0, 14.1 / 16.0, -(8.5 + 10.5 * (SCALE - 1.0)) / 16.0};
+    /** Pilot's feet relative to the centre of gravity (y up, z back), keeping his eye just over the guns. */
+    public static final double PILOT_UP = (14.1 - 27.0) / 16.0, PILOT_BACK = 10.5 * SCALE / 16.0;
     /** Gun muzzles from the CG: {right (left gun is negative), up, forward}. */
-    public static final double GUN_SIDE = 2.0 / 16.0, GUN_UP = 9.1 / 16.0, GUN_FWD = 14.8 / 16.0;
+    public static final double GUN_SIDE = 2.0 / 16.0 * SCALE, GUN_UP = 9.1 / 16.0 * SCALE, GUN_FWD = 14.8 / 16.0 * SCALE;
     /** Nose-up angle the aircraft sits at on its tail skid (visual). */
     public static final float GROUND_TILT = 11.0F;
 

@@ -41,7 +41,7 @@ public class PlaneRenderer extends EntityRenderer<PlaneEntity> {
             // the pilot, seated in the cockpit and banking with the aircraft (his own upright drawing is suppressed)
             net.minecraft.world.entity.player.Player pilot = plane.getPilot();
             poseStack.pushPose();
-            poseStack.translate(0.0, (7.5 - 22.0) / 16.0, 10.5 / 16.0);
+            poseStack.translate(0.0, PlaneEntity.PILOT_UP, PlaneEntity.PILOT_BACK);
             poseStack.mulPose(Axis.YP.rotationDegrees(Mth.rotLerp(pt, pilot.yBodyRotO, pilot.yBodyRot) - 180.0F));
             DRAWING_PILOT = true;
             try {
@@ -51,7 +51,8 @@ public class PlaneRenderer extends EntityRenderer<PlaneEntity> {
             }
             poseStack.popPose();
         }
-        poseStack.translate(0.0, -PlaneEntity.CG_UP, 0.0);
+        poseStack.scale(PlaneEntity.SCALE, PlaneEntity.SCALE, PlaneEntity.SCALE);
+        poseStack.translate(0.0, -22.0 / 16.0, 0.0);
         poseStack.scale(-1.0F, -1.0F, 1.0F);
         poseStack.translate(0.0F, -1.501F, 0.0F);
         Minecraft mc = Minecraft.getInstance();
