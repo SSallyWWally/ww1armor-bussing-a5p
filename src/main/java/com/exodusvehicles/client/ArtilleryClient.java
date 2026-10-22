@@ -843,10 +843,18 @@ public final class ArtilleryClient {
         g.setColor(1.0F, 1.0F, 1.0F, t);
         g.blit(FK_SCOPE, x0, y0, size, size, 0.0F, 0.0F, 512, 512, 512, 512);
         int black = ((int) (t * 255) << 24);
-        g.fill(0, 0, Math.max(0, x0), h, black);
-        g.fill(x0 + size, 0, w, h, black);
-        g.fill(Math.max(0, x0), 0, Math.min(w, x0 + size), Math.max(0, y0), black);
-        g.fill(Math.max(0, x0), y0 + size, Math.min(w, x0 + size), h, black);
+        // solid black everywhere outside the eyepiece, row by row (the texture only supplies the soft inner edge)
+        float rad = size * 0.5F * 0.955F;
+        for (int y = 0; y < h; y++) {
+            float dy = y + 0.5F - h * 0.5F;
+            if (Math.abs(dy) >= rad) {
+                g.fill(0, y, w, y + 1, black);
+                continue;
+            }
+            int half = (int) Math.sqrt(rad * rad - dy * dy);
+            g.fill(0, y, cx - half, y + 1, black);
+            g.fill(cx + half, y, w, y + 1, black);
+        }
         g.setColor(1.0F, 1.0F, 1.0F, 1.0F);
         int ink = ((int) (t * 235) << 24) | 0x101010;
         int r = (int) (size * 0.43F);
