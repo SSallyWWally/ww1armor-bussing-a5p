@@ -98,6 +98,7 @@ public class PlaneEntity extends Entity implements Repairable {
 
     // client visuals
     public float propRot, propRotO;
+    private float propSpeed;
     public final List<ArmoredCarEntity.Tracer> tracers = new ArrayList<>();
     public int flashTicks, flashStyle;
     public float flashScale = 1.0F, flashSpin;
@@ -482,8 +483,13 @@ public class PlaneEntity extends Entity implements Repairable {
 
     private void tickClient() {
         this.propRotO = this.propRot;
-        float t = isDowned() ? 0.0F : (getPilot() != null ? Math.max(0.25F, this.throttle) : 0.0F);
-        this.propRot += t * 1.9F;
+        // the prop only turns with the engine running; after shutdown it winds down and stops dead
+        float target = isDowned() || isWrecked() || !isEngineOn() ? 0.0F : Math.max(0.25F, this.throttle);
+        this.propSpeed += (target - this.propSpeed) * (target > this.propSpeed ? 0.12F : 0.06F);
+        if (target == 0.0F && this.propSpeed < 0.01F) {
+            this.propSpeed = 0.0F;
+        }
+        this.propRot += this.propSpeed * 1.9F;
         if (this.flashTicks > 0) {
             this.flashTicks--;
         }
