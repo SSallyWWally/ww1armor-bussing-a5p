@@ -119,8 +119,11 @@ public final class FieldMgClient {
     public static double[] cameraView(float pt) {
         Minecraft mc = Minecraft.getInstance();
         FieldMgEntity mg = gun();
-        if (mg == null || !mc.options.getCameraType().isFirstPerson()) {
+        if (mg == null) {
             return null;
+        }
+        if (!mc.options.getCameraType().isFirstPerson()) {
+            return shoulderView(mc, mg, pt);
         }
         float viewYaw = mc.player.getViewYRot(pt);
         float rel = mg.relYaw(viewYaw);
@@ -135,6 +138,40 @@ public final class FieldMgClient {
             eye = eye.lerp(mg.gunPoint(base, sled, rel, pitch, e[0], e[1], -e[2]), Math.min(1.0F, sc * 1.6F));
         }
         return new double[]{eye.x, eye.y, eye.z, sled + rel, pitch};
+    }
+
+    /**
+     * Third person: over the gunner's right shoulder, looking at the spot the rounds will hit (so the small crosshair
+     * in the middle of the screen is honest); pulled in if a wall is behind.
+     */
+    private static double[] shoulderView(Minecraft mc, FieldMgEntity mg, float pt) {
+        float viewYaw = mc.player.getViewYRot(pt);
+        float rel = mg.relYaw(viewYaw);
+        float pitch = FieldMgEntity.clampPitch(mc.player.getViewXRot(pt));
+        Vec3 base = new Vec3(Mth.lerp(pt, mg.xo, mg.getX()), Mth.lerp(pt, mg.yo, mg.getY()), Mth.lerp(pt, mg.zo, mg.getZ()));
+        float sled = Mth.rotLerp(pt, mg.yRotO, mg.getYRot());
+        Vec3 eye = mg.gunPoint(base, sled, rel, pitch, 0.0, FieldMgEntity.EYE_UP, -FieldMgEntity.EYE_BACK);
+        Vec3 dir = Vec3.directionFromRotation(pitch, sled + rel);
+        Vec3 far = eye.add(dir.scale(ModConfig.get().fieldMgRange));
+        net.minecraft.world.phys.BlockHitResult hit = mc.level.clip(new net.minecraft.world.level.ClipContext(eye.add(dir.scale(1.2)), far,
+                net.minecraft.world.level.ClipContext.Block.COLLIDER, net.minecraft.world.level.ClipContext.Fluid.NONE, mc.player));
+        Vec3 target = hit.getType() == net.minecraft.world.phys.HitResult.Type.MISS ? far : hit.getLocation();
+        double y = Math.toRadians(sled + rel);
+        Vec3 back = new Vec3(Math.sin(y), 0, -Math.cos(y));
+        Vec3 right = new Vec3(-Math.cos(y), 0, -Math.sin(y));
+        Vec3 want = eye.add(back.scale(2.1)).add(right.scale(0.75)).add(0, 0.55, 0);
+        Vec3 head = eye.add(0, 0.3, 0);
+        net.minecraft.world.phys.BlockHitResult wall = mc.level.clip(new net.minecraft.world.level.ClipContext(head, want,
+                net.minecraft.world.level.ClipContext.Block.VISUAL, net.minecraft.world.level.ClipContext.Fluid.NONE, mc.player));
+        Vec3 cam = want;
+        if (wall.getType() != net.minecraft.world.phys.HitResult.Type.MISS) {
+            Vec3 d = want.subtract(head);
+            double len = Math.max(0.0, wall.getLocation().distanceTo(head) - 0.25);
+            cam = head.add(d.normalize().scale(len));
+        }
+        Vec3 d = target.subtract(cam);
+        double h = Math.sqrt(d.x * d.x + d.z * d.z);
+        return new double[]{cam.x, cam.y, cam.z, Math.toDegrees(Math.atan2(-d.x, d.z)), -Math.toDegrees(Math.atan2(d.y, h))};
     }
 
     /** Camera jitter while suppressed. */
@@ -244,6 +281,14 @@ public final class FieldMgClient {
         float sc = scopeAmount(pt);
         if (sc > 0.05F) {
             drawScope(g, w, h, sc);
+        }
+        if (!mc.options.getCameraType().isFirstPerson()) {
+            // small crosshair for the over-the-shoulder view
+            int cx = w / 2, cy = h / 2, c = 0xE0F0ECDC;
+            g.fill(cx - 4, cy, cx - 1, cy + 1, c);
+            g.fill(cx + 2, cy, cx + 5, cy + 1, c);
+            g.fill(cx, cy - 4, cx + 1, cy - 1, c);
+            g.fill(cx, cy + 2, cx + 1, cy + 5, c);
         }
         ModConfig cfg = ModConfig.get();
         int x = 8, y = 8, barW = 100;

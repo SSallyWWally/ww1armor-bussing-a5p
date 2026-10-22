@@ -121,7 +121,7 @@ public class FieldMgEntity extends Entity implements Repairable {
 
     /** Height of the elevation pivot above the base. */
     public double pivotUp() {
-        return (isBunker() ? 18.0 : isTripod() ? 16.0 : 10.0) / 16.0;
+        return (isBunker() ? 17.0 : isTripod() ? 16.0 : 10.0) / 16.0;
     }
 
     /** The gunner stands (bunker mount, or a sled set up on a parapet above where they are). */
