@@ -64,8 +64,21 @@ public final class PlaneClient {
 
     // ------------------------------------------------------------------ input
 
+    /** Right-click zoom: a mild magnification in both views. */
+    private static float zoom = 1.0F, zoomO = 1.0F;
+    private static final float ZOOM_MAX = 1.45F;
+
+    public static double fovScale(float pt) {
+        float z = net.minecraft.util.Mth.lerp(pt, zoomO, zoom);
+        return z <= 1.001F ? 1.0 : 1.0 / z;
+    }
+
     public static void startTick(Minecraft mc) {
         PlaneEntity p = plane();
+        zoomO = zoom;
+        boolean aim = p != null && mc.player != null && mc.screen == null && GunSight.physicallyDown(mc, mc.options.keyUse);
+        zoom += ((aim ? ZOOM_MAX : 1.0F) - zoom) * 0.35F;
+        if (Math.abs(zoom - (aim ? ZOOM_MAX : 1.0F)) < 0.002F) zoom = aim ? ZOOM_MAX : 1.0F;
         if (p == null || mc.player == null) {
             freelook = false;
             return;
@@ -197,7 +210,7 @@ public final class PlaneClient {
         double x = d.dot(r), y = d.dot(u);
         double rr = Math.toRadians(camRoll);
         double x2 = x * Math.cos(rr) - y * Math.sin(rr), y2 = x * Math.sin(rr) + y * Math.cos(rr);
-        double fov = Math.toRadians(mc.options.fov().get());
+        double fov = 2.0 * Math.atan(Math.tan(Math.toRadians(mc.options.fov().get()) / 2.0) * fovScale(mc.getTimer().getGameTimeDeltaPartialTick(true)));
         double k = (h / 2.0) / Math.tan(fov / 2.0);
         return new float[]{(float) (w / 2.0 + x2 / z * k), (float) (h / 2.0 - y2 / z * k)};
     }
