@@ -54,9 +54,9 @@ public class PlaneEntity extends Entity implements Repairable {
     /** Centre of gravity above the entity position (wheels on the ground, aircraft level). */
     public static final double CG_UP = 22.0 / 16.0;
     /** Pilot's eye, from the CG: {right, up, forward} (blocks). */
-    public static final double[] EYE = {0.0, 14.0 / 16.0, -8.5 / 16.0};
+    public static final double[] EYE = {0.0, 12.5 / 16.0, -8.5 / 16.0};
     /** Gun muzzles from the CG: {right (left gun is negative), up, forward}. */
-    public static final double GUN_SIDE = 2.7 / 16.0, GUN_UP = 10.85 / 16.0, GUN_FWD = 17.2 / 16.0;
+    public static final double GUN_SIDE = 2.0 / 16.0, GUN_UP = 8.5 / 16.0, GUN_FWD = 14.8 / 16.0;
     /** Nose-up angle the aircraft sits at on its tail skid (visual). */
     public static final float GROUND_TILT = 11.0F;
 
