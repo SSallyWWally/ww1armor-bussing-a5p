@@ -296,16 +296,19 @@ public class PlaneEntity extends Entity implements Repairable {
         if (ground) {
             vel = new Vec3(vel.x, pitch < -1.0F ? vel.y : -0.1, vel.z);
         } else {
-            vel = vel.add(0, -(1.0F - lift) * 0.5F, 0);     // sinking when too slow to fly
+            vel = vel.add(0, -(1.0F - lift) * 0.45F, 0);    // sinking when too slow to fly
+            vel = new Vec3(vel.x, Math.max(vel.y, -1.6), vel.z);
         }
         double before = vel.length();
         Vec3 from = this.position();
         this.move(MoverType.SELF, vel);
         Vec3 moved = this.position().subtract(from);
-        if (this.horizontalCollision && Math.sqrt(vel.x * vel.x + vel.z * vel.z) > c.planeCrashSpeed) {
+        // a crash needs real speed: dropping onto its wheels after being set down (or a stalled pancake) is not one
+        boolean settled = this.tickCount < 40;
+        if (!settled && this.horizontalCollision && Math.sqrt(vel.x * vel.x + vel.z * vel.z) > c.planeCrashSpeed) {
             this.crashedLocally = true;
         }
-        if (this.verticalCollision && !ground && vel.y < -c.planeCrashSpeed * 0.9) {
+        if (!settled && this.verticalCollision && !ground && vel.y < -0.7 && this.speed > c.planeStallSpeed) {
             this.crashedLocally = true;            // flown into the ground
         }
         if (this.horizontalCollision && before > 0.01) {
