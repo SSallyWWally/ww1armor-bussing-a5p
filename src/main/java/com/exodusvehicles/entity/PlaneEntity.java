@@ -363,9 +363,20 @@ public class PlaneEntity extends Entity implements Repairable {
         float lift = Mth.clamp(this.speed / stall, 0.0F, 1.0F);
         float auth = Mth.clamp(this.speed / (stall * 1.3F), 0.12F, 1.0F);
         float dy = Mth.wrapDegrees(tYaw - yaw) + rudder * 8.0F;
+        // racing about on the ground: a tail-dragger on grass isn't built for it. Past ~20 km/h for ~15 s the
+        // steering goes and it starts to wander (the server tears up the undercarriage at the same time)
+        if (ground && this.speed > GROUND_ABUSE_SPEED) {
+            this.groundRunTicks++;
+        } else {
+            this.groundRunTicks = Math.max(0, this.groundRunTicks - 3);
+        }
+        float loss = groundSteeringLoss();
         if (ground) {
-            float taxi = Mth.clamp(this.speed / 0.15F, 0.25F, 1.0F) * 2.2F;
-            yaw += Mth.clamp(dy * 0.1F, -taxi, taxi);
+            float taxi = Mth.clamp(this.speed / 0.15F, 0.25F, 1.0F) * 2.2F * (1.0F - 0.85F * loss);
+            yaw += Mth.clamp(dy * 0.1F * (1.0F - 0.85F * loss), -taxi, taxi);
+            if (loss > 0.0F) {
+                yaw += loss * (Mth.sin(this.tickCount * 0.13F) * 2.2F + (this.random.nextFloat() - 0.5F) * 2.5F);
+            }
             boolean takeOff = this.speed > c.planeTakeoffSpeed && tPitch < -4.0F;
             pitch = takeOff ? -7.0F : pitch + (0.0F - pitch) * 0.3F;
             this.roll += (0.0F - this.roll) * 0.3F;
@@ -511,8 +522,29 @@ public class PlaneEntity extends Entity implements Repairable {
     private int bailTicks;
     public static final int BAIL_TICKS = 40;
 
+    /** 20 km/h in blocks per tick; GROUND_ABUSE_TICKS of taxiing faster than this and things start to give. */
+    public static final float GROUND_ABUSE_SPEED = 20.0F / 72.0F;
+    public static final int GROUND_ABUSE_TICKS = 300;
+    /** Ticks spent rolling fast on the ground (each side keeps its own count). */
+    public int groundRunTicks;
+
+    /** 0 = full steering, 1 = the wheels have the aircraft. */
+    public float groundSteeringLoss() {
+        return Mth.clamp((this.groundRunTicks - GROUND_ABUSE_TICKS) / 160.0F, 0.0F, 1.0F);
+    }
+
     private void tickServer() {
         ModConfig cfg = ModConfig.get();
+        if (getPilot() != null && this.onGround() && !isWrecked() && syncedSpeed() > GROUND_ABUSE_SPEED) {
+            this.groundRunTicks++;
+            if (this.groundRunTicks > GROUND_ABUSE_TICKS && this.groundRunTicks % 20 == 0) {
+                // undercarriage and lower wing taking a beating
+                float over = (this.groundRunTicks - GROUND_ABUSE_TICKS) / 20.0F;
+                this.hurt(this.damageSources().generic(), Math.min(4.0F, 1.5F + over * 0.25F));
+            }
+        } else {
+            this.groundRunTicks = Math.max(0, this.groundRunTicks - 3);
+        }
         Player pilotNow = getPilot();
         if (pilotNow != null && !this.onGround() && pilotNow.isShiftKeyDown()) {
             if (++this.bailTicks >= BAIL_TICKS) {

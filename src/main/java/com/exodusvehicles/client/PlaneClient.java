@@ -293,6 +293,12 @@ public final class PlaneClient {
             g.fill(bx2, by2, bx2 + bw, by2 + 5, 0x80000000);
             g.fill(bx2, by2, bx2 + Math.round(bw * Math.min(1.0F, (bailTicks + pt) / PlaneEntity.BAIL_TICKS)), by2 + 5, 0xFFE0A040);
         }
+        if (p.onGround() && p.isControlledByLocalInstance() && p.groundRunTicks > PlaneEntity.GROUND_ABUSE_TICKS - 100) {
+            boolean bad = p.groundRunTicks > PlaneEntity.GROUND_ABUSE_TICKS;
+            boolean blink = (mc.player.tickCount / 6) % 2 == 0;
+            Component gw = Component.translatable(bad ? "hud.exodus_vehicles.plane_ground_damage" : "hud.exodus_vehicles.plane_ground_warn");
+            g.drawString(mc.font, gw, w / 2 - mc.font.width(gw) / 2, h / 2 + 42, bad ? (blink ? 0xFFFF5A3A : 0xFFB04030) : 0xFFE0A040, true);
+        }
         if (freelook) {
             Component fl = Component.translatable("hud.exodus_vehicles.plane_freelook");
             g.drawString(mc.font, fl, w / 2 - mc.font.width(fl) / 2, 8, 0xFFE0C060, true);

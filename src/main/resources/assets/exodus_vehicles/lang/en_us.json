@@ -180,5 +180,7 @@
   "hud.exodus_vehicles.plane_engine_off": "Engine off - press P to start",
   "msg.exodus_vehicles.plane_brake_air": "Parking brake only works on the ground",
   "seat.exodus_vehicles.plane.pilot": "Pilot",
-  "hud.exodus_vehicles.plane_exiting": "Exiting..."
+  "hud.exodus_vehicles.plane_exiting": "Exiting...",
+  "hud.exodus_vehicles.plane_ground_warn": "Too fast on the ground - ease off",
+  "hud.exodus_vehicles.plane_ground_damage": "Undercarriage failing - losing steering"
 }

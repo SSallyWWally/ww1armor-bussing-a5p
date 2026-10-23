@@ -18,7 +18,7 @@ import java.util.List;
 public class ModConfig {
     /** Bumped when a default changes in a way old config files must pick up. Don't edit. */
     public int configVersion = 0;
-    private static final int CURRENT_VERSION = 14;
+    private static final int CURRENT_VERSION = 15;
 
     // ---- armor / damage
     public float maxHealth = 300.0F;
@@ -140,7 +140,7 @@ public class ModConfig {
     public float planeStallSpeed = 0.6F;
     public float planeTakeoffSpeed = 0.75F;
     public float planeTurnRate = 3.2F;          // degrees per tick at full control authority
-    public float planeCeiling = 260.0F;         // can't climb above this height
+    public float planeCeiling = 420.0F;         // can't climb above this height
     public float planeCrashSpeed = 0.55F;       // hitting something faster than this is a crash
     public float planeCrashDamage = 40.0F;
     /** A destroyed aircraft lies burning where it fell for this long before it is cleared away. */
@@ -303,6 +303,9 @@ public class ModConfig {
             if (cfg.planeGunCooling == 0.012F) {
                 cfg.planeGunCooling = 0.0075F;
             }
+        }
+        if (cfg.configVersion < 15 && cfg.planeCeiling == 260.0F) {
+            cfg.planeCeiling = 420.0F;            // 2.4.6: higher ceiling
         }
         cfg.configVersion = CURRENT_VERSION;
         cfg.mgBeltSize = Math.max(1, cfg.mgBeltSize);
